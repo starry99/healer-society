@@ -9,7 +9,8 @@ const HERO_NODE_SIZE = 86;
 const POINT_BADGE_SIZE = 24;
 const HERO_EMBLEM_ICON_OVERRIDES = {
   "discipline-priest": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-oracle.webp",
-  "holy-paladin": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-paladin-heraldofthesun.webp"
+  "holy-paladin": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-paladin-heraldofthesun.webp",
+  "restoration-druid": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-druid-keeperofthegrove.webp",
 };
 const MOBILE_GROUP_TEMPLATES = [
   { id: "hero", label: "영웅 특성", padX: 20, padY: 16, nodeSize: 28, heroSize: 58, minWidth: 200, minHeight: 264 },

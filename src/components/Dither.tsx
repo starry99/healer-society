@@ -186,6 +186,7 @@ interface DitheredWavesProps {
   disableAnimation: boolean;
   enableMouseInteraction: boolean;
   mouseRadius: number;
+  targetFps: number;
 }
 
 function DitheredWaves({
@@ -197,11 +198,12 @@ function DitheredWaves({
   pixelSize,
   disableAnimation,
   enableMouseInteraction,
-  mouseRadius
+  mouseRadius,
+  targetFps
 }: DitheredWavesProps) {
   const mesh = useRef<THREE.Mesh>(null);
   const mouseRef = useRef(new THREE.Vector2());
-  const { viewport, size, gl } = useThree();
+  const { viewport, size, gl, invalidate } = useThree();
 
   const waveUniformsRef = useRef<WaveUniforms>({
     time: new THREE.Uniform(0),
@@ -263,6 +265,23 @@ function DitheredWaves({
     return () => window.removeEventListener('pointermove', handlePointerMove);
   }, [enableMouseInteraction, gl]);
 
+  useEffect(() => {
+    const fps = Number(targetFps);
+    if (!Number.isFinite(fps) || fps <= 0 || fps >= 60) {
+      return;
+    }
+
+    const intervalMs = Math.max(16, Math.floor(1000 / fps));
+    invalidate();
+    const timerId = window.setInterval(() => {
+      invalidate();
+    }, intervalMs);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [targetFps, invalidate]);
+
   return (
     <>
       <mesh ref={mesh} scale={[viewport.width, viewport.height, 1]}>
@@ -291,6 +310,11 @@ interface DitherProps {
   disableAnimation?: boolean;
   enableMouseInteraction?: boolean;
   mouseRadius?: number;
+  targetFps?: number;
+  dpr?: number;
+  antialias?: boolean;
+  preserveDrawingBuffer?: boolean;
+  powerPreference?: 'default' | 'high-performance' | 'low-power';
 }
 
 export default function Dither({
@@ -302,14 +326,23 @@ export default function Dither({
   pixelSize = 2,
   disableAnimation = false,
   enableMouseInteraction = true,
-  mouseRadius = 1
+  mouseRadius = 1,
+  targetFps = 60,
+  dpr = 1,
+  antialias = true,
+  preserveDrawingBuffer = true,
+  powerPreference = 'high-performance'
 }: DitherProps) {
+  const normalizedTargetFps = Math.max(1, Math.floor(Number(targetFps) || 60));
+  const useDemandFrameloop = normalizedTargetFps < 60;
+
   return (
     <Canvas
       className="w-full h-full relative"
       camera={{ position: [0, 0, 6] }}
-      dpr={1}
-      gl={{ antialias: true, preserveDrawingBuffer: true }}
+      dpr={dpr}
+      frameloop={useDemandFrameloop ? 'demand' : 'always'}
+      gl={{ antialias, preserveDrawingBuffer, powerPreference }}
     >
       <DitheredWaves
         waveSpeed={waveSpeed}
@@ -321,6 +354,7 @@ export default function Dither({
         disableAnimation={disableAnimation}
         enableMouseInteraction={enableMouseInteraction}
         mouseRadius={mouseRadius}
+        targetFps={normalizedTargetFps}
       />
     </Canvas>
   );

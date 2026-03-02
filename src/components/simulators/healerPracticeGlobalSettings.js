@@ -267,7 +267,15 @@ export const MOUSE_BINDING_OPTIONS = [
   { token: "CTRL+RMB", label: "Ctrl + 우클릭", label_cdm: "Ctl+우" },
   { token: "ALT+LMB", label: "Alt + 좌클릭", label_cdm: "Alt+좌" },
   { token: "ALT+RMB", label: "Alt + 우클릭", label_cdm: "Alt+우" },
-  { token: "MMB", label: "마우스휠클릭", label_cdm: "휠클" }
+  { token: "MMB", label: "마우스휠클릭", label_cdm: "휠클" },
+  { token: "WHEELUP", label: "휠 업", label_cdm: "휠↑" },
+  { token: "WHEELDOWN", label: "휠 다운", label_cdm: "휠↓" },
+  { token: "SHIFT+WHEELUP", label: "Shift + 휠 업", label_cdm: "Sh+휠↑" },
+  { token: "SHIFT+WHEELDOWN", label: "Shift + 휠 다운", label_cdm: "Sh+휠↓" },
+  { token: "CTRL+WHEELUP", label: "Ctrl + 휠 업", label_cdm: "Ctl+휠↑" },
+  { token: "CTRL+WHEELDOWN", label: "Ctrl + 휠 다운", label_cdm: "Ctl+휠↓" },
+  { token: "ALT+WHEELUP", label: "Alt + 휠 업", label_cdm: "Alt+휠↑" },
+  { token: "ALT+WHEELDOWN", label: "Alt + 휠 다운", label_cdm: "Alt+휠↓" }
 ];
 
 export const RAID_LAYOUT_OPTIONS = [
@@ -277,7 +285,8 @@ export const RAID_LAYOUT_OPTIONS = [
 
 export const MOVEMENT_KEY_OPTIONS = Object.freeze([
   { value: "WASD", label: "WASD (기본)" },
-  { value: "WSQE", label: "WSQE (Q/E 좌우)" }
+  { value: "WSQE", label: "WSQE (Q/E 좌우)" },
+  { value: "CUSTOM", label: "커스텀" }
 ]);
 
 export const MOVEMENT_PRESET_KEYS = Object.freeze({
@@ -292,6 +301,12 @@ export const MOVEMENT_PRESET_KEYS = Object.freeze({
     down: "S",
     left: "Q",
     right: "E"
+  }),
+  CUSTOM: Object.freeze({
+    up: "W",
+    down: "S",
+    left: "A",
+    right: "D"
   })
 });
 
@@ -307,12 +322,19 @@ export const MOVEMENT_PRESET_KEYCODES = Object.freeze({
     down: Phaser.Input.Keyboard.KeyCodes.S,
     left: Phaser.Input.Keyboard.KeyCodes.Q,
     right: Phaser.Input.Keyboard.KeyCodes.E
+  }),
+  CUSTOM: Object.freeze({
+    up: Phaser.Input.Keyboard.KeyCodes.W,
+    down: Phaser.Input.Keyboard.KeyCodes.S,
+    left: Phaser.Input.Keyboard.KeyCodes.A,
+    right: Phaser.Input.Keyboard.KeyCodes.D
   })
 });
 
 export const MOVEMENT_RESTRICTED_KEY_LIST_BY_PRESET = Object.freeze({
   WASD: Object.freeze([]),
-  WSQE: Object.freeze(["Q", "E", "A", "D"])
+  WSQE: Object.freeze(["Q", "E", "A", "D"]),
+  CUSTOM: Object.freeze([])
 });
 
 // 난이도별 피해 배율은 여기 숫자만 수정하면 됩니다.
@@ -326,7 +348,7 @@ export const PRACTICE_DIFFICULTY_TUNING = Object.freeze({
   normal: Object.freeze({
     label: "일반",
     fixedCombatDurationMinutes: 2,
-    incomingDamageMultiplier: 0.5,
+    incomingDamageMultiplier: 0.48,
     damageBreakEveryMs: 30000,
     damageBreakDurationMs: 5000,
     scheduledRaidBursts: Object.freeze([
@@ -337,7 +359,7 @@ export const PRACTICE_DIFFICULTY_TUNING = Object.freeze({
   heroic: Object.freeze({
     label: "영웅",
     fixedCombatDurationMinutes: 2,
-    incomingDamageMultiplier: 0.55,
+    incomingDamageMultiplier: 0.54,
     damageBreakEveryMs: 30000,
     damageBreakDurationMs: 5000,
     scheduledRaidBursts: Object.freeze([
@@ -550,7 +572,15 @@ export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
     missileSpawnIntervalMinMs: 2800,
     missileSpawnIntervalMaxMs: 4200,
     missileSpeedPerSec: 220,
-    missileDamage: 15
+    missileDamage: 15,
+    greenGridZonePatternEnabled: true,
+    greenGridZonePatternSpawnIntervalMinMs: 20000,
+    greenGridZonePatternSpawnIntervalMaxMs: 30000,
+    greenGridZonePatternSizeCells: 4,
+    greenGridZonePatternCountdownSec: 10,
+    greenGridZonePatternMissDamage: 50,
+    greenGridZonePatternInstructionText: "초록 구역으로 이동",
+    greenGridZonePatternCountdownPrefixText: "남은 카운트"
   }),
   heroic: Object.freeze({
     showPlayerHealthBar: true,
@@ -565,7 +595,15 @@ export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
     missileSpawnIntervalMinMs: 2300,
     missileSpawnIntervalMaxMs: 3700,
     missileSpeedPerSec: 230,
-    missileDamage: 25
+    missileDamage: 25,
+    greenGridZonePatternEnabled: true,
+    greenGridZonePatternSpawnIntervalMinMs: 20000,
+    greenGridZonePatternSpawnIntervalMaxMs: 25000,
+    greenGridZonePatternSizeCells: 3,
+    greenGridZonePatternCountdownSec: 8,
+    greenGridZonePatternMissDamage: 60,
+    greenGridZonePatternInstructionText: "초록 구역으로 이동",
+    greenGridZonePatternCountdownPrefixText: "남은 카운트"
   }),
   mythic: Object.freeze({
     showPlayerHealthBar: true,
@@ -581,6 +619,14 @@ export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
     missileSpawnIntervalMaxMs: 3500,
     missileSpeedPerSec: 240,
     missileDamage: 30,
+    greenGridZonePatternEnabled: true,
+    greenGridZonePatternSpawnIntervalMinMs: 20000,
+    greenGridZonePatternSpawnIntervalMaxMs: 25000,
+    greenGridZonePatternSizeCells: 3,
+    greenGridZonePatternCountdownSec: 8,
+    greenGridZonePatternMissDamage: 80,
+    greenGridZonePatternInstructionText: "초록 구역으로 이동",
+    greenGridZonePatternCountdownPrefixText: "남은 카운트",
     worldFirstKillZonePatternEnabled: true,
     worldFirstKillZonePatternStartTimesSec: Object.freeze([48, 108]),
     worldFirstKillZonePatternActiveMs: 12000,
@@ -609,6 +655,14 @@ export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
     missileSpawnIntervalMaxMs: 3000,
     missileSpeedPerSec: 250,
     missileDamage: 50,
+    greenGridZonePatternEnabled: true,
+    greenGridZonePatternSpawnIntervalMinMs: 20000,
+    greenGridZonePatternSpawnIntervalMaxMs: 25000,
+    greenGridZonePatternSizeCells: 3,
+    greenGridZonePatternCountdownSec: 8,
+    greenGridZonePatternMissDamage: 90,
+    greenGridZonePatternInstructionText: "초록 구역으로 이동",
+    greenGridZonePatternCountdownPrefixText: "남은 카운트",
     worldFirstKillZonePatternEnabled: true,
     worldFirstKillZonePatternStartTimesSec: Object.freeze([21, 51, 111, 141]),
     worldFirstKillZonePatternActiveMs: 9000,

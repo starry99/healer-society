@@ -252,12 +252,30 @@ function findEmbeddedFencedCodeBlock(lines = []) {
 function renderCodeBlock({ language = "", code = "" }, keyPrefix) {
   return (
     <div className="space-y-1.5" key={`${keyPrefix}-code`}>
-      {language ? <p className="text-[11px] uppercase tracking-[0.08em] text-slate-400">{language}</p> : null}
+      {language ? <p className="text-[11px] uppercase text-slate-400">{language}</p> : null}
       <pre className="overflow-x-auto rounded-lg border border-slate-700/80 bg-gray-950/75 p-3">
         <code className="block whitespace-pre font-mono text-[12px] leading-6 text-slate-100">{code}</code>
       </pre>
     </div>
   );
+}
+
+function parseListItemTag(rawValue = "") {
+  const text = String(rawValue ?? "").trim();
+  const subHeadingMatched = text.match(/^\[sub\]\s+(.+)$/i);
+  if (subHeadingMatched) {
+    const headingText = String(subHeadingMatched[1] ?? "").trim();
+    if (headingText) {
+      return {
+        type: "subheading",
+        text: headingText
+      };
+    }
+  }
+  return {
+    type: "item",
+    text
+  };
 }
 
 export function GuideRichText({ content, compact = false }) {
@@ -358,9 +376,25 @@ export function GuideRichText({ content, compact = false }) {
         if (isList) {
           return (
             <ul className="list-disc space-y-1 pl-6 text-sm" key={`block-list-${index}`}>
-              {lines.map((line, lineIndex) => (
-                <li key={`line-${index}-${lineIndex}`}>{renderInlineSkills(line.replace(/^\s*-\s*/, ""), `${index}-${lineIndex}`)}</li>
-              ))}
+              {lines.map((line, lineIndex) => {
+                const listItemText = line.replace(/^\s*-\s*/, "");
+                const parsedListItem = parseListItemTag(listItemText);
+                if (parsedListItem.type === "subheading") {
+                  return (
+                    <li
+                      className="list-none pt-2 text-[14px] font-semibold uppercase text-violet-300 first:pt-0"
+                      key={`line-${index}-${lineIndex}`}
+                    >
+                      {renderInlineSkills(parsedListItem.text, `${index}-${lineIndex}`)}
+                    </li>
+                  );
+                }
+                return (
+                  <li key={`line-${index}-${lineIndex}`}>
+                    {renderInlineSkills(parsedListItem.text, `${index}-${lineIndex}`)}
+                  </li>
+                );
+              })}
             </ul>
           );
         }

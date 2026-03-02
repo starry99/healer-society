@@ -10,6 +10,7 @@ export const mistweaverMonkGuideContent = {
     }
   },
   talents: {
+    disabledModes: ["mythic"],
     contentByMode: {
       raid:
         "레이드 빌드는 광역 피해 주기에 맞춰 [[소생의 안개#115151]] 확산과 [[재활#116670]] 효율을 극대화하는 방향이 기본입니다. 영웅 특성은 공대 피해 패턴과 이동량을 기준으로 선택합니다.",

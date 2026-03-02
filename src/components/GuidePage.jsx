@@ -134,6 +134,7 @@ export function GuidePage({ healerMap }) {
   const [activeSectionId, setActiveSectionId] = useState("");
   const [sectionModeById, setSectionModeById] = useState({});
   const [activeRotationByModeKey, setActiveRotationByModeKey] = useState({});
+  const [talentsExtraOpenByKey, setTalentsExtraOpenByKey] = useState({});
   const [mobileCommentsOpen, setMobileCommentsOpen] = useState(false);
   const {
     user,
@@ -193,6 +194,7 @@ export function GuidePage({ healerMap }) {
     });
     setSectionModeById(nextModes);
     setActiveRotationByModeKey({});
+    setTalentsExtraOpenByKey({});
   }, [healer]);
 
   useEffect(() => {
@@ -272,13 +274,18 @@ export function GuidePage({ healerMap }) {
         <Dither
           waveColor={[0.25, 0.15, 0.8]}
           disableAnimation={false}
-          enableMouseInteraction
+          enableMouseInteraction={false}
           mouseRadius={0.35}
           colorNum={4}
           pixelSize={2}
           waveAmplitude={0.3}
           waveFrequency={3}
           waveSpeed={0.025}
+          targetFps={24}
+          dpr={0.75}
+          antialias={false}
+          preserveDrawingBuffer={false}
+          powerPreference="low-power"
         />
       </div>
       <div className="sticky top-0 z-40 w-full flex-none pointer-events-auto">
@@ -334,6 +341,14 @@ export function GuidePage({ healerMap }) {
                 const activeRotationId = activeRotationByModeKey[rotationStateKey] || "";
                 const activeRotation = rotationItems.find((item) => item.id === activeRotationId) || null;
                 const rotationAccent = resolveStatAccent(healer.color, siteAccentFallback);
+                const talentsExtraStateKey = `${healer.slug}:${section.id}:${currentMode}`;
+                const talentsExtraDefaultOpen = healer.slug === "restoration-druid" && section.type === "talents";
+                const talentsExtraOpen = Object.prototype.hasOwnProperty.call(
+                  talentsExtraOpenByKey,
+                  talentsExtraStateKey
+                )
+                  ? Boolean(talentsExtraOpenByKey[talentsExtraStateKey])
+                  : talentsExtraDefaultOpen;
 
                 return (
                   <section
@@ -585,7 +600,17 @@ export function GuidePage({ healerMap }) {
                       <>
                         <GuideRichText content={section.contentByMode?.[currentMode] || ""} />
                         <TalentTreePanel healer={healer} mode={currentMode} />
-                        <details className="mt-4 rounded-lg border border-slate-700/80 bg-gray-950/40">
+                        <details
+                          className="mt-4 rounded-lg border border-slate-700/80 bg-gray-950/40"
+                          onToggle={(event) => {
+                            const nextOpen = Boolean(event.currentTarget.open);
+                            setTalentsExtraOpenByKey((prev) => ({
+                              ...prev,
+                              [talentsExtraStateKey]: nextOpen
+                            }));
+                          }}
+                          open={talentsExtraOpen}
+                        >
                           <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-200">항목별 추가 설명</summary>
                           <div className="border-t border-slate-700/80 px-2 py-3">
                             <GuideRichText content={section.extraByMode?.[currentMode] || ""} />

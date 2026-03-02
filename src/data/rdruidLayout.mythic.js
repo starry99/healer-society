@@ -1,12 +1,21 @@
 export const restorationDruidTalentLayout = {
   "refWidth": 1200,
   "refHeight": 560,
+  "background": "https://assets-ng.maxroll.gg/wow/talents/talents-background-druid-restoration.webp",
   "leftHeader": {
     "titleColor": "rgb(255, 124, 10)",
-    "title": "레이드 추천 특성",
+    "title": "Druid Tree",
+    "spent": "Spent: 31",
+    "level": "Requires level 70"
   },
-  "heroName": "숲 수호자",
-  "exportText": "Export",
+  "rightHeader": {
+    "titleColor": "",
+    "title": "Restoration Tree",
+    "spent": "Spent: 30",
+    "level": "Requires level 69"
+  },
+  "heroName": "Keeper of the Grove",
+  "exportText": "Export (12.0.1.65337)",
   "nodes": [
     {
       "id": "1226140",

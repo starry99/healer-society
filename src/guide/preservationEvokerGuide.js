@@ -12,6 +12,7 @@ export const preservationEvokerGuideContent = {
     }
   },
   talents: {
+    disabledModes: ["mythic"],
     contentByMode: {
       raid:
         "레이드에서는 광역 피해 타이밍에 [[메아리#364343]]와 [[꿈숨결#355936]], [[회귀#366155]] 계열 상호작용을 안정적으로 겹치는 구성이 우선입니다.\n\n" +

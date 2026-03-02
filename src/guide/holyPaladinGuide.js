@@ -144,6 +144,11 @@ export const holyPaladinGuideContent = {
         url: "https://wingsisup.com/",
         description: "신기 네임드인 Ellesmere가 운영하는 신기 정보 사이트입니다. 특히 쐐기 정보에 탁월합니다."
       },
+      {
+        title: "Questionably Epic Live",
+        url: "https://questionablyepic.com/live/",
+        description: "힐러에게 아주 유용한 템 시뮬레이션 사이트입니다."
+      },
     ]
   }
 };

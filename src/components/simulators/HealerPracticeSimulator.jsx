@@ -105,6 +105,12 @@ const MY_RAID_FRAME_POSITION_OPTIONS = Object.freeze([
   Object.freeze({ value: "random", label: "랜덤 위치 (기본)" }),
   Object.freeze({ value: "firstSlotFixed", label: "첫자리 고정 (1,1)" })
 ]);
+const CUSTOM_MOVEMENT_DIRECTION_OPTIONS = Object.freeze([
+  Object.freeze({ value: "up", label: "전진" }),
+  Object.freeze({ value: "down", label: "후진" }),
+  Object.freeze({ value: "left", label: "좌이동" }),
+  Object.freeze({ value: "right", label: "우이동" })
+]);
 
 const MOUSE_UI_LABEL_BY_TOKEN = MOUSE_BINDING_OPTIONS.reduce((acc, option) => {
   acc[option.token] = option.label;
@@ -995,7 +1001,13 @@ function buildCooldownManagerSpellOrderBuckets(
   return { manager, reserve };
 }
 
-function buildKeyboardTokenToSpellMap(keyboardBindings, disabledSpellSet, movementPreset, activeSpellKeys) {
+function buildKeyboardTokenToSpellMap(
+  keyboardBindings,
+  disabledSpellSet,
+  movementPreset,
+  movementCustomKeys,
+  activeSpellKeys
+) {
   const map = {};
   const keys = Array.isArray(activeSpellKeys) ? activeSpellKeys : [];
   for (const spellKey of keys) {
@@ -1003,7 +1015,7 @@ function buildKeyboardTokenToSpellMap(keyboardBindings, disabledSpellSet, moveme
       continue;
     }
     const key = normalizeKey(keyboardBindings[spellKey]?.key);
-    if (isMovementRestrictedKey(key, movementPreset)) {
+    if (isMovementRestrictedKey(key, movementPreset, movementCustomKeys)) {
       continue;
     }
     const token = keyboardBindingToToken(keyboardBindings[spellKey]);
@@ -1035,7 +1047,13 @@ function findDuplicateKeyboardBindings(keyboardBindings, disabledSpellSet, activ
     .map(([token]) => token);
 }
 
-function findBlockedKeyboardBindings(keyboardBindings, disabledSpellSet, movementPreset, activeSpellKeys) {
+function findBlockedKeyboardBindings(
+  keyboardBindings,
+  disabledSpellSet,
+  movementPreset,
+  movementCustomKeys,
+  activeSpellKeys
+) {
   const blocked = new Set();
 
   const keys = Array.isArray(activeSpellKeys) ? activeSpellKeys : [];
@@ -1049,7 +1067,7 @@ function findBlockedKeyboardBindings(keyboardBindings, disabledSpellSet, movemen
     if (token && BLOCKED_KEYBOARD_BINDING_TOKENS.has(token)) {
       blocked.add(token);
     }
-    if (key && isMovementRestrictedKey(key, movementPreset)) {
+    if (key && isMovementRestrictedKey(key, movementPreset, movementCustomKeys)) {
       blocked.add(token || key);
     }
   }
@@ -1246,8 +1264,20 @@ function mouseEventToBindingToken(event) {
     return "";
   }
 
+  const modifiers = getEventModifierList(event);
+  if (modifiers.length > 1) {
+    return "";
+  }
+
   let base = "";
-  if (event.button === 0) {
+  const isWheelEvent = event?.type === "wheel" || typeof event?.deltaY === "number";
+  if (isWheelEvent) {
+    if (event.deltaY < 0) {
+      base = "WHEELUP";
+    } else if (event.deltaY > 0) {
+      base = "WHEELDOWN";
+    }
+  } else if (event.button === 0) {
     base = "LMB";
   } else if (event.button === 1) {
     base = "MMB";
@@ -1256,11 +1286,6 @@ function mouseEventToBindingToken(event) {
   }
 
   if (!base) {
-    return "";
-  }
-
-  const modifiers = getEventModifierList(event);
-  if (modifiers.length > 1) {
     return "";
   }
 
@@ -1295,18 +1320,69 @@ function normalizeMovementPreset(value) {
   return MOVEMENT_PRESET_KEYS[key] ? key : "WASD";
 }
 
+function buildDefaultCustomMovementKeys() {
+  const fallback = MOVEMENT_PRESET_KEYS.WASD ?? { up: "W", down: "S", left: "A", right: "D" };
+  return {
+    up: normalizeKey(fallback.up ?? "W") || "W",
+    down: normalizeKey(fallback.down ?? "S") || "S",
+    left: normalizeKey(fallback.left ?? "A") || "A",
+    right: normalizeKey(fallback.right ?? "D") || "D"
+  };
+}
+
+function normalizeMovementCustomKeys(value) {
+  const fallback = buildDefaultCustomMovementKeys();
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  return {
+    up: normalizeKey(value.up) || fallback.up,
+    down: normalizeKey(value.down) || fallback.down,
+    left: normalizeKey(value.left) || fallback.left,
+    right: normalizeKey(value.right) || fallback.right
+  };
+}
+
+function resolveMovementKeys(movementPreset, movementCustomKeys) {
+  const preset = normalizeMovementPreset(movementPreset);
+  if (preset === "CUSTOM") {
+    return normalizeMovementCustomKeys(movementCustomKeys);
+  }
+  const fallback = buildDefaultCustomMovementKeys();
+  const resolved = MOVEMENT_PRESET_KEYS[preset] ?? MOVEMENT_PRESET_KEYS.WASD ?? fallback;
+  return {
+    up: normalizeKey(resolved.up) || fallback.up,
+    down: normalizeKey(resolved.down) || fallback.down,
+    left: normalizeKey(resolved.left) || fallback.left,
+    right: normalizeKey(resolved.right) || fallback.right
+  };
+}
+
+function resolveMovementRestrictedKeys(movementPreset, movementCustomKeys) {
+  const preset = normalizeMovementPreset(movementPreset);
+  if (preset === "CUSTOM") {
+    const keys = resolveMovementKeys("CUSTOM", movementCustomKeys);
+    return Array.from(new Set([keys.up, keys.down, keys.left, keys.right].filter(Boolean)));
+  }
+  const restricted = MOVEMENT_RESTRICTED_KEY_LIST_BY_PRESET[preset];
+  if (Array.isArray(restricted)) {
+    return restricted;
+  }
+  return [];
+}
+
 function normalizeMyRaidFramePositionMode(value) {
   const source = String(value ?? "").trim();
   return source === "firstSlotFixed" ? "firstSlotFixed" : "random";
 }
 
-function isMovementRestrictedKey(key, movementPreset) {
+function isMovementRestrictedKey(key, movementPreset, movementCustomKeys) {
   const normalizedKey = normalizeKey(key);
   if (!normalizedKey) {
     return false;
   }
-  const preset = normalizeMovementPreset(movementPreset);
-  const restricted = MOVEMENT_RESTRICTED_KEY_LIST_BY_PRESET[preset] ?? [];
+  const restricted = resolveMovementRestrictedKeys(movementPreset, movementCustomKeys);
   return restricted.includes(normalizedKey);
 }
 
@@ -1554,6 +1630,7 @@ export function HealerPracticeSimulator() {
   const [difficultyKey, setDifficultyKey] = useState("normal");
   const [selectedMapKey, setSelectedMapKey] = useState(DEFAULT_PRACTICE_MAP_KEY);
   const [movementKeyPreset, setMovementKeyPreset] = useState("WASD");
+  const [customMovementKeys, setCustomMovementKeys] = useState(() => buildDefaultCustomMovementKeys());
   const [useMouseover, setUseMouseover] = useState(true);
   const [useClickCasting, setUseClickCasting] = useState(false);
   const [raidFrameLayout, setRaidFrameLayout] = useState("4x5");
@@ -1693,8 +1770,15 @@ export function HealerPracticeSimulator() {
   );
 
   const blockedKeyboardBindings = useMemo(
-    () => findBlockedKeyboardBindings(keyboardBindings, disabledKeyboardSpellSet, movementKeyPreset, activeSpellKeys),
-    [keyboardBindings, disabledKeyboardSpellSet, movementKeyPreset, activeSpellKeys]
+    () =>
+      findBlockedKeyboardBindings(
+        keyboardBindings,
+        disabledKeyboardSpellSet,
+        movementKeyPreset,
+        customMovementKeys,
+        activeSpellKeys
+      ),
+    [keyboardBindings, disabledKeyboardSpellSet, movementKeyPreset, customMovementKeys, activeSpellKeys]
   );
 
   const duplicateMouseBindings = useMemo(
@@ -2326,6 +2410,12 @@ export function HealerPracticeSimulator() {
       if (typeof data.useClickCasting === "boolean") {
         setUseClickCasting(Boolean(data.useClickCasting));
       }
+      if (typeof data.movementKeyPreset === "string") {
+        setMovementKeyPreset(normalizeMovementPreset(data.movementKeyPreset));
+      }
+      if (data.movementCustomKeys && typeof data.movementCustomKeys === "object") {
+        setCustomMovementKeys(normalizeMovementCustomKeys(data.movementCustomKeys));
+      }
       if (!silent) {
         setStatusText("저장된 개인 키바인드를 불러왔습니다.");
       }
@@ -2358,6 +2448,8 @@ export function HealerPracticeSimulator() {
       const payload = {
         healerSlug: selectedHealerSlug,
         useClickCasting: Boolean(useClickCasting),
+        movementKeyPreset: normalizeMovementPreset(movementKeyPreset),
+        movementCustomKeys: normalizeMovementCustomKeys(customMovementKeys),
         keyboardBindings: buildPersistableKeyboardBindings(keyboardBindings, activeSpellKeys),
         clickCastBindings: buildPersistableClickCastBindings(clickCastBindings, clickCastableKeys),
         updatedAt: serverTimestamp()
@@ -2412,10 +2504,14 @@ export function HealerPracticeSimulator() {
       FIXED_TRIAGE_MIN_EFFECTIVE_HEAL_PCT
     );
 
+    const normalizedMovementPreset = normalizeMovementPreset(movementKeyPreset);
+    const normalizedMovementCustomKeys = normalizeMovementCustomKeys(customMovementKeys);
+
     const keyboardTokenToSpell = buildKeyboardTokenToSpellMap(
       keyboardBindings,
       disabledKeyboardSpellSet,
-      movementKeyPreset,
+      normalizedMovementPreset,
+      normalizedMovementCustomKeys,
       activeSpellKeys
     );
     const mouseTokenToSpell = useClickCasting
@@ -2444,7 +2540,8 @@ export function HealerPracticeSimulator() {
       healerSlug: selectedHealerSlug,
       difficultyKey,
       mapKey: selectedMapKey,
-      movementKeyPreset: normalizeMovementPreset(movementKeyPreset),
+      movementKeyPreset: normalizedMovementPreset,
+      movementCustomKeys: normalizedMovementCustomKeys,
       useMouseover,
       useClickCasting,
       raidFrameLayout,
@@ -2521,7 +2618,7 @@ export function HealerPracticeSimulator() {
   function handleKeyInputChange(spellKey, rawValue) {
     markSetupDirty();
     const value = normalizeKey(rawValue);
-    const safeKey = isMovementRestrictedKey(value, movementKeyPreset) ? "" : value;
+    const safeKey = isMovementRestrictedKey(value, movementKeyPreset, customMovementKeys) ? "" : value;
     setKeyboardBindings((prev) => ({
       ...prev,
       [spellKey]: {
@@ -2530,8 +2627,40 @@ export function HealerPracticeSimulator() {
       }
     }));
     if (safeKey !== value && value) {
-      setStatusText(`${value} 키는 이동키 프리셋(${normalizeMovementPreset(movementKeyPreset)})에서 사용할 수 없습니다.`);
+      const preset = normalizeMovementPreset(movementKeyPreset);
+      const restrictedKeys = resolveMovementRestrictedKeys(preset, customMovementKeys);
+      const restrictedLabel = restrictedKeys.length ? restrictedKeys.join(", ") : "-";
+      setStatusText(`${value} 키는 이동키(${preset === "CUSTOM" ? `커스텀: ${restrictedLabel}` : preset})와 겹쳐서 사용할 수 없습니다.`);
     }
+  }
+
+  function handleCustomMovementKeyChange(direction, rawValue) {
+    if (!["up", "down", "left", "right"].includes(direction)) {
+      return;
+    }
+    markSetupDirty();
+    const value = normalizeKey(rawValue);
+    if (!value) {
+      return;
+    }
+    if (MODIFIER_ONLY_KEYS.has(value)) {
+      setStatusText("Shift/Ctrl/Alt/Cmd 단독 입력은 이동키로 사용할 수 없습니다.");
+      return;
+    }
+
+    const current = normalizeMovementCustomKeys(customMovementKeys);
+    const duplicateDirection = CUSTOM_MOVEMENT_DIRECTION_OPTIONS.find(
+      (option) => option.value !== direction && current[option.value] === value
+    );
+    if (duplicateDirection) {
+      setStatusText(`${value} 키는 이미 ${duplicateDirection.label}에 사용 중입니다.`);
+      return;
+    }
+
+    setCustomMovementKeys({
+      ...current,
+      [direction]: value
+    });
   }
 
   function handleModifierChange(spellKey, modifierValue) {
@@ -2582,6 +2711,30 @@ export function HealerPracticeSimulator() {
     }
   }
 
+  function handleFrameWheel(event, playerId) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const currentSnapshot = latestSnapshotRef.current;
+    const player = currentSnapshot?.players.find((item) => item.id === playerId);
+    if (!player || !player.alive) {
+      return;
+    }
+
+    const config = sessionConfigRef.current;
+    if (!running || !config?.useClickCasting) {
+      return;
+    }
+
+    const token = mouseEventToBindingToken(event);
+    const spellKey = config.mouseTokenToSpell[token];
+    if (!spellKey) {
+      return;
+    }
+
+    queueSpell(spellKey, playerId);
+  }
+
   useEffect(() => {
     if (!running) {
       return;
@@ -2608,7 +2761,7 @@ export function HealerPracticeSimulator() {
       }
 
       const movementPreset = normalizeMovementPreset(config.movementKeyPreset);
-      const movementKeys = MOVEMENT_PRESET_KEYS[movementPreset] ?? MOVEMENT_PRESET_KEYS.WASD;
+      const movementKeys = resolveMovementKeys(movementPreset, config.movementCustomKeys);
       const nextState = { ...movementStateRef.current };
       let hasMovementKey = false;
       const leftMovementAliases = movementPreset === "WSQE" ? new Set([movementKeys.left, "A"]) : new Set([movementKeys.left]);
@@ -2729,6 +2882,14 @@ export function HealerPracticeSimulator() {
   const activeDifficultyKey = sessionConfig?.difficultyKey ?? difficultyKey;
   const activeMapKey = sessionConfig?.mapKey ?? selectedMapKey;
   const activeMovementKeyPreset = normalizeMovementPreset(sessionConfig?.movementKeyPreset ?? movementKeyPreset);
+  const activeMovementCustomKeys = useMemo(
+    () => normalizeMovementCustomKeys(sessionConfig?.movementCustomKeys ?? customMovementKeys),
+    [sessionConfig?.movementCustomKeys, customMovementKeys]
+  );
+  const activeMovementKeys = useMemo(
+    () => resolveMovementKeys(activeMovementKeyPreset, activeMovementCustomKeys),
+    [activeMovementKeyPreset, activeMovementCustomKeys]
+  );
   const activeCombatHealerSlug = String(sessionConfig?.healerSlug ?? selectedHealerSlug).trim();
   const activeCombatPracticeRuntime = useMemo(
     () => resolveHealerPracticeRuntime(activeCombatHealerSlug),
@@ -3709,7 +3870,34 @@ export function HealerPracticeSimulator() {
     const missileCollisionRadiusPx = Math.max(6, Number(PHASER_ARENA_VISUAL_CONFIG.missileCollisionRadiusPx ?? 10));
     const hazardTargetJitterPx = Math.max(0, Number(PHASER_ARENA_VISUAL_CONFIG.hazardTargetJitterPx ?? 12));
     const missileTargetJitterPx = Math.max(0, Number(PHASER_ARENA_VISUAL_CONFIG.missileTargetJitterPx ?? 10));
-    const movementKeyLetters = MOVEMENT_PRESET_KEYS[activeMovementKeyPreset] ?? MOVEMENT_PRESET_KEYS.WASD;
+    const arenaGridCellSizePx = 28;
+    const greenGridZonePatternEnabled = Boolean(phaserDifficultyConfig.greenGridZonePatternEnabled);
+    const greenGridZonePatternSpawnMinMs = Math.max(
+      1500,
+      Number(phaserDifficultyConfig.greenGridZonePatternSpawnIntervalMinMs ?? 18000)
+    );
+    const greenGridZonePatternSpawnMaxMs = Math.max(
+      greenGridZonePatternSpawnMinMs,
+      Number(phaserDifficultyConfig.greenGridZonePatternSpawnIntervalMaxMs ?? greenGridZonePatternSpawnMinMs)
+    );
+    const greenGridZonePatternSizeCells = Math.max(
+      2,
+      Math.floor(Number(phaserDifficultyConfig.greenGridZonePatternSizeCells ?? 4))
+    );
+    const greenGridZonePatternSizePx = greenGridZonePatternSizeCells * arenaGridCellSizePx;
+    const greenGridZonePatternCountdownSec = Math.max(
+      1,
+      Number(phaserDifficultyConfig.greenGridZonePatternCountdownSec ?? 10)
+    );
+    const greenGridZonePatternDurationMs = greenGridZonePatternCountdownSec * 1000;
+    const greenGridZonePatternMissDamage = Math.max(
+      0,
+      Number(phaserDifficultyConfig.greenGridZonePatternMissDamage ?? 60)
+    );
+    const greenGridZonePatternInstructionText =
+      String(phaserDifficultyConfig.greenGridZonePatternInstructionText ?? "초록 구역으로 이동").trim() ||
+      "초록 구역으로 이동";
+    const movementKeyLetters = activeMovementKeys;
     const restorationDruidTreeantVisualEnabled = activeCombatHealerSlug === RESTORATION_DRUID_HEALER_SLUG;
     const worldFirstZonePatternEnabled = Boolean(phaserDifficultyConfig.worldFirstKillZonePatternEnabled);
     const worldFirstZonePatternStartTimesMs = Array.from(
@@ -3730,6 +3918,11 @@ export function HealerPracticeSimulator() {
       500,
       Number(phaserDifficultyConfig.worldFirstKillZonePatternStepDurationMs ?? 3000)
     );
+    const worldFirstZonePatternResolvedActiveMs = Math.max(
+      worldFirstZonePatternStepDurationMs,
+      Math.round(worldFirstZonePatternActiveMs / worldFirstZonePatternStepDurationMs) * worldFirstZonePatternStepDurationMs
+    );
+    const worldFirstZoneGreenGridBlockWindowMs = 10000;
     const worldFirstZonePatternStripeCount = Math.max(
       2,
       Math.floor(Number(phaserDifficultyConfig.worldFirstKillZonePatternStripeCount ?? 20))
@@ -3806,8 +3999,12 @@ export function HealerPracticeSimulator() {
     let recentHitUntilMs = 0;
     let nextHazardSpawnAtMs = Number.POSITIVE_INFINITY;
     let nextMissileSpawnAtMs = Number.POSITIVE_INFINITY;
+    let nextGreenGridZoneSpawnAtMs = Number.POSITIVE_INFINITY;
     let worldFirstZoneOverlays = [];
     let worldFirstZoneStatusText = null;
+    let greenGridZoneInstructionText = null;
+    let greenGridZoneCountdownText = null;
+    let greenGridZonePattern = null;
     let worldFirstZoneCurrentMask = [];
     let worldFirstZoneOrder = [];
     let worldFirstZoneVariants = [];
@@ -3893,6 +4090,8 @@ export function HealerPracticeSimulator() {
       const steppedSeconds = Math.max(0.5, Math.ceil(Math.max(0, remainingMs) / 500) * 0.5);
       return steppedSeconds.toFixed(1);
     };
+    const formatGreenGridZoneFloorCountdownLabel = (remainingMs) =>
+      `${Math.max(0, Math.ceil(Math.max(0, remainingMs) / 1000))}초`;
     const resolveWorldFirstZoneLabelCenter = (mask) => {
       const stripeWidthPx = raidGridWidthPx / worldFirstZonePatternStripeCount;
       let bestStart = -1;
@@ -4063,6 +4262,14 @@ export function HealerPracticeSimulator() {
         return;
       }
       nextMissileSpawnAtMs = nowMs + randomBetween(missileSpawnMinMs, missileSpawnMaxMs);
+    };
+
+    const scheduleNextGreenGridZoneSpawn = (nowMs) => {
+      if (!greenGridZonePatternEnabled) {
+        nextGreenGridZoneSpawnAtMs = Number.POSITIVE_INFINITY;
+        return;
+      }
+      nextGreenGridZoneSpawnAtMs = nowMs + randomBetween(greenGridZonePatternSpawnMinMs, greenGridZonePatternSpawnMaxMs);
     };
 
     const buildWorldFirstZoneMask = (patternType, variant) => {
@@ -4399,6 +4606,23 @@ export function HealerPracticeSimulator() {
       }
       return Math.max(0, sceneNowMs - sceneStartAtMs);
     };
+    const resolveWorldFirstZoneGreenGridBlockedRemainingMs = (sceneNowMs = 0) => {
+      if (!worldFirstZonePatternEnabled || !worldFirstZonePatternStartTimesMs.length) {
+        return 0;
+      }
+      const combatElapsedMs = resolveCombatElapsedMs(sceneNowMs);
+      let maxBlockedRemainingMs = 0;
+      for (const startOffsetMs of worldFirstZonePatternStartTimesMs) {
+        const blockedStartMs = Math.max(0, startOffsetMs - worldFirstZoneGreenGridBlockWindowMs);
+        const blockedEndMs =
+          startOffsetMs + worldFirstZonePatternResolvedActiveMs + worldFirstZoneGreenGridBlockWindowMs;
+        if (combatElapsedMs < blockedStartMs || combatElapsedMs > blockedEndMs) {
+          continue;
+        }
+        maxBlockedRemainingMs = Math.max(maxBlockedRemainingMs, blockedEndMs - combatElapsedMs);
+      }
+      return Math.max(0, maxBlockedRemainingMs);
+    };
 
     const updateCombatTimeText = (sceneNowMs = 0) => {
       if (!GLOBAL_SHOW_CANVAS_COMBAT_TIME || !combatTimeText) {
@@ -4623,12 +4847,142 @@ export function HealerPracticeSimulator() {
       missile.sprite?.destroy();
     };
 
+    const clearGreenGridZonePattern = () => {
+      greenGridZonePattern?.overlay?.destroy();
+      greenGridZonePattern?.countdownText?.destroy();
+      greenGridZonePattern = null;
+      if (greenGridZoneInstructionText) {
+        greenGridZoneInstructionText.setText("");
+      }
+      if (greenGridZoneCountdownText) {
+        greenGridZoneCountdownText.setText("");
+      }
+    };
+
+    const isPlayerInsideGreenGridZonePattern = () => {
+      if (!player || !greenGridZonePattern) {
+        return false;
+      }
+      return (
+        player.x >= greenGridZonePattern.left &&
+        player.x <= greenGridZonePattern.right &&
+        player.y >= greenGridZonePattern.top &&
+        player.y <= greenGridZonePattern.bottom
+      );
+    };
+
+    const spawnGreenGridZonePattern = (sceneRef, nowMs) => {
+      if (!greenGridZonePatternEnabled) {
+        return;
+      }
+      clearGreenGridZonePattern();
+
+      const maxStartCellX = Math.max(0, Math.floor((raidGridWidthPx - greenGridZonePatternSizePx) / arenaGridCellSizePx));
+      const maxStartCellY = Math.max(0, Math.floor((raidGridHeightPx - greenGridZonePatternSizePx) / arenaGridCellSizePx));
+      const minStartCellY = Math.min(
+        maxStartCellY,
+        Math.max(0, Math.ceil((raidGridHeightPx * 0.5) / arenaGridCellSizePx))
+      );
+      const startCellX = Phaser.Math.Between(0, maxStartCellX);
+      const startCellY = Phaser.Math.Between(minStartCellY, maxStartCellY);
+      const left = startCellX * arenaGridCellSizePx;
+      const top = startCellY * arenaGridCellSizePx;
+
+      const overlay = sceneRef.add.graphics();
+      overlay.fillStyle(0x22c55e, 0.24);
+      overlay.fillRect(left, top, greenGridZonePatternSizePx, greenGridZonePatternSizePx);
+      overlay.lineStyle(2, 0x4ade80, 0.96);
+      overlay.strokeRect(left, top, greenGridZonePatternSizePx, greenGridZonePatternSizePx);
+      overlay.lineStyle(1, 0x86efac, 0.7);
+      for (let cellIndex = 1; cellIndex < greenGridZonePatternSizeCells; cellIndex += 1) {
+        const offset = cellIndex * arenaGridCellSizePx;
+        overlay.lineBetween(left + offset, top, left + offset, top + greenGridZonePatternSizePx);
+        overlay.lineBetween(left, top + offset, left + greenGridZonePatternSizePx, top + offset);
+      }
+      overlay.setDepth(1.6);
+      const countdownText = sceneRef.add
+        .text(
+          left + greenGridZonePatternSizePx * 0.5,
+          top + greenGridZonePatternSizePx * 0.5,
+          formatGreenGridZoneFloorCountdownLabel(greenGridZonePatternDurationMs),
+          {
+            color: "#f0fdf4",
+            fontFamily: "Pretendard, Noto Sans KR, sans-serif",
+            fontSize: "18px",
+            fontStyle: "700"
+          }
+        )
+        .setOrigin(0.5)
+        .setDepth(1.9)
+        .setStroke("#14532d", 4);
+
+      greenGridZonePattern = {
+        left,
+        right: left + greenGridZonePatternSizePx,
+        top,
+        bottom: top + greenGridZonePatternSizePx,
+        expiresAtMs: nowMs + greenGridZonePatternDurationMs,
+        overlay,
+        countdownText
+      };
+      greenGridZoneInstructionText?.setText(greenGridZonePatternInstructionText);
+      greenGridZoneCountdownText?.setText("");
+    };
+
+    const updateGreenGridZonePattern = (sceneRef, nowMs) => {
+      if (!greenGridZonePatternEnabled) {
+        return;
+      }
+      const worldFirstZoneBlockedRemainingMs = resolveWorldFirstZoneGreenGridBlockedRemainingMs(nowMs);
+      if (!greenGridZonePattern) {
+        if (worldFirstZoneBlockedRemainingMs > 0) {
+          const worldFirstZoneBlockedUntilMs = nowMs + worldFirstZoneBlockedRemainingMs;
+          if (nextGreenGridZoneSpawnAtMs < worldFirstZoneBlockedUntilMs) {
+            nextGreenGridZoneSpawnAtMs = worldFirstZoneBlockedUntilMs;
+          }
+          return;
+        }
+        if (nowMs >= nextGreenGridZoneSpawnAtMs) {
+          spawnGreenGridZonePattern(sceneRef, nowMs);
+        }
+        return;
+      }
+
+      const remainingMs = Math.max(0, greenGridZonePattern.expiresAtMs - nowMs);
+      greenGridZoneInstructionText?.setText(greenGridZonePatternInstructionText);
+      greenGridZoneCountdownText?.setText("");
+      greenGridZonePattern.countdownText?.setText(formatGreenGridZoneFloorCountdownLabel(remainingMs));
+      greenGridZonePattern.overlay?.setAlpha(0.24 + Math.sin(nowMs / 160) * 0.05);
+
+      if (remainingMs <= 0) {
+        const playerInsideAtTimeout = isPlayerInsideGreenGridZonePattern();
+        if (!playerInsideAtTimeout && playerHealth > 0 && greenGridZonePatternMissDamage > 0) {
+          applyPlayerDamage(sceneRef, greenGridZonePatternMissDamage);
+        }
+        clearGreenGridZonePattern();
+        scheduleNextGreenGridZoneSpawn(nowMs);
+      }
+    };
+
     const scene = {
       preload() { },
       create() {
         sceneStartAtMs = this.time.now;
         this.cameras.main.setBackgroundColor("#1e293b");
-        this.add.grid(0, 0, raidGridWidthPx * 2, raidGridHeightPx * 2, 28, 28, 0x0f172a, 0.35, 0x334155, 0.2).setOrigin(0);
+        this.add
+          .grid(
+            0,
+            0,
+            raidGridWidthPx * 2,
+            raidGridHeightPx * 2,
+            arenaGridCellSizePx,
+            arenaGridCellSizePx,
+            0x0f172a,
+            0.35,
+            0x334155,
+            0.2
+          )
+          .setOrigin(0);
         this.add.text(8, 6, `${movementKeyLetters.up}${movementKeyLetters.down}${movementKeyLetters.left}${movementKeyLetters.right} 이동`, {
           color: "#cbd5e1",
           fontFamily: "Pretendard, Noto Sans KR, sans-serif",
@@ -4656,6 +5010,20 @@ export function HealerPracticeSimulator() {
           .setDepth(5)
           .setStroke("#1e293b", 3);
         updateRaidBurstCountdownText(this.time.now);
+        if (greenGridZonePatternEnabled) {
+          const infoStartY = GLOBAL_SHOW_CANVAS_COMBAT_TIME ? 24 : 20;
+          greenGridZoneInstructionText = this.add
+            .text(raidGridWidthPx / 2, infoStartY, "", {
+              color: "#86efac",
+              fontFamily: "Pretendard, Noto Sans KR, sans-serif",
+              fontSize: "13px",
+              fontStyle: "700"
+            })
+            .setOrigin(0.5, 0)
+            .setDepth(5)
+            .setStroke("#14532d", 3);
+          clearGreenGridZonePattern();
+        }
         if (worldFirstZonePatternEnabled) {
           const stripeWidthPx = raidGridWidthPx / worldFirstZonePatternStripeCount;
           const zoneTopColorHex = blendColorHex(worldFirstZonePatternDangerColorHex, 0x0f172a, 0.35);
@@ -4795,6 +5163,7 @@ export function HealerPracticeSimulator() {
 
         nextHazardSpawnAtMs = Number.POSITIVE_INFINITY;
         nextMissileSpawnAtMs = Number.POSITIVE_INFINITY;
+        nextGreenGridZoneSpawnAtMs = Number.POSITIVE_INFINITY;
       },
       update(time, delta) {
         if (!player) {
@@ -4820,6 +5189,7 @@ export function HealerPracticeSimulator() {
           const firstMechanicAtMs = time + mechanicsStartDelayMs;
           nextHazardSpawnAtMs = hazardEnabled ? firstMechanicAtMs : Number.POSITIVE_INFINITY;
           nextMissileSpawnAtMs = missileEnabled ? firstMechanicAtMs : Number.POSITIVE_INFINITY;
+          nextGreenGridZoneSpawnAtMs = greenGridZonePatternEnabled ? firstMechanicAtMs : Number.POSITIVE_INFINITY;
           worldFirstZoneNextScheduledStartIndex = 0;
         }
         updateWorldFirstZoneCycle(this, time);
@@ -4869,6 +5239,10 @@ export function HealerPracticeSimulator() {
 
         if (showPlayerHealthBar) {
           updatePlayerHealthUi();
+        }
+        updateGreenGridZonePattern(this, time);
+        if (playerHealth <= 0) {
+          return;
         }
 
         if (hazardEnabled && time >= nextHazardSpawnAtMs) {
@@ -5012,10 +5386,15 @@ export function HealerPracticeSimulator() {
 
     return () => {
       stopWorldFirstZoneCycle();
+      clearGreenGridZonePattern();
       worldFirstZoneOverlays.forEach((overlay) => overlay?.destroy());
       worldFirstZoneOverlays = [];
       worldFirstZoneStatusText?.destroy();
       worldFirstZoneStatusText = null;
+      greenGridZoneInstructionText?.destroy();
+      greenGridZoneInstructionText = null;
+      greenGridZoneCountdownText?.destroy();
+      greenGridZoneCountdownText = null;
       hazards.forEach(clearHazard);
       hazards = [];
       missiles.forEach(clearMissile);
@@ -5047,7 +5426,7 @@ export function HealerPracticeSimulator() {
     raidGridHeightPx,
     activeDifficultyKey,
     activeCombatHealerSlug,
-    activeMovementKeyPreset,
+    activeMovementKeys,
     activePhaserDifficultyConfig,
     selectedHealerColorHex
   ]);
@@ -5470,6 +5849,29 @@ export function HealerPracticeSimulator() {
                     </select>
                   </label>
                 </div>
+
+                {normalizeMovementPreset(movementKeyPreset) === "CUSTOM" ? (
+                  <div className="mt-3 rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+                    <p className="text-xs font-semibold text-slate-100">커스텀 이동키</p>
+                    <p className="mt-1 text-[11px] leading-tight text-slate-400">
+                      전투 이동 입력에 직접 사용됩니다. 여기에 넣은 키는 스킬 단축키로 배정할 수 없습니다.
+                    </p>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      {CUSTOM_MOVEMENT_DIRECTION_OPTIONS.map((option) => (
+                        <label className="text-xs text-slate-300" key={option.value}>
+                          {option.label}
+                          <input
+                            className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs leading-tight text-slate-100"
+                            disabled={running}
+                            maxLength={12}
+                            onChange={(event) => handleCustomMovementKeyChange(option.value, event.target.value)}
+                            value={customMovementKeys[option.value] ?? ""}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="mt-3 space-y-2">
                   <label className="flex items-center gap-2 text-sm text-slate-200">
@@ -6077,6 +6479,7 @@ export function HealerPracticeSimulator() {
                           key={player.id}
                           onContextMenu={(event) => event.preventDefault()}
                           onMouseDown={(event) => handleFrameMouseDown(event, player.id)}
+                          onWheel={(event) => handleFrameWheel(event, player.id)}
                           onMouseEnter={() => {
                             setHoveredTargetId(player.id);
                             hoveredTargetRef.current = player.id;

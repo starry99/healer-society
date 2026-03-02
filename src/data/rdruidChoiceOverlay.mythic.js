@@ -163,7 +163,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_druid_convokethespirits.jpg"
         }
       ],
-      "selectedIndex": 0
+      "selectedIndex": 1
     },
     "rdruid-spec-153": {
       "options": [
@@ -238,7 +238,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_cloth_outdooremeralddream_d_01_buckle.jpg"
         }
       ],
-      "selectedIndex": 0
+      "selectedIndex": 1
     }
   }
 };

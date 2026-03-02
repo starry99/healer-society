@@ -810,9 +810,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "무성한 생장",
         "href": "https://www.wowhead.com/ko/spell=404521/무성한-생장",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_resistnature.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 404521,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "rdruid-spec-119",
@@ -854,9 +854,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "멈출 수 없는 성장",
         "href": "https://www.wowhead.com/ko/spell=382559/%EB%A9%88%EC%B6%9C-%EC%88%98-%EC%97%86%EB%8A%94-%EC%84%B1%EC%9E%A5?def=108143&rank=1",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_flourish.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 382559,
-        "rank": "0/2"
+        "rank": "2/2"
       },
       {
         "id": "rdruid-spec-129",
@@ -865,9 +865,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "신속한 치유 연마",
         "href": "https://www.wowhead.com/ko/spell=470549/신속한-치유-연마",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_empoweredtouch.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 470549,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "rdruid-spec-131",

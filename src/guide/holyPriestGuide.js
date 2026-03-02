@@ -12,6 +12,7 @@ export const holyPriestGuideContent = {
     }
   },
   talents: {
+    disabledModes: ["mythic"],
     contentByMode: {
       raid:
         "현 기준 핵심 운용 포인트 중 하나는 [[치유의 기원#33076]]을 통한 [[강복]] 활용입니다. [[치유의 기원#33076]]을 꾸준히 시전하면 주기적으로 강복이 발동하며, 발동 시 다음 [[순간 치유#2061]]가 [[강복]]으로 대체되어 더 강한 직접 치유를 제공합니다.\n\n" +

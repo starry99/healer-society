@@ -44,13 +44,18 @@ function SimulationPage() {
         <Dither
           waveColor={[0.25, 0.15, 0.8]}
           disableAnimation={false}
-          enableMouseInteraction
+          enableMouseInteraction={false}
           mouseRadius={0.35}
           colorNum={4}
           pixelSize={2}
           waveAmplitude={0.3}
           waveFrequency={3}
           waveSpeed={0.025}
+          targetFps={24}
+          dpr={0.75}
+          antialias={false}
+          preserveDrawingBuffer={false}
+          powerPreference="low-power"
         />
       </div>
       <NavBar />

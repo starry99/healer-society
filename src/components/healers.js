@@ -19,17 +19,29 @@ import { holyPaladinTalentLayout as holyPaladinTalentLayoutMythic } from "../dat
 import { holyPaladinTreesFromCopy } from "../data/hpalTrees.fromCopy";
 import { holyPaladinTreesFromCopy as holyPaladinTreesMythic } from "../data/hpalTrees.mythic";
 import { hpriestChoiceOverlayFromCopy } from "../data/hpriestChoiceOverlay.fromCopy";
+import { hpriestChoiceOverlayFromCopy as hpriestChoiceOverlayMythic } from "../data/hpriestChoiceOverlay.mythic";
 import { holyPriestTalentLayout } from "../data/hpriestLayout.fromCopy";
+import { holyPriestTalentLayout as holyPriestTalentLayoutMythic } from "../data/hpriestLayout.mythic";
 import { holyPriestTreesFromCopy } from "../data/hpriestTrees.fromCopy";
+import { holyPriestTreesFromCopy as holyPriestTreesMythic } from "../data/hpriestTrees.mythic";
 import { mwChoiceOverlayFromCopy } from "../data/mwChoiceOverlay.fromCopy";
+import { mwChoiceOverlayFromCopy as mwChoiceOverlayMythic } from "../data/mwChoiceOverlay.mythic";
 import { mistweaverTalentLayout } from "../data/mwLayout.fromCopy";
+import { mistweaverTalentLayout as mistweaverTalentLayoutMythic } from "../data/mwLayout.mythic";
 import { mistweaverTreesFromCopy } from "../data/mwTrees.fromCopy";
+import { mistweaverTreesFromCopy as mistweaverTreesMythic } from "../data/mwTrees.mythic";
 import { presChoiceOverlayFromCopy } from "../data/presChoiceOverlay.fromCopy";
+import { presChoiceOverlayFromCopy as presChoiceOverlayMythic } from "../data/presChoiceOverlay.mythic";
 import { preservationEvokerTalentLayout } from "../data/presLayout.fromCopy";
+import { preservationEvokerTalentLayout as preservationEvokerTalentLayoutMythic } from "../data/presLayout.mythic";
 import { preservationEvokerTreesFromCopy } from "../data/presTrees.fromCopy";
+import { preservationEvokerTreesFromCopy as preservationEvokerTreesMythic } from "../data/presTrees.mythic";
 import { rdruidChoiceOverlayFromCopy } from "../data/rdruidChoiceOverlay.fromCopy";
+import { rdruidChoiceOverlayFromCopy as rdruidChoiceOverlayMythic } from "../data/rdruidChoiceOverlay.mythic";
 import { restorationDruidTalentLayout } from "../data/rdruidLayout.fromCopy";
+import { restorationDruidTalentLayout as restorationDruidTalentLayoutMythic } from "../data/rdruidLayout.mythic";
 import { restorationDruidTreesFromCopy } from "../data/rdruidTrees.fromCopy";
+import { restorationDruidTreesFromCopy as restorationDruidTreesMythic } from "../data/rdruidTrees.mythic";
 import { rshamChoiceOverlayFromCopy } from "../data/rshamChoiceOverlay.fromCopy";
 import { restorationShamanTalentLayout } from "../data/rshamLayout.fromCopy";
 import { restorationShamanTreesFromCopy } from "../data/rshamTrees.fromCopy";
@@ -106,6 +118,18 @@ export const healers = [
     talentLayout: holyPriestTalentLayout,
     talentTrees: holyPriestTreesFromCopy,
     talentChoiceOverlay: hpriestChoiceOverlayFromCopy,
+    talentByMode: {
+      raid: {
+        talentLayout: holyPriestTalentLayout,
+        talentTrees: holyPriestTreesFromCopy,
+        talentChoiceOverlay: hpriestChoiceOverlayFromCopy
+      },
+      mythic: {
+        talentLayout: holyPriestTalentLayoutMythic,
+        talentTrees: holyPriestTreesMythic,
+        talentChoiceOverlay: hpriestChoiceOverlayMythic
+      }
+    },
     sections: buildGuideSections(holyPriestGuideContent)
   },
   {
@@ -114,11 +138,23 @@ export const healers = [
     name: "회복 드루이드",
     classIcon: wowSpecIcons.restorationDruid,
     color: "#FF7C0A",
-    enabled: false,
-    lastEdited: "2026-02-13",
+    enabled: true,
+    lastEdited: "2026-03-03",
     talentLayout: restorationDruidTalentLayout,
     talentTrees: restorationDruidTreesFromCopy,
     talentChoiceOverlay: rdruidChoiceOverlayFromCopy,
+    talentByMode: {
+      raid: {
+        talentLayout: restorationDruidTalentLayout,
+        talentTrees: restorationDruidTreesFromCopy,
+        talentChoiceOverlay: rdruidChoiceOverlayFromCopy
+      },
+      mythic: {
+        talentLayout: restorationDruidTalentLayoutMythic,
+        talentTrees: restorationDruidTreesMythic,
+        talentChoiceOverlay: rdruidChoiceOverlayMythic
+      }
+    },
     sections: buildGuideSections(restorationDruidGuideContent)
   },
   {
@@ -145,6 +181,18 @@ export const healers = [
     talentLayout: preservationEvokerTalentLayout,
     talentTrees: preservationEvokerTreesFromCopy,
     talentChoiceOverlay: presChoiceOverlayFromCopy,
+    talentByMode: {
+      raid: {
+        talentLayout: preservationEvokerTalentLayout,
+        talentTrees: preservationEvokerTreesFromCopy,
+        talentChoiceOverlay: presChoiceOverlayFromCopy
+      },
+      mythic: {
+        talentLayout: preservationEvokerTalentLayoutMythic,
+        talentTrees: preservationEvokerTreesMythic,
+        talentChoiceOverlay: presChoiceOverlayMythic
+      }
+    },
     sections: buildGuideSections(preservationEvokerGuideContent)
   },
   {
@@ -158,6 +206,18 @@ export const healers = [
     talentLayout: mistweaverTalentLayout,
     talentTrees: mistweaverTreesFromCopy,
     talentChoiceOverlay: mwChoiceOverlayFromCopy,
+    talentByMode: {
+      raid: {
+        talentLayout: mistweaverTalentLayout,
+        talentTrees: mistweaverTreesFromCopy,
+        talentChoiceOverlay: mwChoiceOverlayFromCopy
+      },
+      mythic: {
+        talentLayout: mistweaverTalentLayoutMythic,
+        talentTrees: mistweaverTreesMythic,
+        talentChoiceOverlay: mwChoiceOverlayMythic
+      }
+    },
     sections: buildGuideSections(mistweaverMonkGuideContent)
   }
 ];

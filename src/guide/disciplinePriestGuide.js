@@ -205,6 +205,11 @@ export const disciplinePriestGuideContent = {
         url: "https://discord.com/invite/WarcraftPriests",
         description: "와우는 각 직업 디코가 가장 큰 커뮤니티입니다. 가장 많은 정보가 있지만, 영어라는 단점이 있습니다."
       },
+      {
+        title: "Questionably Epic Live",
+        url: "https://questionablyepic.com/live/",
+        description: "힐러에게 아주 유용한 템 시뮬레이션 사이트입니다."
+      },
     ]
   }
 };
