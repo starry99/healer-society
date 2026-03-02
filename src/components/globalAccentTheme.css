@@ -1,0 +1,79 @@
+:root {
+  --accent-base: #4026cc;
+  --accent-glow: #6a50f0;
+  --accent-strong: #aa97ff;
+  --accent-text: #dacfff;
+  --accent-fallback: #aa97ff;
+  --accent-text-muted: #dacfffd6;
+  --accent-border: #aa97ff9e;
+  --accent-border-soft: #aa97ff80;
+  --accent-border-hover: #aa97ff94;
+  --accent-bg-subtle: #4026cc1a;
+  --accent-bg-soft: #4026cc33;
+  --accent-button-hover: #aa97ffdb;
+  --accent-focus: #aa97ffb8;
+  --accent-left-border: #aa97ff6b;
+  --accent-shadow: #6a50f06b;
+}
+
+.site-accent-text {
+  color: var(--accent-text);
+}
+
+.site-accent-text-muted {
+  color: var(--accent-text-muted);
+}
+
+.site-accent-hover-text:hover {
+  color: var(--accent-text);
+}
+
+.site-accent-border {
+  border-color: var(--accent-border);
+}
+
+.site-accent-border-soft {
+  border-color: var(--accent-border-soft);
+}
+
+.site-accent-hover-border:hover {
+  border-color: var(--accent-border-hover);
+}
+
+.site-accent-bg-subtle {
+  background-color: var(--accent-bg-subtle);
+}
+
+.site-accent-bg-soft {
+  background-color: var(--accent-bg-soft);
+}
+
+.site-accent-button {
+  background-color: var(--accent-strong);
+  color: #020617;
+}
+
+.site-accent-button:hover {
+  background-color: var(--accent-button-hover);
+}
+
+.site-accent-focus:focus {
+  border-color: var(--accent-focus);
+}
+
+.site-accent-left-border {
+  border-left-color: var(--accent-left-border);
+}
+
+.site-accent-shadow {
+  box-shadow: 0 12px 28px var(--accent-shadow);
+}
+
+.site-accent-outline-button {
+  border-color: var(--accent-border);
+  color: var(--accent-text);
+}
+
+.site-accent-outline-button:hover {
+  background-color: var(--accent-bg-subtle);
+}

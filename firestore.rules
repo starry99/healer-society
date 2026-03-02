@@ -1,0 +1,410 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        || exists(/databases/$(database)/documents/admin/$(request.auth.uid))
+      );
+    }
+
+    function hasUserProfile() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function requesterProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function requesterUserId() {
+      return requesterProfile().userId;
+    }
+
+    function requesterDisplayName() {
+      return requesterProfile().nicknameNoun + "#" + requesterProfile().nicknameTag;
+    }
+
+    function signedInWithGoogle() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider == "google.com";
+    }
+
+    function commentRateLimitDocPath(uid) {
+      return /databases/$(database)/documents/users/$(uid)/rateLimits/comments;
+    }
+
+    function hasCommentCooldownElapsed(uid) {
+      return !exists(commentRateLimitDocPath(uid))
+        || (
+          get(commentRateLimitDocPath(uid)).data.lastCommentAt is timestamp
+          && request.time >= get(commentRateLimitDocPath(uid)).data.lastCommentAt + duration.value(20, "s")
+        );
+    }
+
+    function hasCommentRateLimitWriteInRequest(uid) {
+      return getAfter(commentRateLimitDocPath(uid)).data.lastCommentAt == request.time
+        && getAfter(commentRateLimitDocPath(uid)).data.updatedAt == request.time;
+    }
+
+    function isValidReplyTarget(guideSlug, sectionId, parentId) {
+      return parentId is string
+        && exists(/databases/$(database)/documents/guides/$(guideSlug)/sections/$(sectionId)/comments/$(parentId))
+        && get(/databases/$(database)/documents/guides/$(guideSlug)/sections/$(sectionId)/comments/$(parentId)).data.parentId == null;
+    }
+
+    match /admins/{uid} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /admin/{uid} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && uid == request.auth.uid;
+      allow create: if signedInWithGoogle()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          "userId",
+          "nicknameNoun",
+          "nicknameTag",
+          "nicknameChangeCount",
+          "createdAt",
+          "nicknameUpdatedAt",
+          "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "userId",
+          "nicknameNoun",
+          "nicknameTag",
+          "nicknameChangeCount",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.userId is string
+        && request.resource.data.nicknameNoun is string
+        && request.resource.data.nicknameNoun.matches("^[A-Za-z가-힣]+$")
+        && request.resource.data.nicknameNoun.size() > 0
+        && request.resource.data.nicknameNoun.size() <= 12
+        && request.resource.data.nicknameTag is string
+        && request.resource.data.nicknameTag.size() == 4
+        && request.resource.data.nicknameChangeCount == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.nicknameUpdatedAt == null
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedInWithGoogle()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          "userId",
+          "nicknameNoun",
+          "nicknameTag",
+          "nicknameChangeCount",
+          "createdAt",
+          "nicknameUpdatedAt",
+          "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "userId",
+          "nicknameNoun",
+          "nicknameTag",
+          "nicknameChangeCount",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.nicknameTag == resource.data.nicknameTag
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.nicknameNoun is string
+        && request.resource.data.nicknameNoun.matches("^[A-Za-z가-힣]+$")
+        && request.resource.data.nicknameNoun.size() > 0
+        && request.resource.data.nicknameNoun.size() <= 12
+        && request.resource.data.nicknameUpdatedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (
+          request.resource.data.nicknameChangeCount is int
+          || request.resource.data.nicknameChangeCount is float
+        )
+        && request.resource.data.nicknameChangeCount
+          == (
+            (
+              (resource.data.nicknameChangeCount is int)
+              || (resource.data.nicknameChangeCount is float)
+            )
+              ? resource.data.nicknameChangeCount
+              : 0
+          ) + 1
+        && (
+          (
+            (
+              (resource.data.nicknameChangeCount is int)
+              || (resource.data.nicknameChangeCount is float)
+            )
+              ? resource.data.nicknameChangeCount
+              : 0
+          ) == 0
+          || (
+            resource.data.nicknameUpdatedAt is timestamp
+            && request.time >= resource.data.nicknameUpdatedAt + duration.value(7, "d")
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /users/{uid}/healerPracticeKeybinds/{healerSlug} {
+      allow read: if signedIn() && uid == request.auth.uid;
+      allow create, update: if signedInWithGoogle()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          "healerSlug",
+          "useClickCasting",
+          "keyboardBindings",
+          "clickCastBindings",
+          "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "healerSlug",
+          "useClickCasting",
+          "keyboardBindings",
+          "clickCastBindings",
+          "updatedAt"
+        ])
+        && request.resource.data.healerSlug is string
+        && request.resource.data.healerSlug == healerSlug
+        && request.resource.data.useClickCasting is bool
+        && request.resource.data.keyboardBindings is map
+        && request.resource.data.clickCastBindings is map
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if signedIn() && uid == request.auth.uid;
+    }
+
+    match /users/{uid}/rateLimits/{rateKey} {
+      allow read: if signedIn() && uid == request.auth.uid;
+      allow create: if signedInWithGoogle()
+        && uid == request.auth.uid
+        && rateKey == "comments"
+        && request.resource.data.keys().hasOnly([
+          "lastCommentAt",
+          "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "lastCommentAt",
+          "updatedAt"
+        ])
+        && request.resource.data.lastCommentAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedInWithGoogle()
+        && uid == request.auth.uid
+        && rateKey == "comments"
+        && request.resource.data.keys().hasOnly([
+          "lastCommentAt",
+          "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "lastCommentAt",
+          "updatedAt"
+        ])
+        && resource.data.lastCommentAt is timestamp
+        && request.time >= resource.data.lastCommentAt + duration.value(20, "s")
+        && request.resource.data.lastCommentAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /healerPracticeRankings/{mapKey}/difficulties/{difficultyKey}/patches/{patchVersion}/healers/{healerSlug}/entries/{entryId} {
+      allow read: if true;
+      allow create: if signedInWithGoogle()
+        && hasUserProfile()
+        && difficultyKey in ["heroic", "mythic", "worldFirstKill"]
+        && request.resource.data.keys().hasOnly([
+          "authUid",
+          "internalUserId",
+          "playerLabel",
+          "healerSlug",
+          "difficultyKey",
+          "difficultyLabel",
+          "patchVersion",
+          "mapKey",
+          "mapLabel",
+          "score",
+          "scoreBreakdown",
+          "combatRecordSection",
+          "meterSection",
+          "runMeta",
+          "createdAtClientMs",
+          "createdAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "authUid",
+          "playerLabel",
+          "healerSlug",
+          "difficultyKey",
+          "difficultyLabel",
+          "patchVersion",
+          "mapKey",
+          "mapLabel",
+          "score",
+          "scoreBreakdown",
+          "combatRecordSection",
+          "meterSection",
+          "runMeta",
+          "createdAtClientMs",
+          "createdAt"
+        ])
+        && request.resource.data.authUid == request.auth.uid
+        && request.resource.data.mapKey == mapKey
+        && request.resource.data.difficultyKey == difficultyKey
+        && request.resource.data.patchVersion == patchVersion
+        && request.resource.data.healerSlug is string
+        && request.resource.data.healerSlug == healerSlug
+        && request.resource.data.playerLabel is string
+        && request.resource.data.playerLabel.size() > 0
+        && request.resource.data.playerLabel.size() <= 32
+        && request.resource.data.difficultyLabel is string
+        && request.resource.data.mapLabel is string
+        && (
+          (request.resource.data.score is int)
+          || (request.resource.data.score is float)
+        )
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 100
+        && (
+          request.resource.data.internalUserId == null
+          || request.resource.data.internalUserId == requesterUserId()
+        )
+        && request.resource.data.scoreBreakdown is map
+        && request.resource.data.combatRecordSection is map
+        && request.resource.data.meterSection is map
+        && request.resource.data.runMeta is map
+        && (
+          (request.resource.data.createdAtClientMs is int)
+          || (request.resource.data.createdAtClientMs is float)
+        )
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /userPublicProfiles/{userId} {
+      allow read: if true;
+      allow create, update: if signedInWithGoogle()
+        && hasUserProfile()
+        && userId == requesterUserId()
+        && request.resource.data.keys().hasOnly([
+          "userId",
+          "nicknameNoun",
+          "nicknameTag",
+          "authUid",
+          "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "userId",
+          "nicknameNoun",
+          "nicknameTag",
+          "authUid",
+          "updatedAt"
+        ])
+        && request.resource.data.userId == requesterUserId()
+        && request.resource.data.authUid == request.auth.uid
+        && request.resource.data.nicknameNoun is string
+        && request.resource.data.nicknameNoun.matches("^[A-Za-z가-힣]+$")
+        && request.resource.data.nicknameNoun.size() > 0
+        && request.resource.data.nicknameNoun.size() <= 12
+        && request.resource.data.nicknameTag is string
+        && request.resource.data.nicknameTag == requesterProfile().nicknameTag
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /guides/{guideSlug}/sections/{sectionId}/comments/{commentId} {
+      allow read: if true;
+      allow create: if signedInWithGoogle()
+        && request.resource.data.keys().hasOnly([
+          "text",
+          "parentId",
+          "authorUserId",
+          "authorName",
+          "createdAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "text",
+          "authorUserId",
+          "authorName",
+          "createdAt"
+        ])
+        && request.resource.data.authorUserId is string
+        && hasUserProfile()
+        && request.resource.data.authorUserId == requesterUserId()
+        && request.resource.data.authorName == requesterDisplayName()
+        && request.resource.data.authorName is string
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 100
+        && request.resource.data.createdAt == request.time
+        && requesterProfile().createdAt is timestamp
+        && request.time >= requesterProfile().createdAt + duration.value(2, "m")
+        && hasCommentCooldownElapsed(request.auth.uid)
+        && hasCommentRateLimitWriteInRequest(request.auth.uid)
+        && (
+          request.resource.data.parentId == null
+          || isValidReplyTarget(guideSlug, sectionId, request.resource.data.parentId)
+        );
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /guides/{guideSlug}/sections/{sectionId}/votes/{voteId} {
+      allow read: if true;
+      allow create: if signedInWithGoogle()
+        && hasUserProfile()
+        && requesterProfile().createdAt is timestamp
+        && request.time >= requesterProfile().createdAt + duration.value(2, "m")
+        && request.resource.data.keys().hasOnly([
+          "commentId",
+          "uid",
+          "value",
+          "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "commentId",
+          "uid",
+          "value",
+          "updatedAt"
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.commentId is string
+        && request.resource.data.value in [-1, 1]
+        && voteId == request.resource.data.commentId + "_" + request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && exists(/databases/$(database)/documents/guides/$(guideSlug)/sections/$(sectionId)/comments/$(request.resource.data.commentId));
+      allow update: if signedInWithGoogle()
+        && hasUserProfile()
+        && requesterProfile().createdAt is timestamp
+        && request.time >= requesterProfile().createdAt + duration.value(2, "m")
+        && request.resource.data.keys().hasOnly([
+          "commentId",
+          "uid",
+          "value",
+          "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "commentId",
+          "uid",
+          "value",
+          "updatedAt"
+        ])
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.commentId == resource.data.commentId
+        && request.resource.data.value in [-1, 1]
+        && voteId == request.resource.data.commentId + "_" + request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && exists(/databases/$(database)/documents/guides/$(guideSlug)/sections/$(sectionId)/comments/$(request.resource.data.commentId));
+      allow delete: if (signedIn() && resource.data.uid == request.auth.uid) || isAdmin();
+    }
+  }
+}

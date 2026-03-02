@@ -1,0 +1,6701 @@
+import Phaser from "phaser";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { healers } from "../healers";
+import { useAuthSession } from "../../hooks/useAuthSession";
+import { db, serverTimestamp } from "../../lib/firebase";
+import {
+  HOLY_PALADIN_ACTIVE_SPELL_KEYS,
+  HOLY_PALADIN_CLICK_CASTABLE_KEYS,
+  HOLY_PALADIN_DEFAULT_KEYBINDS,
+  HOLY_PALADIN_PRACTICE_SPELLS,
+  MIN_RAID_SIZE,
+  HolyPaladinPracticeEngine,
+  buildRandomRaidRoster
+} from "../../lib/simulators/holyPaladinPracticeEngine";
+import {
+  RESTORATION_DRUID_ACTIVE_SPELL_KEYS,
+  RESTORATION_DRUID_CLICK_CASTABLE_KEYS,
+  RESTORATION_DRUID_DEFAULT_KEYBINDS,
+  RESTORATION_DRUID_PRACTICE_SPELLS,
+  RestorationDruidPracticeEngine
+} from "../../lib/simulators/restorationDruidPracticeEngine";
+import {
+  BLOCKED_KEYBOARD_BINDING_TOKENS,
+  CANDIDATE_NAME_POOL,
+  COOLDOWN_MANAGER_LAYOUT_CONFIG,
+  DEFAULT_PRACTICE_MAP_KEY,
+  DEFAULT_SPELL_ICON_URL,
+  DEFAULT_TANK_DAMAGE_TAKEN_MULTIPLIER,
+  GLOBAL_GAMEOVER_DEATH_THRESHOLD,
+  GLOBAL_GAMEOVER_ON_SELF_DEATH,
+  GLOBAL_LEECH_HEALING_RATIO,
+  GLOBAL_SHOW_CANVAS_COMBAT_TIME,
+  GLOBAL_SUCCESS_MESSAGE_TEXT,
+  GLOBAL_SUCCESS_ON_TIMEOUT_WITHOUT_GAMEOVER,
+  HEALER_PRACTICE_SCORE_COMMON_CONFIG,
+  HEALER_PRACTICE_SCORE_CPM_CONFIG_BY_SLUG,
+  HEALER_PRACTICE_SCORE_HEALER_CONFIG_BY_SLUG,
+  HEALER_PRACTICE_DESKTOP_ONLY_CONFIG,
+  HEALER_PRACTICE_DISCLAIMER_BY_HEALER,
+  HEALER_PRACTICE_PATCH_META_BY_HEALER,
+  HEALER_PRACTICE_RANKING_PATCH_CONFIG,
+  HEALER_PRACTICE_MAP_OPTIONS,
+  DIFFICULTY_OPTIONS,
+  ENGINE_STEP_MS,
+  FIXED_TANK_ANCHORS,
+  HANGUL_TO_QWERTY_KEY_ALIAS,
+  MODIFIER_ONLY_KEYS,
+  MODIFIER_OPTIONS,
+  MOUSE_BINDING_OPTIONS,
+  MOVEMENT_KEY_OPTIONS,
+  MOVEMENT_PRESET_KEYS,
+  MOVEMENT_RESTRICTED_KEY_LIST_BY_PRESET,
+  PHASER_ARENA_VISUAL_CONFIG,
+  PHASER_DIFFICULTY_MECHANIC_TUNING,
+  PRACTICE_DIFFICULTY_TUNING,
+  RAID_CLASS_POOL,
+  RAID_FRAME_VISUAL_CONFIG,
+  RAID_LAYOUT_OPTIONS,
+  SPELL_QUEUE_WINDOW_MS,
+  SPECIAL_PROC_OVERLAY_ICON_SIZE_PX,
+  SPECIAL_PROC_OVERLAY_TOP_OFFSET_PX,
+  TANK_CLASS_POOL,
+  TANK_ROLE_META,
+  UI_STEP_MS,
+  VALID_MODIFIERS
+} from "./healerPracticeGlobalSettings";
+import {
+  COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
+  COOLDOWN_MANAGER_SPELL_KEYS,
+  COOLDOWN_MANAGER_SPELL_META,
+  HOLY_PALADIN_ADDED_TALENT_TOGGLES,
+  HOLY_PALADIN_CRIT_CONFIG,
+  HOLY_PALADIN_DAWNLIGHT_CONFIG,
+  HOLY_PALADIN_DEFAULT_STATS,
+  HOLY_PALADIN_SUN_SEAR_CONFIG,
+  DEFAULT_CLICK_CAST_PREFERRED,
+  HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG,
+  HOLY_PALADIN_SPECIAL_PROC_DISPLAY_CONFIG,
+  SPELL_ICON_URL_BY_KEY
+} from "./holyPaladinPracticeSettings";
+import {
+  RESTORATION_DRUID_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
+  RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_KEYS,
+  RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_META,
+  RESTORATION_DRUID_CRIT_CONFIG,
+  RESTORATION_DRUID_DEFAULT_CLICK_CAST_PREFERRED,
+  RESTORATION_DRUID_DEFAULT_STATS,
+  RESTORATION_DRUID_HEALER_SLUG,
+  RESTORATION_DRUID_SPECIAL_PROC_DISPLAY_CONFIG,
+  RESTORATION_DRUID_TREEANT_CONFIG,
+  RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY
+} from "./restorationDruidPracticeSettings";
+
+const FIXED_TANK_NAME_SET = new Set(FIXED_TANK_ANCHORS.map((anchor) => anchor.name));
+const MY_PLAYER_NAME = "나";
+const HOLY_PALADIN_HEALER_SLUG = "holy-paladin";
+const HOLY_PALADIN_FEEDBACK_CPM_MIN = 40;
+const HOLY_PALADIN_FEEDBACK_SKILL_HIT_DAMAGE_MAX = 100;
+const HOLY_PALADIN_FEEDBACK_SELF_HEAL_RATIO_MAX_PCT = 10;
+const HOLY_PALADIN_FEEDBACK_WASTED_HOLY_POWER_MAX = 5;
+const HOLY_PALADIN_FEEDBACK_OVERHEAL_MAX_PCT = 20;
+const DEFAULT_IMPLEMENTED_HEALER_SLUG = HOLY_PALADIN_HEALER_SLUG;
+const IMPLEMENTED_HEALER_SLUGS = new Set([HOLY_PALADIN_HEALER_SLUG]); // 여기서 추가하면 카드 열림
+const MY_RAID_FRAME_POSITION_OPTIONS = Object.freeze([
+  Object.freeze({ value: "random", label: "랜덤 위치 (기본)" }),
+  Object.freeze({ value: "firstSlotFixed", label: "첫자리 고정 (1,1)" })
+]);
+
+const MOUSE_UI_LABEL_BY_TOKEN = MOUSE_BINDING_OPTIONS.reduce((acc, option) => {
+  acc[option.token] = option.label;
+  return acc;
+}, {});
+
+const MOUSE_CDM_LABEL_BY_TOKEN = MOUSE_BINDING_OPTIONS.reduce((acc, option) => {
+  acc[option.token] = String(option.label_cdm ?? option.label ?? option.token ?? "");
+  return acc;
+}, {});
+const VALID_MOUSE_BINDING_TOKEN_SET = new Set(MOUSE_BINDING_OPTIONS.map((option) => option.token));
+const HEALER_PRACTICE_KEYBIND_PROFILE_SUBCOLLECTION = "healerPracticeKeybinds";
+const HEALER_PRACTICE_RANKING_COLLECTION = "healerPracticeRankings";
+const RANKING_ENABLED_DIFFICULTY_KEYS = new Set(["heroic", "mythic", "worldFirstKill"]);
+const RANKING_DIFFICULTY_TAB_KEYS = Object.freeze(["heroic", "mythic", "worldFirstKill"]);
+const RANKING_FETCH_LIMIT = 200;
+const HEALER_PRACTICE_OPEN_RANKING_EVENT = "healer-practice-open-ranking";
+
+function normalizeRankingPatchVersion(value, fallback = "12.0.1") {
+  const normalized = String(value ?? "").trim();
+  return normalized || fallback;
+}
+
+function pctToChance(value) {
+  const pct = Number(value);
+  if (!Number.isFinite(pct)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(1, pct / 100));
+}
+
+const HEAL_METER_SPELL_META_BY_HEALER = Object.freeze({
+  [HOLY_PALADIN_HEALER_SLUG]: Object.freeze({
+    holyShock: Object.freeze({
+      name: HOLY_PALADIN_PRACTICE_SPELLS.holyShock.name,
+      iconUrl: SPELL_ICON_URL_BY_KEY.holyShock,
+      spellId: 20473
+    }),
+    flashOfLight: Object.freeze({
+      name: HOLY_PALADIN_PRACTICE_SPELLS.flashOfLight.name,
+      iconUrl: SPELL_ICON_URL_BY_KEY.flashOfLight,
+      spellId: 19750
+    }),
+    holyLight: Object.freeze({
+      name: HOLY_PALADIN_PRACTICE_SPELLS.holyLight.name,
+      iconUrl: SPELL_ICON_URL_BY_KEY.holyLight,
+      spellId: 82326
+    }),
+    lightOfDawn: Object.freeze({
+      name: HOLY_PALADIN_PRACTICE_SPELLS.lightOfDawn.name,
+      iconUrl: SPELL_ICON_URL_BY_KEY.lightOfDawn,
+      spellId: 85222
+    }),
+    eternalFlame: Object.freeze({
+      name: HOLY_PALADIN_PRACTICE_SPELLS.eternalFlame.name,
+      iconUrl: SPELL_ICON_URL_BY_KEY.eternalFlame,
+      spellId: 156322
+    }),
+    divineBlessing: Object.freeze({
+      name: HOLY_PALADIN_PRACTICE_SPELLS.divineBlessing.name,
+      iconUrl: SPELL_ICON_URL_BY_KEY.divineBlessing,
+      spellId: 633
+    }),
+    divineToll: Object.freeze({
+      name: HOLY_PALADIN_PRACTICE_SPELLS.divineToll.name,
+      iconUrl: SPELL_ICON_URL_BY_KEY.divineToll,
+      spellId: 375576
+    }),
+    dawnlight: Object.freeze({
+      name: "새벽빛",
+      iconUrl: SPELL_ICON_URL_BY_KEY.dawnlight || SPELL_ICON_URL_BY_KEY.lightOfDawn,
+      spellId: 431377
+    }),
+    beaconTransfer: Object.freeze({
+      name: "빛의 봉화",
+      iconUrl: SPELL_ICON_URL_BY_KEY.beaconOfLight,
+      spellId: 53563
+    }),
+    beaconOfSaviorTransfer: Object.freeze({
+      name: "구세주의 봉화",
+      iconUrl: SPELL_ICON_URL_BY_KEY.beaconOfSavior,
+      spellId: 1244878
+    }),
+    beaconOfSaviorShield: Object.freeze({
+      name: "구세주의 봉화 보호막",
+      iconUrl: SPELL_ICON_URL_BY_KEY.beaconOfSavior,
+      spellId: 1245368
+    }),
+    sunSear: Object.freeze({
+      name: "불사르는 태양",
+      iconUrl: SPELL_ICON_URL_BY_KEY.sunSear || SPELL_ICON_URL_BY_KEY.holyShock,
+      spellId: 431413
+    }),
+    benevolentHealer: Object.freeze({
+      name: "관대한 치유사",
+      iconUrl: SPELL_ICON_URL_BY_KEY.flashOfLight,
+      spellId: 469435
+    }),
+    leech: Object.freeze({
+      name: "생기흡수",
+      iconUrl: DEFAULT_SPELL_ICON_URL,
+      spellId: 143924
+    })
+  }),
+  [RESTORATION_DRUID_HEALER_SLUG]: Object.freeze({
+    rejuvenation: Object.freeze({
+      name: RESTORATION_DRUID_PRACTICE_SPELLS.rejuvenation.name,
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.rejuvenation,
+      spellId: 774
+    }),
+    regrowth: Object.freeze({
+      name: RESTORATION_DRUID_PRACTICE_SPELLS.regrowth.name,
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.regrowth,
+      spellId: 8936
+    }),
+    wildGrowth: Object.freeze({
+      name: RESTORATION_DRUID_PRACTICE_SPELLS.wildGrowth.name,
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.wildGrowth,
+      spellId: 48438
+    }),
+    lifebloom: Object.freeze({
+      name: RESTORATION_DRUID_PRACTICE_SPELLS.lifebloom.name,
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.lifebloom,
+      spellId: 33763
+    }),
+    swiftmend: Object.freeze({
+      name: RESTORATION_DRUID_PRACTICE_SPELLS.swiftmend.name,
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.swiftmend,
+      spellId: 18562
+    }),
+    convokeSpirits: Object.freeze({
+      name: RESTORATION_DRUID_PRACTICE_SPELLS.convokeSpirits.name,
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.convokeSpirits,
+      spellId: 391528
+    }),
+    tranquility: Object.freeze({
+      name: RESTORATION_DRUID_PRACTICE_SPELLS.tranquility.name,
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.tranquility,
+      spellId: 740
+    }),
+    barkskin: Object.freeze({
+      name: RESTORATION_DRUID_PRACTICE_SPELLS.barkskin.name,
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.barkskin,
+      spellId: 22812
+    }),
+    nurture: Object.freeze({
+      name: "육성",
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.nurture,
+      spellId: 422090
+    }),
+    everbloom: Object.freeze({
+      name: "상록숲",
+      iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.everbloom,
+      spellId: 1244331
+    }),
+    leech: Object.freeze({
+      name: "생기흡수",
+      iconUrl: DEFAULT_SPELL_ICON_URL,
+      spellId: 143924
+    })
+  })
+});
+
+const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
+  [HOLY_PALADIN_HEALER_SLUG]: Object.freeze({
+    engineClass: HolyPaladinPracticeEngine,
+    activeSpellKeys: HOLY_PALADIN_ACTIVE_SPELL_KEYS,
+    clickCastableKeys: HOLY_PALADIN_CLICK_CASTABLE_KEYS,
+    defaultKeybinds: HOLY_PALADIN_DEFAULT_KEYBINDS,
+    defaultClickCastPreferred: DEFAULT_CLICK_CAST_PREFERRED,
+    cooldownManagerSpellKeys: COOLDOWN_MANAGER_SPELL_KEYS,
+    cooldownManagerNonDisplaySpellKeys: COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
+    cooldownManagerSpellMeta: COOLDOWN_MANAGER_SPELL_META,
+    spellIconUrlByKey: SPELL_ICON_URL_BY_KEY,
+    practiceSpells: HOLY_PALADIN_PRACTICE_SPELLS,
+    specialProcDisplayConfig: HOLY_PALADIN_SPECIAL_PROC_DISPLAY_CONFIG,
+    healMeterSpellMeta: HEAL_METER_SPELL_META_BY_HEALER[HOLY_PALADIN_HEALER_SLUG],
+    buildEngineConfig: () => ({
+      infusionOfLightProcChance: HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG.procChance,
+      infusionOfLightDurationMs: HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG.durationMs,
+      infusionOfLightFlashOfLightHealMultiplier: HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG.flashOfLightHealMultiplier,
+      infusionOfLightTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.infusionOfLight,
+      handOfFaithTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.handOfFaith,
+      holyRevelationTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.holyRevelation,
+      radiantLightTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.radiantLight,
+      unfadingLightTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.unfadingLight,
+      extricationTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.extrication,
+      dawnlightTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.dawnlight,
+      sunSearTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.sunSear,
+      reclamationTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.reclamation,
+      gloriousDawnTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.gloriousDawn,
+      archangelsBarrierTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.archangelsBarrier,
+      beaconOfSaviorTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.beaconOfSavior,
+      lightOfMartyrTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.lightOfMartyr,
+      benevolentHealerTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.benevolentHealer,
+      secondSunriseTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.secondSunrise,
+      intellect: HOLY_PALADIN_DEFAULT_STATS.intellect,
+      hastePct: HOLY_PALADIN_DEFAULT_STATS.hastePct,
+      masteryPct: HOLY_PALADIN_DEFAULT_STATS.masteryPct,
+      baseCritChance: pctToChance(HOLY_PALADIN_DEFAULT_STATS.critPct),
+      defaultCritHealMultiplier: HOLY_PALADIN_CRIT_CONFIG.defaultCritHealMultiplier,
+      holyShockCritChanceBonus: HOLY_PALADIN_CRIT_CONFIG.holyShockCritChanceBonus,
+      holyShockCritHealMultiplier: HOLY_PALADIN_CRIT_CONFIG.holyShockCritHealMultiplier,
+      flashOfLightCritHealMultiplier: HOLY_PALADIN_CRIT_CONFIG.flashOfLightCritHealMultiplier,
+      eternalFlameCritChanceBonusAtZeroHp: HOLY_PALADIN_CRIT_CONFIG.eternalFlameCritChanceBonusAtZeroHp,
+      sunSearEnabled: HOLY_PALADIN_SUN_SEAR_CONFIG.enabled,
+      sunSearTotalHealRatio: HOLY_PALADIN_SUN_SEAR_CONFIG.totalHealRatio,
+      sunSearDurationMs: HOLY_PALADIN_SUN_SEAR_CONFIG.durationMs,
+      sunSearTickMs: HOLY_PALADIN_SUN_SEAR_CONFIG.tickMs,
+      dawnlightChargesFromDivineToll: HOLY_PALADIN_DAWNLIGHT_CONFIG.chargesFromDivineToll,
+      dawnlightEmpowermentDurationMs: HOLY_PALADIN_DAWNLIGHT_CONFIG.empowermentDurationMs,
+      dawnlightTotalHealRatio: HOLY_PALADIN_DAWNLIGHT_CONFIG.totalHealRatio,
+      dawnlightDurationMs: HOLY_PALADIN_DAWNLIGHT_CONFIG.durationMs,
+      dawnlightTickMs: HOLY_PALADIN_DAWNLIGHT_CONFIG.tickMs
+    })
+  }),
+  [RESTORATION_DRUID_HEALER_SLUG]: Object.freeze({
+    engineClass: RestorationDruidPracticeEngine,
+    activeSpellKeys: RESTORATION_DRUID_ACTIVE_SPELL_KEYS,
+    clickCastableKeys: RESTORATION_DRUID_CLICK_CASTABLE_KEYS,
+    defaultKeybinds: RESTORATION_DRUID_DEFAULT_KEYBINDS,
+    defaultClickCastPreferred: RESTORATION_DRUID_DEFAULT_CLICK_CAST_PREFERRED,
+    cooldownManagerSpellKeys: RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_KEYS,
+    cooldownManagerNonDisplaySpellKeys: RESTORATION_DRUID_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
+    cooldownManagerSpellMeta: RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_META,
+    spellIconUrlByKey: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY,
+    practiceSpells: RESTORATION_DRUID_PRACTICE_SPELLS,
+    specialProcDisplayConfig: RESTORATION_DRUID_SPECIAL_PROC_DISPLAY_CONFIG,
+    healMeterSpellMeta: HEAL_METER_SPELL_META_BY_HEALER[RESTORATION_DRUID_HEALER_SLUG],
+    buildEngineConfig: () => ({
+      intellect: RESTORATION_DRUID_DEFAULT_STATS.intellect,
+      hastePct: RESTORATION_DRUID_DEFAULT_STATS.hastePct,
+      baseCritChance: pctToChance(RESTORATION_DRUID_DEFAULT_STATS.critPct),
+      masteryPct: RESTORATION_DRUID_DEFAULT_STATS.masteryPct,
+      defaultCritHealMultiplier: RESTORATION_DRUID_CRIT_CONFIG.defaultCritHealMultiplier,
+      treeantDurationMs: RESTORATION_DRUID_TREEANT_CONFIG.durationMs,
+      treeantNurtureTickMs: RESTORATION_DRUID_TREEANT_CONFIG.nurtureTickMs
+    })
+  })
+});
+
+function resolveHealerPracticeRuntime(slug) {
+  const key = String(slug ?? "").trim();
+  return HEALER_PRACTICE_RUNTIME_BY_SLUG[key] ?? HEALER_PRACTICE_RUNTIME_BY_SLUG[DEFAULT_IMPLEMENTED_HEALER_SLUG];
+}
+
+function createSeededRng(seed) {
+  let state = Math.floor(seed) >>> 0;
+  if (!state) {
+    state = 0x6d2b79f5;
+  }
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function assignRandomClassesToRoster(roster, seed = Date.now()) {
+  const rng = createSeededRng(seed);
+  const classMetaByKey = RAID_CLASS_POOL.reduce((acc, classMeta) => {
+    acc[classMeta.key] = classMeta;
+    return acc;
+  }, {});
+  const classCapsByKey = RAID_CLASS_POOL.reduce((acc, classMeta) => {
+    acc[classMeta.key] = 2;
+    return acc;
+  }, {});
+
+  classCapsByKey.paladin = 0;
+  classCapsByKey.priest = 1;
+  classCapsByKey.deathKnight = 1;
+  classCapsByKey.rogue = Math.min(2, Number(classCapsByKey.rogue ?? 2));
+  classCapsByKey.monk = Math.min(2, Number(classCapsByKey.monk ?? 2));
+
+  const classCountsByKey = {};
+  const assignedClassKeyByIndex = new Map();
+  const assignableIndexes = [];
+
+  const markAssignedClass = (index, classKey) => {
+    const normalizedKey = String(classKey ?? "");
+    if (!normalizedKey) {
+      return;
+    }
+    assignedClassKeyByIndex.set(index, normalizedKey);
+    classCountsByKey[normalizedKey] = (classCountsByKey[normalizedKey] ?? 0) + 1;
+  };
+
+  for (let index = 0; index < roster.length; index += 1) {
+    const player = roster[index];
+    const name = String(player?.name ?? "").trim();
+    if (name === MY_PLAYER_NAME || FIXED_TANK_NAME_SET.has(name)) {
+      continue;
+    }
+    assignableIndexes.push(index);
+  }
+
+  for (let index = assignableIndexes.length - 1; index > 0; index -= 1) {
+    const nextIndex = Math.floor(rng() * (index + 1));
+    [assignableIndexes[index], assignableIndexes[nextIndex]] = [assignableIndexes[nextIndex], assignableIndexes[index]];
+  }
+
+  const forcedClassKeys = ["priest", "deathKnight"];
+  for (const forcedClassKey of forcedClassKeys) {
+    const classMeta = classMetaByKey[forcedClassKey];
+    if (!classMeta || assignableIndexes.length === 0) {
+      continue;
+    }
+    const targetIndex = assignableIndexes.pop();
+    markAssignedClass(targetIndex, forcedClassKey);
+  }
+
+  for (const targetIndex of assignableIndexes) {
+    const availableClassPool = RAID_CLASS_POOL.filter((classMeta) => {
+      const cap = Number(classCapsByKey[classMeta.key]);
+      if (!Number.isFinite(cap) || cap <= 0) {
+        return false;
+      }
+      return (classCountsByKey[classMeta.key] ?? 0) < cap;
+    });
+    const pickedClass =
+      availableClassPool[Math.floor(rng() * availableClassPool.length)] ??
+      classMetaByKey.warrior ??
+      RAID_CLASS_POOL[0];
+    markAssignedClass(targetIndex, pickedClass?.key);
+  }
+
+  return roster.map((player, index) => {
+    const classKey = assignedClassKeyByIndex.get(index);
+    if (!classKey) {
+      return player;
+    }
+
+    const picked = classMetaByKey[classKey] ?? classMetaByKey.warrior ?? RAID_CLASS_POOL[0];
+    const nextPlayer = {
+      ...player,
+      classKey: picked.key,
+      className: picked.name,
+      classColor: picked.color,
+      incomingDamageTakenMultiplier: undefined,
+      maxHp: undefined
+    };
+
+    if (picked.key === "priest") {
+      nextPlayer.incomingDamageTakenMultiplier = 1.1;
+    } else if (picked.key === "deathKnight") {
+      nextPlayer.maxHp = 400000;
+      nextPlayer.incomingDamageTakenMultiplier = 0.9;
+    } else if (picked.key === "warlock") {
+      nextPlayer.maxHp = 400000;
+    }
+
+    return nextPlayer;
+  });
+}
+
+function normalizeSingleKeyboardCharacter(source) {
+  const alias = HANGUL_TO_QWERTY_KEY_ALIAS[source];
+  if (alias) {
+    return alias;
+  }
+  return source.toUpperCase();
+}
+
+function normalizeKey(value) {
+  if (value === " ") {
+    return "SPACE";
+  }
+
+  const source = String(value ?? "").trim();
+  if (!source) {
+    return "";
+  }
+
+  const aliases = {
+    esc: "ESC",
+    escape: "ESC",
+    enter: "ENTER",
+    tab: "TAB",
+    shift: "SHIFT",
+    control: "CTRL",
+    ctrl: "CTRL",
+    alt: "ALT",
+    cmd: "CMD",
+    command: "COMMAND",
+    arrowup: "ARROWUP",
+    arrowdown: "ARROWDOWN",
+    arrowleft: "ARROWLEFT",
+    arrowright: "ARROWRIGHT",
+    space: "SPACE"
+  };
+
+  const alias = aliases[source.toLowerCase()];
+  if (alias) {
+    return alias;
+  }
+
+  if (source.length === 1) {
+    return normalizeSingleKeyboardCharacter(source);
+  }
+
+  return source.toUpperCase().replace(/\s+/g, "");
+}
+
+function normalizeModifier(value) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  return VALID_MODIFIERS.has(normalized) ? normalized : "";
+}
+
+function formatTime(ms) {
+  const safeMs = Math.max(0, Math.floor(ms));
+  const totalSeconds = Math.floor(safeMs / 1000);
+  const minute = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const second = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${minute}:${second}`;
+}
+
+function isTimeoutFinishedSnapshot(snapshot) {
+  const nowMs = Number(snapshot?.nowMs ?? 0);
+  const durationMs = Number(snapshot?.durationMs ?? 0);
+  if (!Number.isFinite(nowMs) || !Number.isFinite(durationMs) || durationMs <= 0) {
+    return false;
+  }
+  return nowMs >= durationMs - ENGINE_STEP_MS;
+}
+
+function resolveDifficultyValue(configByDifficulty, difficultyKey) {
+  if (!configByDifficulty || typeof configByDifficulty !== "object") {
+    return null;
+  }
+  const requestedKey = String(difficultyKey ?? "").trim();
+  if (requestedKey && Object.prototype.hasOwnProperty.call(configByDifficulty, requestedKey)) {
+    return configByDifficulty[requestedKey];
+  }
+  if (Object.prototype.hasOwnProperty.call(configByDifficulty, "normal")) {
+    return configByDifficulty.normal;
+  }
+  const firstKey = Object.keys(configByDifficulty)[0];
+  return firstKey ? configByDifficulty[firstKey] : null;
+}
+
+function clampScore(score, maxPoints) {
+  const safeMaxPoints = Math.max(0, Number(maxPoints) || 0);
+  const safeScore = Number(score);
+  if (!Number.isFinite(safeScore)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(safeMaxPoints, safeScore));
+}
+
+function roundToOneDecimal(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return Math.round(numeric * 10) / 10;
+}
+
+function toMillisFromUnknownTimestamp(value) {
+  if (!value) {
+    return 0;
+  }
+  if (typeof value?.toMillis === "function") {
+    const millis = Number(value.toMillis());
+    return Number.isFinite(millis) ? millis : 0;
+  }
+  const asNumber = Number(value);
+  if (Number.isFinite(asNumber)) {
+    return asNumber;
+  }
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function computeCountPenaltyScore(value, config, defaultMaxPoints = 20) {
+  const maxPoints = Math.max(0, Number(config?.maxPoints ?? defaultMaxPoints) || defaultMaxPoints);
+  const count = Math.max(0, Number(value) || 0);
+  const pointsLostPerUnit = Math.max(0, Number(config?.pointsLostPerUnit ?? 1) || 1);
+  const deductedPoints = Math.floor(count * pointsLostPerUnit + 1e-9);
+  return clampScore(maxPoints - deductedPoints, maxPoints);
+}
+
+function computeLowerIsBetterStepScore(valuePct, config, defaults) {
+  const maxPoints = Math.max(0, Number(config?.maxPoints ?? defaults?.maxPoints ?? 20) || 20);
+  const fullScoreThreshold = Number(config?.fullScoreAtOrBelowPct ?? defaults?.fullScoreAtOrBelowPct ?? 0);
+  const pctPerStep = Math.max(
+    1e-6,
+    Number(config?.pctPerStep ?? config?.pctPerPointLost ?? defaults?.pctPerStep ?? defaults?.pctPerPointLost ?? 1) || 1
+  );
+  const pointsLostPerStep = Math.max(
+    0,
+    Number(config?.pointsLostPerStep ?? defaults?.pointsLostPerStep ?? 1) || 1
+  );
+  const value = Math.max(0, Number(valuePct) || 0);
+  if (value <= fullScoreThreshold) {
+    return maxPoints;
+  }
+  const stepCount = Math.floor((value - fullScoreThreshold + 1e-9) / pctPerStep);
+  const deductedPoints = stepCount * pointsLostPerStep;
+  return clampScore(maxPoints - deductedPoints, maxPoints);
+}
+
+function computeHigherIsBetterStepScore(valuePct, config, defaults) {
+  const maxPoints = Math.max(0, Number(config?.maxPoints ?? defaults?.maxPoints ?? 20) || 20);
+  const fullScoreThreshold = Number(config?.fullScoreAtOrAbovePct ?? defaults?.fullScoreAtOrAbovePct ?? 100);
+  const pctPerStep = Math.max(
+    1e-6,
+    Number(config?.pctPerStep ?? config?.pctPerPointLost ?? defaults?.pctPerStep ?? defaults?.pctPerPointLost ?? 1) || 1
+  );
+  const pointsLostPerStep = Math.max(
+    0,
+    Number(config?.pointsLostPerStep ?? defaults?.pointsLostPerStep ?? 1) || 1
+  );
+  const value = Math.max(0, Number(valuePct) || 0);
+  if (value >= fullScoreThreshold) {
+    return maxPoints;
+  }
+  const stepCount = Math.floor((fullScoreThreshold - value + 1e-9) / pctPerStep);
+  const deductedPoints = stepCount * pointsLostPerStep;
+  return clampScore(maxPoints - deductedPoints, maxPoints);
+}
+
+function computeHigherIsBetterLinearScore(value, config, defaults) {
+  const maxPoints = Math.max(0, Number(config?.maxPoints ?? defaults?.maxPoints ?? 10) || 10);
+  const fullScoreAtOrAbove = Number(
+    config?.fullScoreAtOrAboveValue ?? config?.fullScoreAtOrAboveCpm ?? defaults?.fullScoreAtOrAboveValue ?? 1
+  );
+  const zeroScoreAtOrBelow = Number(
+    config?.zeroScoreAtOrBelowValue ?? config?.zeroScoreAtOrBelowCpm ?? defaults?.zeroScoreAtOrBelowValue ?? 0
+  );
+  const input = Math.max(0, Number(value) || 0);
+  if (fullScoreAtOrAbove <= zeroScoreAtOrBelow + 1e-9) {
+    return input >= fullScoreAtOrAbove ? maxPoints : 0;
+  }
+  if (input >= fullScoreAtOrAbove) {
+    return maxPoints;
+  }
+  if (input <= zeroScoreAtOrBelow) {
+    return 0;
+  }
+  const ratio = (input - zeroScoreAtOrBelow) / (fullScoreAtOrAbove - zeroScoreAtOrBelow);
+  return clampScore(maxPoints * ratio, maxPoints);
+}
+
+function createInitialCanvasHitCounts() {
+  return {
+    missile: 0,
+    hazardBar: 0,
+    zoneFloor: 0
+  };
+}
+
+function raidFrameClassColor(player) {
+  const color = String(player?.classColor ?? "").trim();
+  if (color) {
+    return color;
+  }
+  if (String(player?.roleKey ?? "").trim().toLowerCase() === TANK_ROLE_META.key) {
+    return TANK_CLASS_POOL[0]?.color ?? "#64748B";
+  }
+  return "#64748B";
+}
+
+function raidFrameFillPercent(player) {
+  const ratio = Number(player?.hpRatio ?? 0);
+  if (!Number.isFinite(ratio)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(ratio * 100)));
+}
+
+function getPlayerHpRatio(player) {
+  if (!player) {
+    return 0;
+  }
+
+  const snapshotRatio = Number(player.hpRatio);
+  if (Number.isFinite(snapshotRatio)) {
+    return Math.max(0, Math.min(1, snapshotRatio));
+  }
+
+  const hp = Number(player.hp ?? 0);
+  const maxHp = Number(player.maxHp ?? 0);
+  if (!Number.isFinite(hp) || !Number.isFinite(maxHp) || maxHp <= 0) {
+    return 0;
+  }
+  return Math.max(0, Math.min(1, hp / maxHp));
+}
+
+function findMyPlayerInSnapshot(snapshot, preferredPlayerId = "") {
+  const players = Array.isArray(snapshot?.players) ? snapshot.players : [];
+  if (!players.length) {
+    return null;
+  }
+
+  if (preferredPlayerId) {
+    const preferredPlayer = players.find((player) => player.id === preferredPlayerId);
+    if (preferredPlayer) {
+      return preferredPlayer;
+    }
+  }
+
+  return players.find((player) => String(player?.name ?? "").trim() === MY_PLAYER_NAME) ?? null;
+}
+
+function formatSeconds(ms, decimals = 1) {
+  if (!ms || ms <= 0) {
+    return "0.0";
+  }
+  return (ms / 1000).toFixed(decimals);
+}
+
+function formatHealingAmount(value) {
+  const amount = Math.max(0, Number(value) || 0);
+  if (amount >= 1_000_000) {
+    return `${(amount / 1_000_000).toFixed(2)}m`;
+  }
+  if (amount >= 1_000) {
+    return `${(amount / 1_000).toFixed(1)}k`;
+  }
+  return `${Math.round(amount)}`;
+}
+
+function resolveResponsiveYAxisMax(value) {
+  const safeValue = Math.max(0, Number(value) || 0);
+  if (safeValue <= 0) {
+    return 1;
+  }
+  // Keep a small headroom above peak damage so the line does not stick to the ceiling.
+  const paddedValue = safeValue * 1.08;
+  if (paddedValue < 1_000) {
+    return Math.max(1, Math.ceil(paddedValue));
+  }
+  if (paddedValue < 10_000) {
+    return Math.ceil(paddedValue / 10) * 10;
+  }
+  if (paddedValue < 100_000) {
+    return Math.ceil(paddedValue / 100) * 100;
+  }
+  return Math.ceil(paddedValue / 1_000) * 1_000;
+}
+
+function buildGraphTimeTicks(durationMs, desiredTickCount = 6) {
+  const duration = Math.max(0, Number(durationMs) || 0);
+  if (duration <= 0) {
+    return [0];
+  }
+  const roughStepSec = Math.max(1, duration / 1000 / Math.max(1, desiredTickCount));
+  const stepSec = Math.max(5, Math.round(roughStepSec / 5) * 5);
+  const stepMs = stepSec * 1000;
+  const ticks = [];
+  for (let timeMs = 0; timeMs <= duration; timeMs += stepMs) {
+    ticks.push(Math.max(0, Math.min(duration, timeMs)));
+  }
+  if (!ticks.length || ticks[ticks.length - 1] !== duration) {
+    ticks.push(duration);
+  }
+  return ticks;
+}
+
+function colorStringToHexInt(value, fallback = 0xf58cba) {
+  const source = String(value ?? "").trim();
+  if (!source) {
+    return fallback;
+  }
+
+  const normalized = source.startsWith("#") ? source.slice(1) : source;
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return fallback;
+  }
+
+  return Number.parseInt(normalized, 16);
+}
+
+function scrollElementIntoViewWithStickyTopOffset(element, behavior = "smooth") {
+  if (!(element instanceof HTMLElement)) {
+    return;
+  }
+
+  const stickyHeader = document.querySelector("header.sticky.top-0");
+  const stickyOffsetPx =
+    stickyHeader instanceof HTMLElement ? Math.max(0, Math.ceil(stickyHeader.getBoundingClientRect().height + 8)) : 0;
+  const top = Math.max(0, Math.round(window.scrollY + element.getBoundingClientRect().top - stickyOffsetPx));
+  window.scrollTo({ top, behavior });
+}
+
+function refreshWowheadTooltips() {
+  if (window?.WH?.Tooltips?.refreshLinks) {
+    window.WH.Tooltips.refreshLinks();
+    return;
+  }
+  if (window?.$WowheadPower?.refreshLinks) {
+    window.$WowheadPower.refreshLinks();
+  }
+}
+
+function getSelfBuffRemainingMs(snapshot, spellKey) {
+  if (!snapshot?.buffs) {
+    if (spellKey === "lifebloom") {
+      const players = Array.isArray(snapshot?.players) ? snapshot.players : [];
+      return players.reduce(
+        (max, player) => Math.max(max, Math.max(0, Number(player?.lifebloomRemainingMs ?? 0))),
+        0
+      );
+    }
+    return 0;
+  }
+  if (spellKey === "avengingWrath") {
+    return Math.max(0, Number(snapshot.buffs.avengingWrathMs ?? 0));
+  }
+  if (spellKey === "auraMastery") {
+    return Math.max(0, Number(snapshot.buffs.auraMasteryMs ?? 0));
+  }
+  if (spellKey === "divineProtection") {
+    return Math.max(0, Number(snapshot.buffs.divineProtectionMs ?? 0));
+  }
+  if (spellKey === "lifebloom") {
+    const players = Array.isArray(snapshot?.players) ? snapshot.players : [];
+    return players.reduce(
+      (max, player) => Math.max(max, Math.max(0, Number(player?.lifebloomRemainingMs ?? 0))),
+      0
+    );
+  }
+  return 0;
+}
+
+function logColorClass(type) {
+  switch (type) {
+    case "heal":
+      return "text-emerald-200";
+    case "buff":
+      return "text-violet-200";
+    case "warn":
+      return "text-amber-200";
+    case "error":
+      return "text-rose-200";
+    case "success":
+      return "text-emerald-300";
+    default:
+      return "text-slate-200";
+  }
+}
+
+function keyboardBindingToRawToken(binding) {
+  const modifier = normalizeModifier(binding?.modifier);
+  const key = normalizeKey(binding?.key);
+  if (!key || MODIFIER_ONLY_KEYS.has(key)) {
+    return "";
+  }
+  return modifier ? `${modifier}+${key}` : key;
+}
+
+function keyboardBindingToToken(binding) {
+  const token = keyboardBindingToRawToken(binding);
+  if (!token || BLOCKED_KEYBOARD_BINDING_TOKENS.has(token)) {
+    return "";
+  }
+  return token;
+}
+
+function buildDefaultKeyboardBindings(activeSpellKeys, defaultKeybinds) {
+  const defaults = {};
+  const keys = Array.isArray(activeSpellKeys) ? activeSpellKeys : [];
+  for (const spellKey of keys) {
+    defaults[spellKey] = {
+      modifier: "",
+      key: normalizeKey(defaultKeybinds?.[spellKey] ?? "")
+    };
+  }
+  return defaults;
+}
+
+function buildDefaultClickCastBindings(clickCastableKeys, defaultClickCastPreferred) {
+  const result = {};
+  const usedTokens = new Set();
+  const fallbackTokens = MOUSE_BINDING_OPTIONS.map((option) => option.token).filter(Boolean);
+
+  const keys = Array.isArray(clickCastableKeys) ? clickCastableKeys : [];
+  for (const spellKey of keys) {
+    const hasPreferredToken = Object.prototype.hasOwnProperty.call(defaultClickCastPreferred ?? {}, spellKey);
+    let token = hasPreferredToken ? String(defaultClickCastPreferred?.[spellKey] ?? "") : "";
+    if (token && usedTokens.has(token)) {
+      token = fallbackTokens.find((candidate) => !usedTokens.has(candidate)) ?? "";
+    } else if (!hasPreferredToken) {
+      token = fallbackTokens.find((candidate) => !usedTokens.has(candidate)) ?? "";
+    }
+    result[spellKey] = token;
+    if (token) {
+      usedTokens.add(token);
+    }
+  }
+
+  return result;
+}
+
+function buildPersistableKeyboardBindings(keyboardBindings, activeSpellKeys) {
+  const result = {};
+  const keys = Array.isArray(activeSpellKeys) ? activeSpellKeys : [];
+  for (const spellKey of keys) {
+    result[spellKey] = {
+      modifier: normalizeModifier(keyboardBindings?.[spellKey]?.modifier),
+      key: normalizeKey(keyboardBindings?.[spellKey]?.key)
+    };
+  }
+  return result;
+}
+
+function buildPersistableClickCastBindings(clickCastBindings, clickCastableKeys) {
+  const result = {};
+  const keys = Array.isArray(clickCastableKeys) ? clickCastableKeys : [];
+  for (const spellKey of keys) {
+    const rawToken = String(clickCastBindings?.[spellKey] ?? "");
+    result[spellKey] = VALID_MOUSE_BINDING_TOKEN_SET.has(rawToken) ? rawToken : "";
+  }
+  return result;
+}
+
+function resolveStoredKeyboardBindings(rawBindings, activeSpellKeys, defaultKeybinds) {
+  const resolved = buildDefaultKeyboardBindings(activeSpellKeys, defaultKeybinds);
+  if (!rawBindings || typeof rawBindings !== "object") {
+    return resolved;
+  }
+
+  const keys = Array.isArray(activeSpellKeys) ? activeSpellKeys : [];
+  for (const spellKey of keys) {
+    const rawBinding = rawBindings[spellKey];
+    if (!rawBinding || typeof rawBinding !== "object") {
+      continue;
+    }
+    resolved[spellKey] = {
+      modifier: normalizeModifier(rawBinding.modifier),
+      key: normalizeKey(rawBinding.key)
+    };
+  }
+  return resolved;
+}
+
+function resolveStoredClickCastBindings(rawBindings, clickCastableKeys, defaultClickCastPreferred) {
+  const resolved = buildDefaultClickCastBindings(clickCastableKeys, defaultClickCastPreferred);
+  if (!rawBindings || typeof rawBindings !== "object") {
+    return resolved;
+  }
+
+  const keys = Array.isArray(clickCastableKeys) ? clickCastableKeys : [];
+  for (const spellKey of keys) {
+    const rawToken = String(rawBindings[spellKey] ?? "");
+    resolved[spellKey] = VALID_MOUSE_BINDING_TOKEN_SET.has(rawToken) ? rawToken : "";
+  }
+  return resolved;
+}
+
+function buildCooldownManagerSpellOrderBuckets(
+  activeSpellKeys,
+  preferredManagerSpellKeys = [],
+  preferredReserveSpellKeys = []
+) {
+  const activeKeys = Array.isArray(activeSpellKeys) ? activeSpellKeys.filter(Boolean) : [];
+  const activeSet = new Set(activeKeys);
+  const used = new Set();
+  const manager = [];
+  const reserve = [];
+
+  const pushUnique = (target, spellKey) => {
+    if (!spellKey || !activeSet.has(spellKey) || used.has(spellKey)) {
+      return;
+    }
+    target.push(spellKey);
+    used.add(spellKey);
+  };
+
+  for (const spellKey of Array.isArray(preferredManagerSpellKeys) ? preferredManagerSpellKeys : []) {
+    pushUnique(manager, spellKey);
+  }
+  for (const spellKey of Array.isArray(preferredReserveSpellKeys) ? preferredReserveSpellKeys : []) {
+    pushUnique(reserve, spellKey);
+  }
+  for (const spellKey of activeKeys) {
+    pushUnique(reserve, spellKey);
+  }
+
+  return { manager, reserve };
+}
+
+function buildKeyboardTokenToSpellMap(keyboardBindings, disabledSpellSet, movementPreset, activeSpellKeys) {
+  const map = {};
+  const keys = Array.isArray(activeSpellKeys) ? activeSpellKeys : [];
+  for (const spellKey of keys) {
+    if (disabledSpellSet.has(spellKey)) {
+      continue;
+    }
+    const key = normalizeKey(keyboardBindings[spellKey]?.key);
+    if (isMovementRestrictedKey(key, movementPreset)) {
+      continue;
+    }
+    const token = keyboardBindingToToken(keyboardBindings[spellKey]);
+    if (!token || map[token]) {
+      continue;
+    }
+    map[token] = spellKey;
+  }
+  return map;
+}
+
+function findDuplicateKeyboardBindings(keyboardBindings, disabledSpellSet, activeSpellKeys) {
+  const countByToken = new Map();
+
+  const keys = Array.isArray(activeSpellKeys) ? activeSpellKeys : [];
+  for (const spellKey of keys) {
+    if (disabledSpellSet.has(spellKey)) {
+      continue;
+    }
+    const token = keyboardBindingToToken(keyboardBindings[spellKey]);
+    if (!token) {
+      continue;
+    }
+    countByToken.set(token, (countByToken.get(token) ?? 0) + 1);
+  }
+
+  return Array.from(countByToken.entries())
+    .filter(([, count]) => count > 1)
+    .map(([token]) => token);
+}
+
+function findBlockedKeyboardBindings(keyboardBindings, disabledSpellSet, movementPreset, activeSpellKeys) {
+  const blocked = new Set();
+
+  const keys = Array.isArray(activeSpellKeys) ? activeSpellKeys : [];
+  for (const spellKey of keys) {
+    if (disabledSpellSet.has(spellKey)) {
+      continue;
+    }
+
+    const key = normalizeKey(keyboardBindings[spellKey]?.key);
+    const token = keyboardBindingToRawToken(keyboardBindings[spellKey]);
+    if (token && BLOCKED_KEYBOARD_BINDING_TOKENS.has(token)) {
+      blocked.add(token);
+    }
+    if (key && isMovementRestrictedKey(key, movementPreset)) {
+      blocked.add(token || key);
+    }
+  }
+
+  return Array.from(blocked);
+}
+
+function findDuplicateMouseBindings(clickCastBindings, clickCastableKeys) {
+  const countByToken = new Map();
+
+  const keys = Array.isArray(clickCastableKeys) ? clickCastableKeys : [];
+  for (const spellKey of keys) {
+    const token = clickCastBindings[spellKey];
+    if (!token) {
+      continue;
+    }
+    countByToken.set(token, (countByToken.get(token) ?? 0) + 1);
+  }
+
+  return Array.from(countByToken.entries())
+    .filter(([, count]) => count > 1)
+    .map(([token]) => token);
+}
+
+function buildMouseTokenToSpellMap(clickCastBindings, clickCastableKeys) {
+  const map = {};
+  const keys = Array.isArray(clickCastableKeys) ? clickCastableKeys : [];
+  for (const spellKey of keys) {
+    const token = clickCastBindings[spellKey];
+    if (!token || map[token]) {
+      continue;
+    }
+    map[token] = spellKey;
+  }
+  return map;
+}
+
+function abbreviateModifierForCooldownLabel(value) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "CTRL") {
+    return "Ctl";
+  }
+  if (normalized === "ALT") {
+    return "Alt";
+  }
+  if (normalized === "CMD" || normalized === "COMMAND") {
+    return "Cmd";
+  }
+  if (normalized === "SHIFT") {
+    return "Sh";
+  }
+  return value;
+}
+
+function formatCooldownBindingLabel(rawLabel) {
+  const source = String(rawLabel ?? "").trim();
+  if (!source || source === "-") {
+    return source || "-";
+  }
+
+  const compact = source.replace(/\s*\+\s*/g, "+");
+  const parts = compact.split("+").map((part) => part.trim()).filter(Boolean);
+  if (!parts.length) {
+    return source;
+  }
+
+  return parts
+    .map((part) => abbreviateModifierForCooldownLabel(part))
+    .join("+");
+}
+
+function buildEffectiveBindingLabels({
+  useClickCasting,
+  keyboardBindings,
+  clickCastBindings,
+  activeSpellKeys,
+  clickCastableSet
+}) {
+  const labels = {};
+
+  const keys = Array.isArray(activeSpellKeys) ? activeSpellKeys : [];
+  for (const spellKey of keys) {
+    const mouseToken = useClickCasting ? clickCastBindings[spellKey] : "";
+    if (mouseToken && clickCastableSet?.has(spellKey)) {
+      labels[spellKey] = formatCooldownBindingLabel(MOUSE_CDM_LABEL_BY_TOKEN[mouseToken] ?? mouseToken);
+      continue;
+    }
+    labels[spellKey] = formatCooldownBindingLabel(keyboardBindingToToken(keyboardBindings[spellKey]) || "-");
+  }
+
+  return labels;
+}
+
+function getEventModifierList(event) {
+  const modifiers = [];
+  if (event.ctrlKey) {
+    modifiers.push("CTRL");
+  }
+  if (event.altKey) {
+    modifiers.push("ALT");
+  }
+  if (event.shiftKey) {
+    modifiers.push("SHIFT");
+  }
+  if (event.metaKey) {
+    modifiers.push("CMD");
+  }
+  return modifiers;
+}
+
+function codeToFallbackKey(code) {
+  const normalized = String(code ?? "");
+  if (!normalized) {
+    return "";
+  }
+
+  if (/^Key[A-Z]$/.test(normalized)) {
+    return normalized.slice(3);
+  }
+  if (/^Digit[0-9]$/.test(normalized)) {
+    return normalized.slice(5);
+  }
+  if (/^Numpad[0-9]$/.test(normalized)) {
+    return normalized.slice(6);
+  }
+  if (/^F\\d{1,2}$/.test(normalized)) {
+    return normalized;
+  }
+
+  const codeAliases = {
+    Space: "SPACE",
+    Tab: "TAB",
+    Enter: "ENTER",
+    Escape: "ESC",
+    ArrowUp: "ARROWUP",
+    ArrowDown: "ARROWDOWN",
+    ArrowLeft: "ARROWLEFT",
+    ArrowRight: "ARROWRIGHT",
+    Minus: "-",
+    Equal: "=",
+    BracketLeft: "[",
+    BracketRight: "]",
+    Semicolon: ";",
+    Quote: "'",
+    Backslash: "\\\\",
+    Comma: ",",
+    Period: ".",
+    Slash: "/",
+    Backquote: "`"
+  };
+
+  return codeAliases[normalized] ?? "";
+}
+
+function keyboardEventToResolvedKeys(event) {
+  const keys = [];
+
+  const keyFromCode = codeToFallbackKey(event.code);
+  if (keyFromCode) {
+    keys.push(keyFromCode);
+  }
+
+  const normalizedEventKey = normalizeKey(event.key);
+  if (normalizedEventKey && normalizedEventKey !== "PROCESS" && normalizedEventKey !== "UNIDENTIFIED") {
+    keys.push(normalizedEventKey);
+  }
+
+  return Array.from(new Set(keys.filter((key) => key && !MODIFIER_ONLY_KEYS.has(key))));
+}
+
+function keyboardEventToBindingTokens(event) {
+  const modifiers = getEventModifierList(event);
+  if (modifiers.length > 1) {
+    return [];
+  }
+
+  const keys = keyboardEventToResolvedKeys(event);
+  if (!keys.length) {
+    return [];
+  }
+
+  const tokens = [];
+  for (const key of keys) {
+    const token = modifiers.length ? `${modifiers[0]}+${key}` : key;
+    if (!BLOCKED_KEYBOARD_BINDING_TOKENS.has(token)) {
+      tokens.push(token);
+    }
+  }
+  return Array.from(new Set(tokens));
+}
+
+function mouseEventToBindingToken(event) {
+  if (event.metaKey) {
+    return "";
+  }
+
+  let base = "";
+  if (event.button === 0) {
+    base = "LMB";
+  } else if (event.button === 1) {
+    base = "MMB";
+  } else if (event.button === 2) {
+    base = "RMB";
+  }
+
+  if (!base) {
+    return "";
+  }
+
+  const modifiers = getEventModifierList(event);
+  if (modifiers.length > 1) {
+    return "";
+  }
+
+  if (base === "MMB") {
+    return modifiers.length ? "" : "MMB";
+  }
+
+  return modifiers.length ? `${modifiers[0]}+${base}` : base;
+}
+
+function resolveCombatDurationMinutesByDifficulty(difficultyKey) {
+  const requestedKey = String(difficultyKey ?? "").trim();
+  const requested = PRACTICE_DIFFICULTY_TUNING[requestedKey];
+  const fallback = PRACTICE_DIFFICULTY_TUNING.normal;
+  const configuredMinutes = Number(requested?.fixedCombatDurationMinutes ?? fallback?.fixedCombatDurationMinutes ?? 2);
+  if (!Number.isFinite(configuredMinutes)) {
+    return 2;
+  }
+  return Math.max(0.5, configuredMinutes);
+}
+
+function toPercentNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return Math.max(0, Math.min(100, Number(fallback) || 0));
+  }
+  return Math.max(0, Math.min(100, parsed));
+}
+
+function normalizeMovementPreset(value) {
+  const key = String(value || "").toUpperCase();
+  return MOVEMENT_PRESET_KEYS[key] ? key : "WASD";
+}
+
+function normalizeMyRaidFramePositionMode(value) {
+  const source = String(value ?? "").trim();
+  return source === "firstSlotFixed" ? "firstSlotFixed" : "random";
+}
+
+function isMovementRestrictedKey(key, movementPreset) {
+  const normalizedKey = normalizeKey(key);
+  if (!normalizedKey) {
+    return false;
+  }
+  const preset = normalizeMovementPreset(movementPreset);
+  const restricted = MOVEMENT_RESTRICTED_KEY_LIST_BY_PRESET[preset] ?? [];
+  return restricted.includes(normalizedKey);
+}
+
+function raidLayoutColumnCount(layout) {
+  return layout === "4x5" ? 5 : 4;
+}
+
+function raidFrameIndexFromPosition(layout, row, column) {
+  const safeRow = Math.max(1, Math.floor(Number(row) || 1));
+  const safeColumn = Math.max(1, Math.floor(Number(column) || 1));
+  return (safeRow - 1) * raidLayoutColumnCount(layout) + (safeColumn - 1);
+}
+
+function ensureRosterIncludesNames(roster, requiredNames, seed = Date.now()) {
+  const names = Array.isArray(requiredNames) ? requiredNames.filter(Boolean) : [];
+  if (!names.length) {
+    return Array.isArray(roster) ? roster.map((player) => ({ ...player })) : [];
+  }
+
+  const result = Array.isArray(roster) ? roster.map((player) => ({ ...player })) : [];
+  const requiredSet = new Set(names);
+  const rng = createSeededRng((Number(seed) || Date.now()) ^ 0x27d4eb2d);
+  const presentNames = new Set(
+    result
+      .map((player) => String(player?.name ?? "").trim())
+      .filter(Boolean)
+  );
+  const replaceableIndexes = result
+    .map((player, index) => ({
+      index,
+      name: String(player?.name ?? "").trim()
+    }))
+    .filter(({ name }) => name && !requiredSet.has(name))
+    .map(({ index }) => index);
+
+  for (let index = replaceableIndexes.length - 1; index > 0; index -= 1) {
+    const nextIndex = Math.floor(rng() * (index + 1));
+    [replaceableIndexes[index], replaceableIndexes[nextIndex]] = [replaceableIndexes[nextIndex], replaceableIndexes[index]];
+  }
+
+  let replaceCursor = 0;
+  for (const requiredName of names) {
+    if (presentNames.has(requiredName)) {
+      continue;
+    }
+    const replaceIndex = replaceableIndexes[replaceCursor];
+    if (replaceIndex == null) {
+      break;
+    }
+    replaceCursor += 1;
+
+    const previousName = String(result[replaceIndex]?.name ?? "").trim();
+    if (previousName) {
+      presentNames.delete(previousName);
+    }
+
+    result[replaceIndex] = {
+      ...result[replaceIndex],
+      name: requiredName
+    };
+    presentNames.add(requiredName);
+  }
+
+  return result;
+}
+
+function applyFixedTankRoleMetaToRoster(roster, seed = Date.now()) {
+  const rng = createSeededRng(seed ^ 0x85ebca6b);
+  const pickTankClass = () => {
+    if (!TANK_CLASS_POOL.length) {
+      return { key: "tank", name: "탱커", color: "#64748B" };
+    }
+    const index = Math.floor(rng() * TANK_CLASS_POOL.length);
+    return TANK_CLASS_POOL[index] ?? TANK_CLASS_POOL[0];
+  };
+
+  return roster.map((player) => {
+    const name = String(player?.name ?? "").trim();
+    if (!FIXED_TANK_NAME_SET.has(name)) {
+      return player;
+    }
+    const pickedTankClass = pickTankClass();
+    return {
+      ...player,
+      classKey: pickedTankClass.key,
+      className: pickedTankClass.name,
+      classColor: pickedTankClass.color,
+      roleKey: TANK_ROLE_META.key,
+      roleName: TANK_ROLE_META.name,
+      roleIconUrl: TANK_ROLE_META.iconUrl
+    };
+  });
+}
+
+function applyMyPlayerMetaToRoster(roster, healerMeta = null) {
+  const healerColor = String(healerMeta?.color ?? "#F58CBA");
+  const healerName = String(healerMeta?.name ?? healerMeta?.shortName ?? "힐러");
+  const healerKey = String(healerMeta?.slug ?? "healer");
+
+  return roster.map((player) => {
+    const name = String(player?.name ?? "").trim();
+    if (name !== MY_PLAYER_NAME) {
+      return player;
+    }
+
+    return {
+      ...player,
+      classKey: healerKey,
+      className: healerName,
+      classColor: healerColor,
+      roleKey: "healer",
+      roleName: "힐러",
+      roleIconUrl: ""
+    };
+  });
+}
+
+function moveNamedPlayerToRaidFramePosition(ordered, layout, name, row, column) {
+  const sourceIndex = ordered.findIndex((player) => String(player?.name ?? "").trim() === name);
+  if (sourceIndex < 0) {
+    return;
+  }
+
+  const targetIndex = raidFrameIndexFromPosition(layout, row, column);
+  if (targetIndex < 0 || targetIndex >= ordered.length || targetIndex === sourceIndex) {
+    return;
+  }
+
+  [ordered[targetIndex], ordered[sourceIndex]] = [ordered[sourceIndex], ordered[targetIndex]];
+}
+
+function buildRaidFrameOrderedPlayers(players, layout, myRaidFramePositionMode = "random") {
+  const ordered = Array.isArray(players) ? [...players] : [];
+  const mode = normalizeMyRaidFramePositionMode(myRaidFramePositionMode);
+
+  if (mode === "firstSlotFixed") {
+    moveNamedPlayerToRaidFramePosition(ordered, layout, MY_PLAYER_NAME, 1, 1);
+
+    const primaryTankAnchor =
+      FIXED_TANK_ANCHORS.find((anchor) => Number(anchor?.row) === 1 && Number(anchor?.column) === 1) ??
+      FIXED_TANK_ANCHORS[0];
+    if (primaryTankAnchor?.name) {
+      moveNamedPlayerToRaidFramePosition(ordered, layout, primaryTankAnchor.name, 2, 1);
+    }
+
+    for (const anchor of FIXED_TANK_ANCHORS) {
+      if (!anchor?.name || anchor.name === primaryTankAnchor?.name) {
+        continue;
+      }
+      moveNamedPlayerToRaidFramePosition(ordered, layout, anchor.name, anchor.row, anchor.column);
+    }
+    return ordered;
+  }
+
+  for (const anchor of FIXED_TANK_ANCHORS) {
+    moveNamedPlayerToRaidFramePosition(ordered, layout, anchor.name, anchor.row, anchor.column);
+  }
+
+  return ordered;
+}
+
+function areAllFixedTanksDead(players) {
+  const tankPlayers = Array.isArray(players)
+    ? players.filter((player) => String(player?.roleKey ?? "").trim().toLowerCase() === TANK_ROLE_META.key)
+    : [];
+  return tankPlayers.length >= 2 && tankPlayers.every((player) => !player.alive);
+}
+
+function mapGameOverFeedbackReason(reason, deathThreshold = 10) {
+  const text = String(reason ?? "").trim();
+  if (!text) {
+    return "";
+  }
+  if (text.includes("탱커")) {
+    return "탱 사망";
+  }
+  if (text.includes("나 사망") || text.includes("캐릭터 사망")) {
+    return "본인 사망";
+  }
+  if (text.includes("사망자") || text.includes("전원 사망")) {
+    return `공대 ${Math.max(1, Number(deathThreshold) || 10)}인 사망`;
+  }
+  return text;
+}
+
+function isDesktopEnvironmentSupported() {
+  if (typeof window === "undefined") {
+    return true;
+  }
+
+  const minViewportWidthPx = Math.max(
+    0,
+    Number(HEALER_PRACTICE_DESKTOP_ONLY_CONFIG?.minViewportWidthPx ?? 0)
+  );
+  const requireFinePointer = Boolean(HEALER_PRACTICE_DESKTOP_ONLY_CONFIG?.requireFinePointer);
+  const viewportWidth = Math.max(
+    0,
+    Number(window.innerWidth ?? document?.documentElement?.clientWidth ?? 0)
+  );
+  const widthOk = viewportWidth >= minViewportWidthPx;
+  const pointerOk = !requireFinePointer || window.matchMedia("(pointer: fine)").matches;
+  return widthOk && pointerOk;
+}
+
+function buildConfiguredRoster(seed = Date.now(), healerMeta = null) {
+  const roster = buildRandomRaidRoster(CANDIDATE_NAME_POOL, MIN_RAID_SIZE, seed);
+  const rosterWithFixedNames = ensureRosterIncludesNames(
+    roster,
+    [...FIXED_TANK_ANCHORS.map((anchor) => anchor.name), MY_PLAYER_NAME],
+    seed
+  );
+  const classAssignedRoster = assignRandomClassesToRoster(rosterWithFixedNames, seed ^ 0x9e3779b9);
+  const tankAssignedRoster = applyFixedTankRoleMetaToRoster(classAssignedRoster, seed);
+  return applyMyPlayerMetaToRoster(tankAssignedRoster, healerMeta);
+}
+
+function buildInitialRoster() {
+  return [];
+}
+
+const DEATH_GAMEOVER_THRESHOLD = Math.max(1, Number(GLOBAL_GAMEOVER_DEATH_THRESHOLD ?? 10));
+const BOSS_DAMAGE_GRAPH_BUCKET_MS = 1000;
+const BOSS_DAMAGE_GRAPH_VIEWBOX_WIDTH = 760;
+const BOSS_DAMAGE_GRAPH_VIEWBOX_HEIGHT = 200;
+const BOSS_DAMAGE_GRAPH_PADDING = Object.freeze({
+  left: 46,
+  right: 12,
+  top: 10,
+  bottom: 28
+});
+// Triage thresholds are intentionally code-driven (not user-configurable in UI).
+const FIXED_TRIAGE_HEALTH_THRESHOLD_PCT = 30;
+const FIXED_TRIAGE_MIN_EFFECTIVE_HEAL_PCT = 10;
+const DEFAULT_PRACTICE_RUNTIME = resolveHealerPracticeRuntime(DEFAULT_IMPLEMENTED_HEALER_SLUG);
+const DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS = buildCooldownManagerSpellOrderBuckets(
+  DEFAULT_PRACTICE_RUNTIME.activeSpellKeys,
+  DEFAULT_PRACTICE_RUNTIME.cooldownManagerSpellKeys,
+  DEFAULT_PRACTICE_RUNTIME.cooldownManagerNonDisplaySpellKeys
+);
+
+export function HealerPracticeSimulator() {
+  const { user, userLabel, internalUserId, isLoggedIn, firebaseEnabled: authFirebaseEnabled } = useAuthSession();
+  const [selectedHealerSlug, setSelectedHealerSlug] = useState(DEFAULT_IMPLEMENTED_HEALER_SLUG);
+  const [hasExplicitHealerSelection, setHasExplicitHealerSelection] = useState(false);
+  const [difficultyKey, setDifficultyKey] = useState("normal");
+  const [selectedMapKey, setSelectedMapKey] = useState(DEFAULT_PRACTICE_MAP_KEY);
+  const [movementKeyPreset, setMovementKeyPreset] = useState("WASD");
+  const [useMouseover, setUseMouseover] = useState(true);
+  const [useClickCasting, setUseClickCasting] = useState(false);
+  const [raidFrameLayout, setRaidFrameLayout] = useState("4x5");
+  const [myRaidFramePositionMode, setMyRaidFramePositionMode] = useState("random");
+  const [keyboardBindings, setKeyboardBindings] = useState(() =>
+    buildDefaultKeyboardBindings(DEFAULT_PRACTICE_RUNTIME.activeSpellKeys, DEFAULT_PRACTICE_RUNTIME.defaultKeybinds)
+  );
+  const [clickCastBindings, setClickCastBindings] = useState(() =>
+    buildDefaultClickCastBindings(
+      DEFAULT_PRACTICE_RUNTIME.clickCastableKeys,
+      DEFAULT_PRACTICE_RUNTIME.defaultClickCastPreferred
+    )
+  );
+
+  const [draftRoster, setDraftRoster] = useState(() => buildInitialRoster());
+  const [setupSeed, setSetupSeed] = useState(null);
+  const [setupConfirmed, setSetupConfirmed] = useState(false);
+  const [cooldownSpellOrder, setCooldownSpellOrder] = useState(() => [
+    ...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.manager
+  ]);
+  const [cooldownReserveSpellOrder, setCooldownReserveSpellOrder] = useState(() => [
+    ...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.reserve
+  ]);
+
+  const [running, setRunning] = useState(false);
+  const [snapshot, setSnapshot] = useState(null);
+  const [selectedTargetId, setSelectedTargetId] = useState("");
+  const [hoveredTargetId, setHoveredTargetId] = useState("");
+  const [statusText, setStatusText] = useState("");
+  const [inCombatView, setInCombatView] = useState(false);
+  const [gameOverReason, setGameOverReason] = useState("");
+  const [keybindProfileSyncBusy, setKeybindProfileSyncBusy] = useState(false);
+  const [rankingModalOpen, setRankingModalOpen] = useState(false);
+  const [rankingViewMapKey, setRankingViewMapKey] = useState(DEFAULT_PRACTICE_MAP_KEY);
+  const [rankingViewDifficultyKey, setRankingViewDifficultyKey] = useState("heroic");
+  const [rankingViewPatchVersion, setRankingViewPatchVersion] = useState(() =>
+    normalizeRankingPatchVersion(HEALER_PRACTICE_RANKING_PATCH_CONFIG?.currentPatchVersion, "12.0.1")
+  );
+  const [rankingViewHealerSlug, setRankingViewHealerSlug] = useState(HOLY_PALADIN_HEALER_SLUG);
+  const [rankingRows, setRankingRows] = useState([]);
+  const [rankingLoading, setRankingLoading] = useState(false);
+  const [rankingErrorText, setRankingErrorText] = useState("");
+  const [rankingSaveStatus, setRankingSaveStatus] = useState("idle");
+  const [isDesktopEnvironment, setIsDesktopEnvironment] = useState(() => isDesktopEnvironmentSupported());
+  const [canvasRawDamageTaken, setCanvasRawDamageTaken] = useState(0);
+  const [canvasHitCounts, setCanvasHitCounts] = useState(() => createInitialCanvasHitCounts());
+
+  const [sessionConfig, setSessionConfig] = useState(null);
+
+  const engineRef = useRef(null);
+  const rafRef = useRef(0);
+  const lastFrameRef = useRef(0);
+  const simAccumulatorRef = useRef(0);
+  const uiAccumulatorRef = useRef(0);
+
+  const selectedTargetRef = useRef("");
+  const hoveredTargetRef = useRef("");
+  const latestSnapshotRef = useRef(null);
+  const sessionConfigRef = useRef(null);
+  const pointerInRaidFramesRef = useRef(false);
+  const pointerInPhaserCanvasRef = useRef(false);
+  const runningRef = useRef(false);
+  const gameOverReasonRef = useRef("");
+  const draggedCooldownSpellRef = useRef({ spellKey: "", groupKey: "manager" });
+  const combatViewRef = useRef(null);
+  const phaserHostRef = useRef(null);
+  const phaserGameRef = useRef(null);
+  const selfPlayerIdRef = useRef("");
+  const phaserSelfHpRatioRef = useRef(1);
+  const canvasRawDamageTakenRef = useRef(0);
+  const canvasHitCountsRef = useRef(createInitialCanvasHitCounts());
+  const cooldownSpellOrderRef = useRef([...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.manager]);
+  const cooldownReserveSpellOrderRef = useRef([...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.reserve]);
+  const movementStateRef = useRef({
+    up: false,
+    down: false,
+    left: false,
+    right: false
+  });
+  const keybindProfileRequestSeqRef = useRef(0);
+  const rankingSavedRunKeyRef = useRef("");
+  const rankingSaveAttemptedRunKeyRef = useRef("");
+
+  const selectedPracticeRuntime = useMemo(
+    () => resolveHealerPracticeRuntime(selectedHealerSlug),
+    [selectedHealerSlug]
+  );
+  const activeSpellKeys = selectedPracticeRuntime.activeSpellKeys;
+  const clickCastableKeys = selectedPracticeRuntime.clickCastableKeys;
+  const clickCastableSet = useMemo(() => new Set(clickCastableKeys), [clickCastableKeys]);
+  const practiceSpellsByKey = selectedPracticeRuntime.practiceSpells;
+  const practiceSpellIconsByKey = selectedPracticeRuntime.spellIconUrlByKey;
+  const practiceCooldownSpellMetaByKey = selectedPracticeRuntime.cooldownManagerSpellMeta;
+  const healMeterSpellMetaByKey = selectedPracticeRuntime.healMeterSpellMeta;
+  const normalizedCooldownOrders = useMemo(
+    () =>
+      buildCooldownManagerSpellOrderBuckets(
+        activeSpellKeys,
+        cooldownSpellOrder,
+        cooldownReserveSpellOrder
+      ),
+    [activeSpellKeys, cooldownSpellOrder, cooldownReserveSpellOrder]
+  );
+  const managerCooldownSpellOrder = normalizedCooldownOrders.manager;
+  const reserveCooldownSpellOrder = normalizedCooldownOrders.reserve;
+  const reserveCooldownSectionWidthPx = useMemo(() => {
+    const iconCount = Math.max(0, reserveCooldownSpellOrder.length);
+    const iconSizePx = Math.max(1, Number(COOLDOWN_MANAGER_LAYOUT_CONFIG.iconSizePx ?? 50));
+    const iconGapPx = Math.max(0, Number(COOLDOWN_MANAGER_LAYOUT_CONFIG.iconGapPx ?? 4));
+    const iconRowWidthPx = iconCount > 0 ? iconCount * iconSizePx + (iconCount - 1) * iconGapPx : iconSizePx;
+    const barHorizontalPaddingPx = 12; // renderCooldownManagerBar p-1.5 * 좌우
+    const sectionHorizontalPaddingPx = 24; // 외부 p-3 * 좌우
+    return Math.round(iconRowWidthPx + barHorizontalPaddingPx + sectionHorizontalPaddingPx);
+  }, [reserveCooldownSpellOrder]);
+
+  const activeSpells = useMemo(
+    () => activeSpellKeys.map((spellKey) => practiceSpellsByKey[spellKey]).filter(Boolean),
+    [activeSpellKeys, practiceSpellsByKey]
+  );
+
+  const disabledKeyboardSpellSet = useMemo(() => {
+    const result = new Set();
+    if (!useClickCasting) {
+      return result;
+    }
+    for (const spellKey of clickCastableKeys) {
+      if (clickCastBindings[spellKey]) {
+        result.add(spellKey);
+      }
+    }
+    return result;
+  }, [useClickCasting, clickCastBindings, clickCastableKeys]);
+
+  const duplicateKeyboardBindings = useMemo(
+    () => findDuplicateKeyboardBindings(keyboardBindings, disabledKeyboardSpellSet, activeSpellKeys),
+    [keyboardBindings, disabledKeyboardSpellSet, activeSpellKeys]
+  );
+
+  const blockedKeyboardBindings = useMemo(
+    () => findBlockedKeyboardBindings(keyboardBindings, disabledKeyboardSpellSet, movementKeyPreset, activeSpellKeys),
+    [keyboardBindings, disabledKeyboardSpellSet, movementKeyPreset, activeSpellKeys]
+  );
+
+  const duplicateMouseBindings = useMemo(
+    () => (useClickCasting ? findDuplicateMouseBindings(clickCastBindings, clickCastableKeys) : []),
+    [useClickCasting, clickCastBindings, clickCastableKeys]
+  );
+
+  const effectiveBindingLabels = useMemo(
+    () =>
+      buildEffectiveBindingLabels({
+        useClickCasting,
+        keyboardBindings,
+        clickCastBindings,
+        activeSpellKeys,
+        clickCastableSet
+      }),
+    [useClickCasting, keyboardBindings, clickCastBindings, activeSpellKeys, clickCastableSet]
+  );
+
+  const selectedHealerIsImplemented = IMPLEMENTED_HEALER_SLUGS.has(selectedHealerSlug);
+  const selectedHealerMeta = useMemo(
+    () => healers.find((healer) => healer.slug === selectedHealerSlug) ?? null,
+    [selectedHealerSlug]
+  );
+  const selectedHealerDisclaimers = useMemo(() => {
+    if (!hasExplicitHealerSelection || !selectedHealerMeta) {
+      return [];
+    }
+
+    const source =
+      HEALER_PRACTICE_DISCLAIMER_BY_HEALER[selectedHealerSlug] ??
+      HEALER_PRACTICE_DISCLAIMER_BY_HEALER.default ??
+      [];
+    if (!Array.isArray(source)) {
+      return [];
+    }
+
+    return source
+      .map((line) => String(line ?? "").trim())
+      .filter(Boolean);
+  }, [hasExplicitHealerSelection, selectedHealerMeta, selectedHealerSlug]);
+  const selectedHealerPatchMeta = useMemo(() => {
+    if (!hasExplicitHealerSelection || !selectedHealerMeta) {
+      return null;
+    }
+
+    const source =
+      HEALER_PRACTICE_PATCH_META_BY_HEALER[selectedHealerSlug] ??
+      HEALER_PRACTICE_PATCH_META_BY_HEALER.default ??
+      null;
+    if (!source || typeof source !== "object") {
+      return null;
+    }
+
+    const lastUpdatedAt = String(source.lastUpdatedAt ?? "").trim();
+    const patchVersion = String(source.patchVersion ?? "").trim();
+    if (!lastUpdatedAt && !patchVersion) {
+      return null;
+    }
+
+    return {
+      lastUpdatedAt,
+      patchVersion
+    };
+  }, [hasExplicitHealerSelection, selectedHealerMeta, selectedHealerSlug]);
+  const selectedHealerColorHex = useMemo(
+    () => colorStringToHexInt(selectedHealerMeta?.color, 0xf58cba),
+    [selectedHealerMeta]
+  );
+  const showPreCombatSetupSections = hasExplicitHealerSelection;
+  const canUseCloudKeybindProfile =
+    Boolean(authFirebaseEnabled) &&
+    Boolean(db) &&
+    Boolean(user?.uid) &&
+    selectedHealerIsImplemented &&
+    showPreCombatSetupSections;
+  const canStartSimulation =
+    selectedHealerIsImplemented &&
+    setupConfirmed &&
+    draftRoster.length === MIN_RAID_SIZE &&
+    duplicateKeyboardBindings.length === 0 &&
+    blockedKeyboardBindings.length === 0 &&
+    duplicateMouseBindings.length === 0;
+  const canSaveRankingForCurrentDifficulty = RANKING_ENABLED_DIFFICULTY_KEYS.has(
+    String(sessionConfig?.difficultyKey ?? difficultyKey)
+  );
+
+  function resolveMapLabel(mapKey) {
+    const normalizedKey = String(mapKey ?? "").trim();
+    const option = HEALER_PRACTICE_MAP_OPTIONS.find((entry) => entry.value === normalizedKey);
+    return option?.label ?? (normalizedKey || DEFAULT_PRACTICE_MAP_KEY);
+  }
+
+  function resolveRankingEntriesCollection(
+    mapKey,
+    difficulty,
+    patchVersion = rankingCurrentPatchVersion,
+    healerSlug = HOLY_PALADIN_HEALER_SLUG
+  ) {
+    if (!db) {
+      return null;
+    }
+    const normalizedMapKey = String(mapKey ?? "").trim() || DEFAULT_PRACTICE_MAP_KEY;
+    const normalizedDifficulty = String(difficulty ?? "").trim() || "normal";
+    const normalizedPatchVersion = normalizeRankingPatchVersion(patchVersion, rankingCurrentPatchVersion);
+    const normalizedHealerSlug = String(healerSlug ?? "").trim() || HOLY_PALADIN_HEALER_SLUG;
+    return db
+      .collection(HEALER_PRACTICE_RANKING_COLLECTION)
+      .doc(normalizedMapKey)
+      .collection("difficulties")
+      .doc(normalizedDifficulty)
+      .collection("patches")
+      .doc(normalizedPatchVersion)
+      .collection("healers")
+      .doc(normalizedHealerSlug)
+      .collection("entries");
+  }
+
+  function handleOpenRankingModal() {
+    const normalizedActiveDifficulty = String(activeDifficultyKey ?? "normal");
+    const initialRankingDifficulty = RANKING_ENABLED_DIFFICULTY_KEYS.has(normalizedActiveDifficulty)
+      ? normalizedActiveDifficulty
+      : "heroic";
+    const initialRankingHealerSlug = String(activeCombatHealerSlug ?? selectedHealerSlug ?? HOLY_PALADIN_HEALER_SLUG).trim();
+    const initialRankingHealerEnabled = healers.some(
+      (healer) => healer.slug === initialRankingHealerSlug && healer.enabled !== false
+    );
+    const firstEnabledHealerSlug =
+      healers.find((healer) => healer.enabled !== false)?.slug ?? HOLY_PALADIN_HEALER_SLUG;
+    setRankingViewMapKey(String(activeMapKey ?? DEFAULT_PRACTICE_MAP_KEY));
+    setRankingViewDifficultyKey(initialRankingDifficulty);
+    setRankingViewPatchVersion(rankingCurrentPatchVersion);
+    setRankingViewHealerSlug(
+      initialRankingHealerEnabled ? initialRankingHealerSlug || HOLY_PALADIN_HEALER_SLUG : firstEnabledHealerSlug
+    );
+    setRankingModalOpen(true);
+  }
+
+  useEffect(() => {
+    selectedTargetRef.current = selectedTargetId;
+  }, [selectedTargetId]);
+
+  useEffect(() => {
+    hoveredTargetRef.current = hoveredTargetId;
+  }, [hoveredTargetId]);
+
+  useEffect(() => {
+    latestSnapshotRef.current = snapshot;
+  }, [snapshot]);
+
+  useEffect(() => {
+    sessionConfigRef.current = sessionConfig;
+  }, [sessionConfig]);
+
+  useEffect(() => {
+    runningRef.current = running;
+  }, [running]);
+
+  useEffect(() => {
+    cooldownSpellOrderRef.current = managerCooldownSpellOrder;
+  }, [managerCooldownSpellOrder]);
+
+  useEffect(() => {
+    cooldownReserveSpellOrderRef.current = reserveCooldownSpellOrder;
+  }, [reserveCooldownSpellOrder]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const handleEnvironmentChange = () => {
+      setIsDesktopEnvironment(isDesktopEnvironmentSupported());
+    };
+
+    const pointerFineMediaQuery = window.matchMedia("(pointer: fine)");
+    handleEnvironmentChange();
+    window.addEventListener("resize", handleEnvironmentChange);
+    if (pointerFineMediaQuery?.addEventListener) {
+      pointerFineMediaQuery.addEventListener("change", handleEnvironmentChange);
+    } else if (pointerFineMediaQuery?.addListener) {
+      pointerFineMediaQuery.addListener(handleEnvironmentChange);
+    }
+
+    return () => {
+      window.removeEventListener("resize", handleEnvironmentChange);
+      if (pointerFineMediaQuery?.removeEventListener) {
+        pointerFineMediaQuery.removeEventListener("change", handleEnvironmentChange);
+      } else if (pointerFineMediaQuery?.removeListener) {
+        pointerFineMediaQuery.removeListener(handleEnvironmentChange);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!setupConfirmed) {
+      return;
+    }
+    refreshWowheadTooltips();
+  }, [setupConfirmed, managerCooldownSpellOrder, reserveCooldownSpellOrder]);
+
+  useEffect(() => {
+    if (inCombatView) {
+      return;
+    }
+    refreshWowheadTooltips();
+  }, [inCombatView, useClickCasting, showPreCombatSetupSections, selectedHealerSlug, activeSpells.length]);
+
+  useEffect(
+    () => () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    },
+    []
+  );
+
+  function stopLoopOnly() {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
+    lastFrameRef.current = 0;
+    simAccumulatorRef.current = 0;
+    uiAccumulatorRef.current = 0;
+  }
+
+  function clearGameOverState() {
+    gameOverReasonRef.current = "";
+    setGameOverReason("");
+  }
+
+  function triggerGameOver(reason, snapshotOverride = null) {
+    if (gameOverReasonRef.current) {
+      return;
+    }
+
+    const finalReason = String(reason || "전투 실패");
+    gameOverReasonRef.current = finalReason;
+    setGameOverReason(finalReason);
+    setStatusText(`GAME OVER: ${finalReason}`);
+
+    const engine = engineRef.current;
+    let finalSnapshot = snapshotOverride;
+    if (engine) {
+      if (!engine.finished) {
+        engine.finish("game-over");
+      }
+      finalSnapshot = engine.getSnapshot();
+    }
+
+    stopLoopOnly();
+    setRunning(false);
+    runningRef.current = false;
+    if (finalSnapshot) {
+      setSnapshot(finalSnapshot);
+      latestSnapshotRef.current = finalSnapshot;
+    }
+  }
+
+  function handleRestartPractice() {
+    stopLoopOnly();
+    engineRef.current = null;
+    setRunning(false);
+    runningRef.current = false;
+    setSnapshot(null);
+    latestSnapshotRef.current = null;
+    setSessionConfig(null);
+    sessionConfigRef.current = null;
+    setSelectedTargetId("");
+    selectedTargetRef.current = "";
+    setHoveredTargetId("");
+    hoveredTargetRef.current = "";
+    pointerInRaidFramesRef.current = false;
+    pointerInPhaserCanvasRef.current = false;
+    selfPlayerIdRef.current = "";
+    phaserSelfHpRatioRef.current = 1;
+    canvasRawDamageTakenRef.current = 0;
+    setCanvasRawDamageTaken(0);
+    canvasHitCountsRef.current = createInitialCanvasHitCounts();
+    setCanvasHitCounts(createInitialCanvasHitCounts());
+    setDraftRoster(buildInitialRoster());
+    setSetupSeed(null);
+    setSetupConfirmed(false);
+    setInCombatView(false);
+    setRankingModalOpen(false);
+    setRankingSaveStatus("idle");
+    rankingSavedRunKeyRef.current = "";
+    rankingSaveAttemptedRunKeyRef.current = "";
+    clearGameOverState();
+    setStatusText("");
+  }
+
+  function markSetupDirty() {
+    if (!running) {
+      setSetupSeed(null);
+      setSetupConfirmed(false);
+    }
+  }
+
+  function resolveKeyboardTarget(config) {
+    const currentSnapshot = latestSnapshotRef.current;
+    if (!currentSnapshot) {
+      return null;
+    }
+
+    const findAlive = (targetId) => currentSnapshot.players.find((player) => player.id === targetId && player.alive);
+
+    if (config.useMouseover) {
+      const hovered = hoveredTargetRef.current;
+      if (hovered && findAlive(hovered)) {
+        return hovered;
+      }
+    }
+
+    const selected = selectedTargetRef.current;
+    if (selected && findAlive(selected)) {
+      return selected;
+    }
+
+    return currentSnapshot.players.find((player) => player.alive)?.id ?? null;
+  }
+
+  function queueSpell(spellKey, targetId = null) {
+    const engine = engineRef.current;
+    if (!engine) {
+      return;
+    }
+    engine.queueAction({
+      type: "cast",
+      spellKey,
+      targetId
+    });
+  }
+
+  function forceCanvasSelfDeathFromRaidFrame() {
+    phaserSelfHpRatioRef.current = 0;
+
+    const phaserGame = phaserGameRef.current;
+    if (!phaserGame?.scene?.getScenes) {
+      return;
+    }
+    const activeScene = phaserGame.scene.getScenes(true)?.[0];
+    if (activeScene?.events?.emit) {
+      activeScene.events.emit("force-self-death");
+    }
+  }
+
+  function startSimulationLoop() {
+    const loop = (timestamp) => {
+      const engine = engineRef.current;
+      if (!engine) {
+        return;
+      }
+
+      if (!lastFrameRef.current) {
+        lastFrameRef.current = timestamp;
+      }
+
+      let delta = timestamp - lastFrameRef.current;
+      if (delta > 120) {
+        delta = 120;
+      }
+      lastFrameRef.current = timestamp;
+
+      simAccumulatorRef.current += delta;
+      uiAccumulatorRef.current += delta;
+
+      while (simAccumulatorRef.current >= ENGINE_STEP_MS) {
+        const movementState = movementStateRef.current;
+        const isPlayerMoving = Boolean(
+          movementState.up || movementState.down || movementState.left || movementState.right
+        );
+        if (selfPlayerIdRef.current) {
+          engine.setExternalPlayerHpRatio(selfPlayerIdRef.current, phaserSelfHpRatioRef.current);
+        }
+        engine.step(ENGINE_STEP_MS, { isPlayerMoving });
+        simAccumulatorRef.current -= ENGINE_STEP_MS;
+      }
+
+      const latest = engine.getSnapshot();
+      latestSnapshotRef.current = latest;
+      const myPlayerInSnapshot = findMyPlayerInSnapshot(latest, selfPlayerIdRef.current);
+      if (myPlayerInSnapshot?.id) {
+        selfPlayerIdRef.current = myPlayerInSnapshot.id;
+      }
+      if (myPlayerInSnapshot) {
+        phaserSelfHpRatioRef.current = getPlayerHpRatio(myPlayerInSnapshot);
+        if (!myPlayerInSnapshot.alive) {
+          // 안전 동기화: 레이드 프레임에서 죽으면 캔버스 캐릭터도 즉시 0%로 맞춥니다.
+          forceCanvasSelfDeathFromRaidFrame();
+        }
+      }
+
+      if (GLOBAL_GAMEOVER_ON_SELF_DEATH && myPlayerInSnapshot && !myPlayerInSnapshot.alive) {
+        triggerGameOver("나 사망", latest);
+        return;
+      }
+
+      if (areAllFixedTanksDead(latest.players)) {
+        triggerGameOver("탱커 전멸", latest);
+        return;
+      }
+
+      if (Number(latest.metrics?.deaths ?? 0) >= DEATH_GAMEOVER_THRESHOLD) {
+        triggerGameOver(`사망자 ${DEATH_GAMEOVER_THRESHOLD}명`, latest);
+        return;
+      }
+
+      if (uiAccumulatorRef.current >= UI_STEP_MS || latest.finished) {
+        setSnapshot(latest);
+        uiAccumulatorRef.current = 0;
+      }
+
+      if (latest.finished) {
+        const allRaidDead = latest.players.every((player) => !player.alive);
+        if (allRaidDead) {
+          triggerGameOver("전원 사망", latest);
+          return;
+        }
+        stopLoopOnly();
+        setRunning(false);
+        const successByNoGameOver =
+          GLOBAL_SUCCESS_ON_TIMEOUT_WITHOUT_GAMEOVER && isTimeoutFinishedSnapshot(latest) && !gameOverReasonRef.current;
+        setStatusText(successByNoGameOver ? GLOBAL_SUCCESS_MESSAGE_TEXT : `연습 종료: 사망 ${latest.metrics.deaths}명`);
+        return;
+      }
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+  }
+
+  function handleConfirmSetup() {
+    if (running) {
+      return;
+    }
+    if (!selectedHealerIsImplemented) {
+      setStatusText("선택한 힐러 연습기는 아직 준비중입니다.");
+      return;
+    }
+    if (duplicateKeyboardBindings.length || blockedKeyboardBindings.length || duplicateMouseBindings.length) {
+      setStatusText("설정 완료 전에 단축키/클릭캐스팅 중복 또는 금지 조합을 해결하세요.");
+      return;
+    }
+
+    const seed = Date.now();
+    const roster = buildConfiguredRoster(seed, selectedHealerMeta);
+
+    stopLoopOnly();
+    engineRef.current = null;
+    setRunning(false);
+    runningRef.current = false;
+    setSnapshot(null);
+    latestSnapshotRef.current = null;
+    setSessionConfig(null);
+    sessionConfigRef.current = null;
+    setSelectedTargetId("");
+    selectedTargetRef.current = "";
+    setHoveredTargetId("");
+    hoveredTargetRef.current = "";
+    setInCombatView(false);
+    clearGameOverState();
+    selfPlayerIdRef.current = "";
+    phaserSelfHpRatioRef.current = 1;
+
+    setDraftRoster(roster);
+    setSetupSeed(seed);
+    setSetupConfirmed(true);
+    setStatusText(`${CANDIDATE_NAME_POOL.length}명 후보 중 랜덤 20인 로스터 생성 완료`);
+  }
+
+  function handleCooldownSpellDragStart(event, spellKey, groupKey = "manager") {
+    draggedCooldownSpellRef.current = {
+      spellKey,
+      groupKey: groupKey === "reserve" ? "reserve" : "manager"
+    };
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", spellKey);
+      event.dataTransfer.setData(
+        "application/x-healer-cooldown-spell",
+        JSON.stringify(draggedCooldownSpellRef.current)
+      );
+    }
+  }
+
+  function handleCooldownSpellDragOver(event) {
+    event.preventDefault();
+  }
+
+  function resolveDraggedCooldownSpellPayload(event) {
+    const refPayload = draggedCooldownSpellRef.current;
+    if (refPayload?.spellKey) {
+      return refPayload;
+    }
+
+    const serialized = event.dataTransfer?.getData("application/x-healer-cooldown-spell") || "";
+    if (serialized) {
+      try {
+        const parsed = JSON.parse(serialized);
+        if (parsed?.spellKey) {
+          return {
+            spellKey: String(parsed.spellKey),
+            groupKey: String(parsed.groupKey) === "reserve" ? "reserve" : "manager"
+          };
+        }
+      } catch {
+        // noop
+      }
+    }
+
+    const fallbackSpellKey = event.dataTransfer?.getData("text/plain") || "";
+    if (!fallbackSpellKey) {
+      return { spellKey: "", groupKey: "manager" };
+    }
+    return { spellKey: String(fallbackSpellKey), groupKey: "manager" };
+  }
+
+  function applyCooldownSpellOrders(nextManagerOrder, nextReserveOrder) {
+    const normalized = buildCooldownManagerSpellOrderBuckets(
+      activeSpellKeys,
+      nextManagerOrder,
+      nextReserveOrder
+    );
+    cooldownSpellOrderRef.current = normalized.manager;
+    cooldownReserveSpellOrderRef.current = normalized.reserve;
+    setCooldownSpellOrder(normalized.manager);
+    setCooldownReserveSpellOrder(normalized.reserve);
+  }
+
+  function handleCooldownSpellDrop(event, targetGroupKey = "manager", targetSpellKey = "") {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const payload = resolveDraggedCooldownSpellPayload(event);
+    const sourceSpellKey = String(payload.spellKey ?? "");
+    const targetGroup = targetGroupKey === "reserve" ? "reserve" : "manager";
+    if (!sourceSpellKey) {
+      return;
+    }
+
+    const managerOrder = [...(cooldownSpellOrderRef.current ?? [])];
+    const reserveOrder = [...(cooldownReserveSpellOrderRef.current ?? [])];
+    const removeFrom = (list) => list.filter((key) => key !== sourceSpellKey);
+    const nextManagerOrder = removeFrom(managerOrder);
+    const nextReserveOrder = removeFrom(reserveOrder);
+    const targetList = targetGroup === "reserve" ? nextReserveOrder : nextManagerOrder;
+    if (targetSpellKey && sourceSpellKey === targetSpellKey) {
+      return;
+    }
+
+    if (!targetSpellKey || !targetList.includes(targetSpellKey)) {
+      targetList.push(sourceSpellKey);
+      applyCooldownSpellOrders(nextManagerOrder, nextReserveOrder);
+      return;
+    }
+
+    const targetIndex = targetList.indexOf(targetSpellKey);
+    targetList.splice(targetIndex, 0, sourceSpellKey);
+    applyCooldownSpellOrders(nextManagerOrder, nextReserveOrder);
+  }
+
+  function handleCooldownSpellDragEnd() {
+    draggedCooldownSpellRef.current = { spellKey: "", groupKey: "manager" };
+  }
+
+  function resolveKeybindProfileDocRef() {
+    const uid = String(user?.uid ?? "").trim();
+    if (!uid || !db) {
+      return null;
+    }
+    return db
+      .collection("users")
+      .doc(uid)
+      .collection(HEALER_PRACTICE_KEYBIND_PROFILE_SUBCOLLECTION)
+      .doc(selectedHealerSlug);
+  }
+
+  async function loadCloudKeybindProfile(options = {}) {
+    const silent = Boolean(options?.silent);
+    if (!canUseCloudKeybindProfile) {
+      if (!silent) {
+        setStatusText("로그인 후에 직업별 키바인드 불러오기를 사용할 수 있습니다.");
+      }
+      return false;
+    }
+    const docRef = resolveKeybindProfileDocRef();
+    if (!docRef) {
+      if (!silent) {
+        setStatusText("키바인드 저장소에 접근할 수 없습니다.");
+      }
+      return false;
+    }
+
+    const requestSeq = keybindProfileRequestSeqRef.current + 1;
+    keybindProfileRequestSeqRef.current = requestSeq;
+    setKeybindProfileSyncBusy(true);
+
+    try {
+      const snapshot = await docRef.get();
+      if (requestSeq !== keybindProfileRequestSeqRef.current) {
+        return false;
+      }
+      if (!snapshot.exists) {
+        if (!silent) {
+          setStatusText("저장된 키바인드가 없습니다.");
+        }
+        return false;
+      }
+
+      const data = snapshot.data() ?? {};
+      markSetupDirty();
+      setKeyboardBindings(
+        resolveStoredKeyboardBindings(
+          data.keyboardBindings,
+          activeSpellKeys,
+          selectedPracticeRuntime.defaultKeybinds
+        )
+      );
+      setClickCastBindings(
+        resolveStoredClickCastBindings(
+          data.clickCastBindings,
+          clickCastableKeys,
+          selectedPracticeRuntime.defaultClickCastPreferred
+        )
+      );
+      if (typeof data.useClickCasting === "boolean") {
+        setUseClickCasting(Boolean(data.useClickCasting));
+      }
+      if (!silent) {
+        setStatusText("저장된 개인 키바인드를 불러왔습니다.");
+      }
+      return true;
+    } catch {
+      if (!silent) {
+        setStatusText("개인 키바인드 불러오기에 실패했습니다.");
+      }
+      return false;
+    } finally {
+      if (requestSeq === keybindProfileRequestSeqRef.current) {
+        setKeybindProfileSyncBusy(false);
+      }
+    }
+  }
+
+  async function handleSaveCloudKeybindProfile() {
+    if (!canUseCloudKeybindProfile) {
+      setStatusText("로그인 후에 직업별 키바인드 저장을 사용할 수 있습니다.");
+      return;
+    }
+    const docRef = resolveKeybindProfileDocRef();
+    if (!docRef) {
+      setStatusText("키바인드 저장소에 접근할 수 없습니다.");
+      return;
+    }
+
+    setKeybindProfileSyncBusy(true);
+    try {
+      const payload = {
+        healerSlug: selectedHealerSlug,
+        useClickCasting: Boolean(useClickCasting),
+        keyboardBindings: buildPersistableKeyboardBindings(keyboardBindings, activeSpellKeys),
+        clickCastBindings: buildPersistableClickCastBindings(clickCastBindings, clickCastableKeys),
+        updatedAt: serverTimestamp()
+      };
+      await docRef.set(payload, { merge: true });
+      setStatusText("개인 키바인드를 저장했습니다.");
+    } catch {
+      setStatusText("개인 키바인드 저장에 실패했습니다.");
+    } finally {
+      setKeybindProfileSyncBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!canUseCloudKeybindProfile || running) {
+      return;
+    }
+    void loadCloudKeybindProfile({ silent: true });
+  }, [canUseCloudKeybindProfile, running, selectedHealerSlug, user?.uid]);
+
+  function handleStartSimulation() {
+    if (!selectedHealerIsImplemented) {
+      setStatusText("선택한 힐러 연습기는 아직 준비중입니다.");
+      return;
+    }
+    if (!canStartSimulation) {
+      if (!setupConfirmed) {
+        setStatusText("먼저 설정 완료를 눌러 랜덤 20인을 확정하세요.");
+      } else {
+        setStatusText("시작 전에 단축키/클릭캐스팅 중복 또는 금지 조합을 확인하세요.");
+      }
+      return;
+    }
+
+    stopLoopOnly();
+    clearGameOverState();
+
+    const durationMinutes = resolveCombatDurationMinutesByDifficulty(difficultyKey);
+    const durationMs = durationMinutes * 60 * 1000;
+    const configuredSetupSeed = Number(setupSeed);
+    const seed = Number.isFinite(configuredSetupSeed)
+      ? Math.floor(configuredSetupSeed)
+      : Math.floor(Math.random() * 2147483647);
+    const difficultyConfig = PRACTICE_DIFFICULTY_TUNING[difficultyKey] ?? PRACTICE_DIFFICULTY_TUNING.normal;
+    const resolvedTankDamageTakenMultiplier = DEFAULT_TANK_DAMAGE_TAKEN_MULTIPLIER;
+    const normalizedTriageHealthThresholdPct = toPercentNumber(
+      FIXED_TRIAGE_HEALTH_THRESHOLD_PCT,
+      FIXED_TRIAGE_HEALTH_THRESHOLD_PCT
+    );
+    const normalizedTriageMinEffectiveHealPct = toPercentNumber(
+      FIXED_TRIAGE_MIN_EFFECTIVE_HEAL_PCT,
+      FIXED_TRIAGE_MIN_EFFECTIVE_HEAL_PCT
+    );
+
+    const keyboardTokenToSpell = buildKeyboardTokenToSpellMap(
+      keyboardBindings,
+      disabledKeyboardSpellSet,
+      movementKeyPreset,
+      activeSpellKeys
+    );
+    const mouseTokenToSpell = useClickCasting
+      ? buildMouseTokenToSpellMap(clickCastBindings, clickCastableKeys)
+      : {};
+    const EngineClass = selectedPracticeRuntime.engineClass;
+
+    const engine = new EngineClass({
+      durationMs,
+      seed,
+      players: draftRoster,
+      incomingDamageMultiplier: difficultyConfig.incomingDamageMultiplier,
+      damageBreakEveryMs: difficultyConfig.damageBreakEveryMs,
+      damageBreakDurationMs: difficultyConfig.damageBreakDurationMs,
+      scheduledRaidBursts: difficultyConfig.scheduledRaidBursts,
+      tankIncomingDamageMultiplier: resolvedTankDamageTakenMultiplier,
+      triageHealthThresholdPct: normalizedTriageHealthThresholdPct,
+      triageMinEffectiveHealPct: normalizedTriageMinEffectiveHealPct,
+      ...selectedPracticeRuntime.buildEngineConfig(),
+      leechHealingRatio: GLOBAL_LEECH_HEALING_RATIO,
+      queueWindowMs: SPELL_QUEUE_WINDOW_MS
+    });
+
+    const frozenConfig = {
+      seed,
+      healerSlug: selectedHealerSlug,
+      difficultyKey,
+      mapKey: selectedMapKey,
+      movementKeyPreset: normalizeMovementPreset(movementKeyPreset),
+      useMouseover,
+      useClickCasting,
+      raidFrameLayout,
+      myRaidFramePositionMode: normalizeMyRaidFramePositionMode(myRaidFramePositionMode),
+      tankDamageTakenMultiplier: resolvedTankDamageTakenMultiplier,
+      triageHealthThresholdPct: normalizedTriageHealthThresholdPct,
+      triageMinEffectiveHealPct: normalizedTriageMinEffectiveHealPct,
+      keybinds: { ...effectiveBindingLabels },
+      keyboardTokenToSpell,
+      mouseTokenToSpell
+    };
+
+    const firstSnapshot = engine.getSnapshot();
+    const myPlayerInFirstSnapshot = findMyPlayerInSnapshot(firstSnapshot);
+
+    engineRef.current = engine;
+    setSessionConfig(frozenConfig);
+    sessionConfigRef.current = frozenConfig;
+
+    setSnapshot(firstSnapshot);
+    latestSnapshotRef.current = firstSnapshot;
+
+    const defaultTarget = firstSnapshot.players.find((player) => player.alive)?.id ?? "";
+    setSelectedTargetId(defaultTarget);
+    selectedTargetRef.current = defaultTarget;
+
+    setHoveredTargetId("");
+    hoveredTargetRef.current = "";
+    selfPlayerIdRef.current = myPlayerInFirstSnapshot?.id ?? "";
+    phaserSelfHpRatioRef.current = myPlayerInFirstSnapshot ? getPlayerHpRatio(myPlayerInFirstSnapshot) : 1;
+    canvasRawDamageTakenRef.current = 0;
+    setCanvasRawDamageTaken(0);
+    canvasHitCountsRef.current = createInitialCanvasHitCounts();
+    setCanvasHitCounts(createInitialCanvasHitCounts());
+
+    setRunning(true);
+    runningRef.current = true;
+    setInCombatView(true);
+    setRankingSaveStatus("idle");
+    rankingSavedRunKeyRef.current = "";
+    rankingSaveAttemptedRunKeyRef.current = "";
+    setStatusText("연습 진행 중");
+    startSimulationLoop();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollElementIntoViewWithStickyTopOffset(combatViewRef.current, "smooth");
+      });
+    });
+  }
+
+  function handleStopSimulation() {
+    const engine = engineRef.current;
+    if (!engine) {
+      return;
+    }
+
+    engine.finish("manual");
+    const finalSnapshot = engine.getSnapshot();
+
+    stopLoopOnly();
+    setRunning(false);
+    runningRef.current = false;
+    setSnapshot(finalSnapshot);
+    latestSnapshotRef.current = finalSnapshot;
+    const myPlayerInFinalSnapshot = findMyPlayerInSnapshot(finalSnapshot, selfPlayerIdRef.current);
+    if (myPlayerInFinalSnapshot?.id) {
+      selfPlayerIdRef.current = myPlayerInFinalSnapshot.id;
+      phaserSelfHpRatioRef.current = getPlayerHpRatio(myPlayerInFinalSnapshot);
+    }
+
+    setStatusText("연습을 수동 종료했습니다.");
+  }
+
+  function handleKeyInputChange(spellKey, rawValue) {
+    markSetupDirty();
+    const value = normalizeKey(rawValue);
+    const safeKey = isMovementRestrictedKey(value, movementKeyPreset) ? "" : value;
+    setKeyboardBindings((prev) => ({
+      ...prev,
+      [spellKey]: {
+        modifier: normalizeModifier(prev[spellKey]?.modifier),
+        key: safeKey
+      }
+    }));
+    if (safeKey !== value && value) {
+      setStatusText(`${value} 키는 이동키 프리셋(${normalizeMovementPreset(movementKeyPreset)})에서 사용할 수 없습니다.`);
+    }
+  }
+
+  function handleModifierChange(spellKey, modifierValue) {
+    markSetupDirty();
+    const modifier = normalizeModifier(modifierValue);
+    setKeyboardBindings((prev) => ({
+      ...prev,
+      [spellKey]: {
+        modifier,
+        key: normalizeKey(prev[spellKey]?.key)
+      }
+    }));
+  }
+
+  function handleClickCastBindingChange(spellKey, token) {
+    markSetupDirty();
+    setClickCastBindings((prev) => ({
+      ...prev,
+      [spellKey]: token
+    }));
+  }
+
+  function selectTarget(playerId) {
+    setSelectedTargetId(playerId);
+    selectedTargetRef.current = playerId;
+  }
+
+  function handleFrameMouseDown(event, playerId) {
+    const currentSnapshot = latestSnapshotRef.current;
+    const player = currentSnapshot?.players.find((item) => item.id === playerId);
+    if (!player || !player.alive) {
+      return;
+    }
+
+    const config = sessionConfigRef.current;
+    if (running && config?.useClickCasting) {
+      const token = mouseEventToBindingToken(event);
+      const spellKey = config.mouseTokenToSpell[token];
+      if (spellKey) {
+        event.preventDefault();
+        queueSpell(spellKey, playerId);
+        return;
+      }
+    }
+
+    if (event.button === 0) {
+      selectTarget(playerId);
+    }
+  }
+
+  useEffect(() => {
+    if (!running) {
+      return;
+    }
+
+    const clearMovementState = () => {
+      movementStateRef.current = {
+        up: false,
+        down: false,
+        left: false,
+        right: false
+      };
+    };
+
+    const applyMovementStateFromEvent = (event, isPressed) => {
+      const config = sessionConfigRef.current;
+      if (!config) {
+        return false;
+      }
+
+      const resolvedKeys = keyboardEventToResolvedKeys(event);
+      if (!resolvedKeys.length) {
+        return false;
+      }
+
+      const movementPreset = normalizeMovementPreset(config.movementKeyPreset);
+      const movementKeys = MOVEMENT_PRESET_KEYS[movementPreset] ?? MOVEMENT_PRESET_KEYS.WASD;
+      const nextState = { ...movementStateRef.current };
+      let hasMovementKey = false;
+      const leftMovementAliases = movementPreset === "WSQE" ? new Set([movementKeys.left, "A"]) : new Set([movementKeys.left]);
+      const rightMovementAliases = movementPreset === "WSQE" ? new Set([movementKeys.right, "D"]) : new Set([movementKeys.right]);
+
+      for (const key of resolvedKeys) {
+        if (key === movementKeys.up) {
+          nextState.up = isPressed;
+          hasMovementKey = true;
+        } else if (key === movementKeys.down) {
+          nextState.down = isPressed;
+          hasMovementKey = true;
+        } else if (leftMovementAliases.has(key)) {
+          nextState.left = isPressed;
+          hasMovementKey = true;
+        } else if (rightMovementAliases.has(key)) {
+          nextState.right = isPressed;
+          hasMovementKey = true;
+        }
+      }
+
+      if (hasMovementKey) {
+        movementStateRef.current = nextState;
+      }
+
+      return hasMovementKey;
+    };
+
+    const onKeyDown = (event) => {
+      const pointerInRaidFrames = pointerInRaidFramesRef.current;
+      const pointerInPhaserCanvas = pointerInPhaserCanvasRef.current;
+      const targetTag = event.target?.tagName;
+      if (
+        !pointerInRaidFrames &&
+        !pointerInPhaserCanvas &&
+        (targetTag === "INPUT" ||
+          targetTag === "TEXTAREA" ||
+          targetTag === "SELECT" ||
+          event.target?.isContentEditable)
+      ) {
+        return;
+      }
+
+      const isMovementKey = applyMovementStateFromEvent(event, true);
+      if (isMovementKey) {
+        return;
+      }
+
+      if (event.repeat) {
+        return;
+      }
+
+      const config = sessionConfigRef.current;
+      if (!config) {
+        return;
+      }
+
+      const tokens = keyboardEventToBindingTokens(event);
+      if (!tokens.length) {
+        return;
+      }
+
+      const spellKey = tokens.map((token) => config.keyboardTokenToSpell[token]).find(Boolean);
+      if (!spellKey) {
+        return;
+      }
+
+      const runtime = resolveHealerPracticeRuntime(config.healerSlug);
+      const spell = runtime.practiceSpells[spellKey];
+      if (!spell) {
+        return;
+      }
+
+      event.preventDefault();
+      if (pointerInRaidFrames) {
+        event.stopPropagation();
+      }
+
+      if (!spell.requiresTarget) {
+        queueSpell(spell.key, null);
+        return;
+      }
+
+      const targetId = resolveKeyboardTarget(config);
+      if (!targetId) {
+        setStatusText(`${spell.name}: 대상 지정 필요`);
+        return;
+      }
+
+      queueSpell(spell.key, targetId);
+    };
+
+    const onKeyUp = (event) => {
+      applyMovementStateFromEvent(event, false);
+    };
+
+    const onWindowBlur = () => {
+      clearMovementState();
+    };
+
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("keyup", onKeyUp, true);
+    window.addEventListener("blur", onWindowBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("keyup", onKeyUp, true);
+      window.removeEventListener("blur", onWindowBlur);
+      clearMovementState();
+    };
+  }, [running]);
+
+  const currentSnapshot = snapshot;
+  const bindingLabelsForDisplay = sessionConfig?.keybinds ?? effectiveBindingLabels;
+  const activeRaidFrameLayout = sessionConfig?.raidFrameLayout ?? raidFrameLayout;
+  const activeMyRaidFramePositionMode = normalizeMyRaidFramePositionMode(
+    sessionConfig?.myRaidFramePositionMode ?? myRaidFramePositionMode
+  );
+  const activeDifficultyKey = sessionConfig?.difficultyKey ?? difficultyKey;
+  const activeMapKey = sessionConfig?.mapKey ?? selectedMapKey;
+  const activeMovementKeyPreset = normalizeMovementPreset(sessionConfig?.movementKeyPreset ?? movementKeyPreset);
+  const activeCombatHealerSlug = String(sessionConfig?.healerSlug ?? selectedHealerSlug).trim();
+  const activeCombatPracticeRuntime = useMemo(
+    () => resolveHealerPracticeRuntime(activeCombatHealerSlug),
+    [activeCombatHealerSlug]
+  );
+  const activeCombatSpellIconsByKey = activeCombatPracticeRuntime.spellIconUrlByKey ?? practiceSpellIconsByKey;
+  const rankingHealerTabOptions = useMemo(
+    () =>
+      healers.map((healer) => ({
+        slug: String(healer.slug ?? "").trim(),
+        shortName: String(healer.shortName ?? healer.name ?? healer.slug ?? "").trim() || "힐러",
+        iconUrl: String(healer.classIcon ?? "").trim() || DEFAULT_SPELL_ICON_URL,
+        enabled: IMPLEMENTED_HEALER_SLUGS.has(String(healer.slug ?? "").trim())
+      })),
+    []
+  );
+  const rankingCurrentPatchVersion = useMemo(
+    () => normalizeRankingPatchVersion(HEALER_PRACTICE_RANKING_PATCH_CONFIG?.currentPatchVersion, "12.0.1"),
+    []
+  );
+  const rankingPatchVersionOptions = useMemo(() => {
+    const configured = Array.isArray(HEALER_PRACTICE_RANKING_PATCH_CONFIG?.availablePatchVersions)
+      ? HEALER_PRACTICE_RANKING_PATCH_CONFIG.availablePatchVersions
+      : [];
+    const unique = new Set(
+      configured
+        .map((entry) => normalizeRankingPatchVersion(entry, ""))
+        .filter(Boolean)
+    );
+    unique.add(rankingCurrentPatchVersion);
+    return Array.from(unique);
+  }, [rankingCurrentPatchVersion]);
+  const activePhaserDifficultyConfig =
+    PHASER_DIFFICULTY_MECHANIC_TUNING[activeDifficultyKey] ?? PHASER_DIFFICULTY_MECHANIC_TUNING.normal;
+  const hasCombatSnapshot = Boolean(currentSnapshot);
+  const raidColumnCount = raidLayoutColumnCount(activeRaidFrameLayout);
+  const raidRowCount = activeRaidFrameLayout === "4x5" ? 4 : 5;
+  const frameSizeByLayout = RAID_FRAME_VISUAL_CONFIG.frameSizeByLayout ?? {};
+  const activeFrameSize =
+    frameSizeByLayout[activeRaidFrameLayout] ??
+    frameSizeByLayout["4x5"] ??
+    {};
+  const raidFrameWidthPx = Math.max(
+    1,
+    Number(activeFrameSize.widthPx ?? RAID_FRAME_VISUAL_CONFIG.frameWidthPx ?? 112)
+  );
+  const raidFrameHeightPx = Math.max(
+    1,
+    Number(activeFrameSize.heightPx ?? RAID_FRAME_VISUAL_CONFIG.frameHeightPx ?? 58)
+  );
+  const raidGridWidthPx =
+    RAID_FRAME_VISUAL_CONFIG.gridWidthOverridePx ?? raidFrameWidthPx * raidColumnCount;
+  const raidGridHeightPx = raidFrameHeightPx * raidRowCount;
+  const raidGridStyle = {
+    width: `${raidGridWidthPx}px`,
+    gridTemplateColumns: `repeat(${raidColumnCount}, ${raidFrameWidthPx}px)`
+  };
+
+  const cooldownBarSnapshot = currentSnapshot ?? {
+    holyPower: 0,
+    cooldowns: {},
+    buffs: {},
+    manaPct: 100,
+    currentCast: null,
+    queuedAction: null,
+    queueLockoutRemainingMs: 0,
+    spellQueueWindowMs: SPELL_QUEUE_WINDOW_MS
+  };
+  const activeSpecialProcDisplayConfig = activeCombatPracticeRuntime.specialProcDisplayConfig ?? [];
+  const activeSpecialProcIndicators = useMemo(() => {
+    if (!currentSnapshot) {
+      return [];
+    }
+
+    const buffState = currentSnapshot.buffs ?? {};
+    return activeSpecialProcDisplayConfig
+      .map((entry, index) => {
+        const procKey = String(entry?.key ?? "").trim();
+        const buffRemainingMsKey = String(entry?.buffRemainingMsKey ?? "").trim();
+        if (!buffRemainingMsKey) {
+          return null;
+        }
+
+        const remainingMs = Math.max(0, Number(buffState[buffRemainingMsKey] ?? 0));
+        if (remainingMs <= 0) {
+          return null;
+        }
+        const stackCountBuffKey = String(entry?.stackCountBuffKey ?? "").trim();
+        const stackCountValueRaw = stackCountBuffKey ? Number(buffState[stackCountBuffKey] ?? 0) : Number.NaN;
+        const stackCount = Number.isFinite(stackCountValueRaw) ? Math.max(0, Math.floor(stackCountValueRaw)) : null;
+
+        const iconSizePx = Math.max(12, Number(SPECIAL_PROC_OVERLAY_ICON_SIZE_PX ?? 19));
+        const topOffsetPx = Number.isFinite(Number(SPECIAL_PROC_OVERLAY_TOP_OFFSET_PX))
+          ? Number(SPECIAL_PROC_OVERLAY_TOP_OFFSET_PX)
+          : -22;
+        const label = String(entry?.label ?? "").trim() || procKey || "버프";
+
+        return {
+          id: `${procKey || buffRemainingMsKey || "proc"}-${index}`,
+          key: procKey,
+          label,
+          iconUrl:
+            String(entry?.iconUrl ?? "").trim() ||
+            activeCombatSpellIconsByKey[procKey] ||
+            DEFAULT_SPELL_ICON_URL,
+          remainingMs,
+          iconSizePx,
+          topOffsetPx,
+          showAboveCooldownManager: Boolean(entry?.showAboveCooldownManager),
+          showOnMyRaidFrame: Boolean(entry?.showOnMyRaidFrame),
+          showCountdownOnOverlay: entry?.showCountdownOnOverlay !== false,
+          showCountdownOnRaidFrame: Boolean(entry?.showCountdownOnRaidFrame),
+          showStackCountOnOverlay: Boolean(entry?.showStackCountOnOverlay),
+          stackCount
+        };
+      })
+      .filter(Boolean);
+  }, [activeCombatSpellIconsByKey, activeSpecialProcDisplayConfig, currentSnapshot]);
+  const overlayTopProcIndicators = useMemo(
+    () => activeSpecialProcIndicators.filter((entry) => entry.showAboveCooldownManager),
+    [activeSpecialProcIndicators]
+  );
+  const overlayMyFrameProcIndicators = useMemo(
+    () => activeSpecialProcIndicators.filter((entry) => entry.showOnMyRaidFrame),
+    [activeSpecialProcIndicators]
+  );
+  const orderedRaidFramePlayers = useMemo(
+    () =>
+      buildRaidFrameOrderedPlayers(
+        currentSnapshot?.players ?? [],
+        activeRaidFrameLayout,
+        activeMyRaidFramePositionMode
+      ),
+    [currentSnapshot, activeRaidFrameLayout, activeMyRaidFramePositionMode]
+  );
+  const finalOverhealingPct = useMemo(() => {
+    const metrics = currentSnapshot?.metrics;
+    if (!metrics) {
+      return 0;
+    }
+    const direct = Number(metrics.overhealingPct);
+    if (Number.isFinite(direct)) {
+      return Math.max(0, Math.min(100, direct));
+    }
+    const healingDone = Math.max(0, Number(metrics.healingDone ?? 0));
+    const overhealing = Math.max(0, Number(metrics.overhealing ?? 0));
+    const total = healingDone + overhealing;
+    if (total <= 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(100, (overhealing / total) * 100));
+  }, [currentSnapshot]);
+  const finalAverageRaidHealthPct = useMemo(() => {
+    const value = Number(currentSnapshot?.metrics?.averageRaidHealthPct ?? 0);
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return Math.max(0, Math.min(100, value));
+  }, [currentSnapshot]);
+  const finalScoreBreakdown = useMemo(() => {
+    if (!currentSnapshot?.finished) {
+      return null;
+    }
+
+    const metrics = currentSnapshot?.metrics ?? {};
+    const deaths = Math.max(0, Math.round(Number(metrics.deaths ?? 0)));
+    const manaPct = Math.max(0, Math.min(100, Number(currentSnapshot?.manaPct ?? 0)));
+    const wastedHolyPower = Math.max(0, Math.round(Number(metrics.wastedHolyPower ?? 0)));
+
+    const deathsConfig = HEALER_PRACTICE_SCORE_COMMON_CONFIG?.deaths ?? {};
+    const deathsScore = computeCountPenaltyScore(deaths, {
+      maxPoints: deathsConfig.maxPoints,
+      pointsLostPerUnit: deathsConfig.pointsLostPerDeath
+    });
+
+    const overhealConfig = resolveDifficultyValue(
+      HEALER_PRACTICE_SCORE_COMMON_CONFIG?.overhealingByDifficulty,
+      activeDifficultyKey
+    );
+    const overhealingScore = computeLowerIsBetterStepScore(
+      finalOverhealingPct,
+      overhealConfig,
+      { maxPoints: 15, fullScoreAtOrBelowPct: 10, pctPerPointLost: 2, pointsLostPerStep: 0.5 }
+    );
+
+    const healerScoreConfig = resolveDifficultyValue(
+      HEALER_PRACTICE_SCORE_HEALER_CONFIG_BY_SLUG?.[activeCombatHealerSlug],
+      activeDifficultyKey
+    );
+    const averageRaidHealthScore = computeHigherIsBetterStepScore(
+      finalAverageRaidHealthPct,
+      healerScoreConfig?.averageRaidHealth,
+      { maxPoints: 20, fullScoreAtOrAbovePct: 75, pctPerPointLost: 1 }
+    );
+    const remainingManaScore = computeLowerIsBetterStepScore(
+      manaPct,
+      healerScoreConfig?.remainingMana,
+      { maxPoints: 10, fullScoreAtOrBelowPct: 30, pctPerPointLost: 2, pointsLostPerStep: 0.5 }
+    );
+
+    const directCpm = Number(metrics.cpm);
+    const cpm = Number.isFinite(directCpm)
+      ? Math.max(0, directCpm)
+      : Math.max(
+        0,
+        (() => {
+          const casts = metrics.casts;
+          if (!casts || typeof casts !== "object") {
+            return 0;
+          }
+          const totalCasts = Object.values(casts).reduce(
+            (sum, value) => sum + Math.max(0, Number(value ?? 0)),
+            0
+          );
+          const elapsedMinutes = Math.max(1e-6, Number(currentSnapshot?.nowMs ?? 0) / 60000);
+          return totalCasts / elapsedMinutes;
+        })()
+      );
+    const cpmConfig = HEALER_PRACTICE_SCORE_CPM_CONFIG_BY_SLUG?.[activeCombatHealerSlug] ?? null;
+    const cpmScore = roundToOneDecimal(
+      computeHigherIsBetterLinearScore(cpm, cpmConfig, {
+        maxPoints: 10,
+        fullScoreAtOrAboveValue: 42,
+        zeroScoreAtOrBelowValue: 30
+      })
+    );
+
+    const totalHealingDone = Math.max(0, Number(metrics.healingDone ?? 0));
+    const myPlayer = findMyPlayerInSnapshot(currentSnapshot, selfPlayerIdRef.current);
+    const healingByTarget = metrics.healingByTarget;
+    const selfHealingDone =
+      totalHealingDone > 0 && myPlayer?.id && healingByTarget && typeof healingByTarget === "object"
+        ? Math.max(0, Number(healingByTarget[myPlayer.id] ?? 0))
+        : 0;
+    const selfHealRatioPctForScore =
+      totalHealingDone > 0 ? Math.max(0, Math.min(100, (selfHealingDone / totalHealingDone) * 100)) : 0;
+    const selfHealConfig = HEALER_PRACTICE_SCORE_COMMON_CONFIG?.selfHealRatio ?? {};
+    const selfHealScore = roundToOneDecimal(
+      computeLowerIsBetterStepScore(selfHealRatioPctForScore, selfHealConfig, {
+        maxPoints: 5,
+        fullScoreAtOrBelowPct: 6,
+        pctPerPointLost: 3,
+        pointsLostPerStep: 1
+      })
+    );
+
+    const healerSpecificConfig = healerScoreConfig?.healerSpecific ?? {};
+    const healerSpecificType = String(healerSpecificConfig.type ?? "").trim();
+    const healerSpecificMaxPoints = Math.max(0, Number(healerSpecificConfig.maxPoints ?? 20) || 20);
+    let healerSpecificScore = healerSpecificMaxPoints;
+    if (healerSpecificType === "wastedHolyPower") {
+      healerSpecificScore = computeCountPenaltyScore(wastedHolyPower, {
+        maxPoints: healerSpecificMaxPoints,
+        pointsLostPerUnit: Number(healerSpecificConfig.pointsLostPerWastedHolyPower ?? 1)
+      });
+    }
+    healerSpecificScore = roundToOneDecimal(healerSpecificScore);
+    const deathsScoreRounded = roundToOneDecimal(deathsScore);
+    const overhealingScoreRounded = roundToOneDecimal(overhealingScore);
+    const averageRaidHealthScoreRounded = roundToOneDecimal(averageRaidHealthScore);
+    const remainingManaScoreRounded = roundToOneDecimal(remainingManaScore);
+
+    const totalRaw =
+      deathsScoreRounded +
+      overhealingScoreRounded +
+      averageRaidHealthScoreRounded +
+      remainingManaScoreRounded +
+      cpmScore +
+      selfHealScore +
+      healerSpecificScore;
+    const totalScore = roundToOneDecimal(clampScore(totalRaw, 100));
+
+    return {
+      totalScore,
+      deathsScore: deathsScoreRounded,
+      overhealingScore: overhealingScoreRounded,
+      averageRaidHealthScore: averageRaidHealthScoreRounded,
+      remainingManaScore: remainingManaScoreRounded,
+      cpmScore,
+      selfHealScore,
+      healerSpecificScore
+    };
+  }, [
+    activeCombatHealerSlug,
+    activeDifficultyKey,
+    currentSnapshot,
+    finalAverageRaidHealthPct,
+    finalOverhealingPct
+  ]);
+  const bossDamageGraphPreview = useMemo(() => {
+    if (!setupConfirmed || !selectedHealerIsImplemented || draftRoster.length !== MIN_RAID_SIZE) {
+      return null;
+    }
+    const configuredSeed = Number(setupSeed);
+    if (!Number.isFinite(configuredSeed)) {
+      return null;
+    }
+
+    const durationMinutes = resolveCombatDurationMinutesByDifficulty(difficultyKey);
+    const durationMs = durationMinutes * 60 * 1000;
+    const seed = Math.floor(configuredSeed);
+    const difficultyConfig = PRACTICE_DIFFICULTY_TUNING[difficultyKey] ?? PRACTICE_DIFFICULTY_TUNING.normal;
+    const normalizedTriageHealthThresholdPct = toPercentNumber(
+      FIXED_TRIAGE_HEALTH_THRESHOLD_PCT,
+      FIXED_TRIAGE_HEALTH_THRESHOLD_PCT
+    );
+    const normalizedTriageMinEffectiveHealPct = toPercentNumber(
+      FIXED_TRIAGE_MIN_EFFECTIVE_HEAL_PCT,
+      FIXED_TRIAGE_MIN_EFFECTIVE_HEAL_PCT
+    );
+    const EngineClass = selectedPracticeRuntime.engineClass;
+    const graphWidth = BOSS_DAMAGE_GRAPH_VIEWBOX_WIDTH - BOSS_DAMAGE_GRAPH_PADDING.left - BOSS_DAMAGE_GRAPH_PADDING.right;
+    const graphHeight = BOSS_DAMAGE_GRAPH_VIEWBOX_HEIGHT - BOSS_DAMAGE_GRAPH_PADDING.top - BOSS_DAMAGE_GRAPH_PADDING.bottom;
+
+    try {
+      const previewEngine = new EngineClass({
+        durationMs,
+        seed,
+        players: draftRoster,
+        incomingDamageMultiplier: difficultyConfig.incomingDamageMultiplier,
+        damageBreakEveryMs: difficultyConfig.damageBreakEveryMs,
+        damageBreakDurationMs: difficultyConfig.damageBreakDurationMs,
+        scheduledRaidBursts: difficultyConfig.scheduledRaidBursts,
+        tankIncomingDamageMultiplier: DEFAULT_TANK_DAMAGE_TAKEN_MULTIPLIER,
+        triageHealthThresholdPct: normalizedTriageHealthThresholdPct,
+        triageMinEffectiveHealPct: normalizedTriageMinEffectiveHealPct,
+        ...selectedPracticeRuntime.buildEngineConfig(),
+        leechHealingRatio: GLOBAL_LEECH_HEALING_RATIO,
+        queueWindowMs: SPELL_QUEUE_WINDOW_MS
+      });
+
+      const rawSeries = Array.isArray(previewEngine.getIncomingDamageTimelineSeries?.(BOSS_DAMAGE_GRAPH_BUCKET_MS))
+        ? previewEngine.getIncomingDamageTimelineSeries(BOSS_DAMAGE_GRAPH_BUCKET_MS)
+        : [];
+      const points = rawSeries
+        .map((point) => ({
+          timeMs: Math.max(0, Math.min(durationMs, Number(point?.timeMs) || 0)),
+          damage: Math.max(0, Number(point?.damage) || 0)
+        }))
+        .sort((a, b) => a.timeMs - b.timeMs);
+      const totalDamage = points.reduce((sum, point) => sum + point.damage, 0);
+      const maxDamage = points.reduce((max, point) => Math.max(max, point.damage), 0);
+      const yAxisMax = resolveResponsiveYAxisMax(Math.max(1, maxDamage));
+      const xFromTimeMs = (timeMs) =>
+        BOSS_DAMAGE_GRAPH_PADDING.left + (durationMs > 0 ? (Math.max(0, Math.min(durationMs, timeMs)) / durationMs) * graphWidth : 0);
+      const yFromDamage = (damage) =>
+        BOSS_DAMAGE_GRAPH_PADDING.top + graphHeight * (1 - Math.max(0, Math.min(yAxisMax, damage)) / yAxisMax);
+      const linePath = points
+        .map((point, index) => `${index === 0 ? "M" : "L"} ${xFromTimeMs(point.timeMs).toFixed(2)} ${yFromDamage(point.damage).toFixed(2)}`)
+        .join(" ");
+      const xStart = points.length ? xFromTimeMs(points[0].timeMs) : BOSS_DAMAGE_GRAPH_PADDING.left;
+      const xEnd = points.length ? xFromTimeMs(durationMs) : BOSS_DAMAGE_GRAPH_PADDING.left;
+      const yBase = yFromDamage(0);
+      const areaPath = linePath ? `${linePath} L ${xEnd.toFixed(2)} ${yBase.toFixed(2)} L ${xStart.toFixed(2)} ${yBase.toFixed(2)} Z` : "";
+      const yTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+        const value = yAxisMax * ratio;
+        return {
+          value,
+          y: yFromDamage(value)
+        };
+      });
+      const timeTicks = buildGraphTimeTicks(durationMs, 6).map((timeMs) => ({
+        timeMs,
+        x: xFromTimeMs(timeMs)
+      }));
+
+      return {
+        seed,
+        durationMs,
+        totalDamage,
+        maxDamage,
+        yAxisMax,
+        linePath,
+        areaPath,
+        yTicks,
+        timeTicks
+      };
+    } catch (error) {
+      return null;
+    }
+  }, [
+    difficultyKey,
+    draftRoster,
+    selectedHealerIsImplemented,
+    selectedPracticeRuntime,
+    setupConfirmed,
+    setupSeed
+  ]);
+  const combatRecordCommonCards = useMemo(() => {
+    const deaths = Math.max(0, Math.round(Number(currentSnapshot?.metrics?.deaths ?? 0)));
+    const mana = Math.max(0, Number(currentSnapshot?.mana ?? 0));
+    const manaPct = Math.max(0, Math.min(100, Number(currentSnapshot?.manaPct ?? 0)));
+    const triageHealing = Math.max(0, Number(currentSnapshot?.metrics?.triageHealing ?? 0));
+    const healingDone = Math.max(0, Number(currentSnapshot?.metrics?.healingDone ?? 0));
+    const triageRatioPct = healingDone > 0 ? (triageHealing / healingDone) * 100 : 0;
+    return [
+      {
+        key: "avg-raid-health",
+        title: "평균 공대 체력",
+        value: `${finalAverageRaidHealthPct.toFixed(1)}%`,
+        valueClassName: "text-emerald-200"
+      },
+      {
+        key: "overhealing",
+        title: "최종 오버힐 비율",
+        value: `${finalOverhealingPct.toFixed(1)}%`,
+        valueClassName: "text-amber-200"
+      },
+      {
+        key: "deaths",
+        title: "최종 사망자 수",
+        value: `${deaths}`,
+        valueClassName: "text-rose-200"
+      },
+      {
+        key: "mana",
+        title: "남은 마나",
+        value: `${Math.round(mana)} (${Math.round(manaPct)}%)`,
+        valueClassName: "text-violet-200"
+      },
+      {
+        key: "triage-healing",
+        title: "트리아지 힐 총량",
+        value: `${Math.round(triageHealing)} (${triageRatioPct.toFixed(1)}%)`,
+        valueClassName: "text-sky-200"
+      }
+    ];
+  }, [currentSnapshot, finalAverageRaidHealthPct, finalOverhealingPct]);
+  const combatRecordHealerSpecificCards = useMemo(() => {
+    if (!currentSnapshot) {
+      return [];
+    }
+    if (activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG) {
+      return [
+        {
+          key: "wasted-holy-power",
+          title: "낭비한 신성한 힘",
+          value: `${Math.max(0, Math.round(Number(currentSnapshot.metrics?.wastedHolyPower ?? 0)))}`,
+          valueClassName: "text-yellow-200"
+        }
+      ];
+    }
+    if (activeCombatHealerSlug === RESTORATION_DRUID_HEALER_SLUG) {
+      const uptime = Math.max(0, Math.min(100, Number(currentSnapshot.metrics?.lifebloomHotUptimePct ?? 0)));
+      return [
+        {
+          key: "lifebloom-uptime",
+          title: "피생 도트 업타임",
+          value: `${uptime.toFixed(1)}%`,
+          valueClassName: "text-lime-200"
+        }
+      ];
+    }
+    return [];
+  }, [activeCombatHealerSlug, currentSnapshot]);
+  const finalCpm = useMemo(() => {
+    const direct = Number(currentSnapshot?.metrics?.cpm);
+    if (Number.isFinite(direct)) {
+      return Math.max(0, direct);
+    }
+
+    const casts = currentSnapshot?.metrics?.casts;
+    if (!casts || typeof casts !== "object") {
+      return 0;
+    }
+
+    const totalCasts = Object.values(casts).reduce(
+      (sum, value) => sum + Math.max(0, Number(value ?? 0)),
+      0
+    );
+    const elapsedMinutes = Math.max(1e-6, Number(currentSnapshot?.nowMs ?? 0) / 60000);
+    return Math.max(0, totalCasts / elapsedMinutes);
+  }, [currentSnapshot]);
+  const showZoneFloorHitCount = Boolean(activePhaserDifficultyConfig?.worldFirstKillZonePatternEnabled);
+  const feedbackGameOverReason = useMemo(
+    () => mapGameOverFeedbackReason(gameOverReason, DEATH_GAMEOVER_THRESHOLD),
+    [gameOverReason]
+  );
+  const isSuccessfulPracticeResult = Boolean(
+    GLOBAL_SUCCESS_ON_TIMEOUT_WITHOUT_GAMEOVER &&
+    currentSnapshot?.finished &&
+    !gameOverReason &&
+    isTimeoutFinishedSnapshot(currentSnapshot)
+  );
+  const rankingRunKey = useMemo(() => {
+    if (!currentSnapshot?.finished || !sessionConfig) {
+      return "";
+    }
+    const seed = Number(sessionConfig.seed);
+    const safeSeed = Number.isFinite(seed) ? Math.floor(seed) : "seedless";
+    const finishedMs = Math.max(0, Number(currentSnapshot.nowMs ?? 0));
+    const healerSlug = String(sessionConfig.healerSlug ?? activeCombatHealerSlug).trim();
+    const difficulty = String(sessionConfig.difficultyKey ?? activeDifficultyKey).trim();
+    const mapKey = String(sessionConfig.mapKey ?? activeMapKey).trim();
+    return `${healerSlug}|${difficulty}|${mapKey}|${rankingCurrentPatchVersion}|${safeSeed}|${finishedMs}`;
+  }, [
+    activeCombatHealerSlug,
+    activeDifficultyKey,
+    activeMapKey,
+    currentSnapshot?.finished,
+    currentSnapshot?.nowMs,
+    rankingCurrentPatchVersion,
+    sessionConfig
+  ]);
+  const canvasDamageHealingEquivalentAmount = useMemo(() => {
+    const myPlayer = findMyPlayerInSnapshot(currentSnapshot, selfPlayerIdRef.current);
+    if (!myPlayer?.maxHp) {
+      return 0;
+    }
+    const canvasMaxHealth = Math.max(1, Number(activePhaserDifficultyConfig.playerMaxHealth ?? 100));
+    const hpScale = Math.max(0, Number(myPlayer.maxHp ?? 0)) / canvasMaxHealth;
+    return Math.max(0, canvasRawDamageTaken * hpScale);
+  }, [activePhaserDifficultyConfig, canvasRawDamageTaken, currentSnapshot]);
+  const canvasDamageHealingSharePct = useMemo(() => {
+    const totalHealingDone = Math.max(0, Number(currentSnapshot?.metrics?.healingDone ?? 0));
+    if (totalHealingDone <= 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(100, (canvasDamageHealingEquivalentAmount / totalHealingDone) * 100));
+  }, [canvasDamageHealingEquivalentAmount, currentSnapshot]);
+  const healMeterRows = useMemo(() => {
+    const healingBySpell = currentSnapshot?.metrics?.healingBySpell;
+    if (!healingBySpell || typeof healingBySpell !== "object") {
+      return [];
+    }
+
+    const mergedAmountBySpell = Object.entries(healingBySpell).reduce((acc, [spellKey, rawAmount]) => {
+      const amount = Math.max(0, Number(rawAmount) || 0);
+      if (amount <= 0) {
+        return acc;
+      }
+      const mergedSpellKey = spellKey === "eternalFlameTick" ? "eternalFlame" : spellKey;
+      acc[mergedSpellKey] = Math.max(0, Number(acc[mergedSpellKey] ?? 0)) + amount;
+      return acc;
+    }, {});
+
+    const entries = Object.entries(mergedAmountBySpell).map(([spellKey, amount]) => ({
+      spellKey,
+      amount: Math.max(0, Number(amount) || 0)
+    }));
+
+    if (!entries.length) {
+      return [];
+    }
+
+    const totalAmount = entries.reduce((sum, entry) => sum + entry.amount, 0);
+    if (totalAmount <= 0) {
+      return [];
+    }
+
+    return entries
+      .sort((a, b) => b.amount - a.amount)
+      .map((entry) => {
+        const meta = healMeterSpellMetaByKey[entry.spellKey] ?? {};
+        const fallbackName = practiceSpellsByKey[entry.spellKey]?.name ?? entry.spellKey;
+        const castsRaw = Number(currentSnapshot?.metrics?.casts?.[entry.spellKey]);
+        return {
+          spellKey: entry.spellKey,
+          spellName: meta.name ?? fallbackName,
+          iconUrl: meta.iconUrl ?? practiceSpellIconsByKey[entry.spellKey] ?? DEFAULT_SPELL_ICON_URL,
+          spellId: Number.isFinite(meta.spellId) ? Number(meta.spellId) : null,
+          amount: entry.amount,
+          ratioPct: (entry.amount / totalAmount) * 100,
+          casts: Number.isFinite(castsRaw) ? Math.max(0, Math.round(castsRaw)) : null
+        };
+      });
+  }, [currentSnapshot, healMeterSpellMetaByKey, practiceSpellsByKey, practiceSpellIconsByKey]);
+  const sortedEventLogs = useMemo(() => {
+    const logs = Array.isArray(currentSnapshot?.logs) ? [...currentSnapshot.logs] : [];
+    return logs.sort((left, right) => {
+      const byTime = Number(right?.timeMs ?? 0) - Number(left?.timeMs ?? 0);
+      if (byTime !== 0) {
+        return byTime;
+      }
+      return Number(right?.id ?? 0) - Number(left?.id ?? 0);
+    });
+  }, [currentSnapshot]);
+  const selfHealRatioPct = useMemo(() => {
+    const metrics = currentSnapshot?.metrics;
+    if (!metrics) {
+      return 0;
+    }
+    const totalHealingDone = Math.max(0, Number(metrics.healingDone ?? 0));
+    if (totalHealingDone <= 0) {
+      return 0;
+    }
+    const myPlayer = findMyPlayerInSnapshot(currentSnapshot, selfPlayerIdRef.current);
+    if (!myPlayer?.id) {
+      return 0;
+    }
+    const healingByTarget = metrics.healingByTarget;
+    if (!healingByTarget || typeof healingByTarget !== "object") {
+      return 0;
+    }
+    const selfHealingDone = Math.max(0, Number(healingByTarget[myPlayer.id] ?? 0));
+    return Math.max(0, Math.min(100, (selfHealingDone / totalHealingDone) * 100));
+  }, [currentSnapshot]);
+  const holyPaladinFeedbackLines = useMemo(() => {
+    if (!isSuccessfulPracticeResult || activeCombatHealerSlug !== HOLY_PALADIN_HEALER_SLUG) {
+      return [];
+    }
+
+    const lines = [];
+    if (finalCpm < HOLY_PALADIN_FEEDBACK_CPM_MIN) {
+      lines.push(`CPM이 낮습니다. (현재 ${finalCpm.toFixed(1)})`);
+    }
+    if (canvasRawDamageTaken > HOLY_PALADIN_FEEDBACK_SKILL_HIT_DAMAGE_MAX) {
+      lines.push(`스킬을 너무 많이 맞았습니다. (스킬 맞은 피해 ${canvasRawDamageTaken.toFixed(1)})`);
+    }
+    if (selfHealRatioPct > HOLY_PALADIN_FEEDBACK_SELF_HEAL_RATIO_MAX_PCT) {
+      lines.push(`자힐 비중이 너무 높습니다. (현재 ${selfHealRatioPct.toFixed(1)}%)`);
+    }
+    const wastedHolyPower = Math.max(0, Math.round(Number(currentSnapshot?.metrics?.wastedHolyPower ?? 0)));
+    if (wastedHolyPower > HOLY_PALADIN_FEEDBACK_WASTED_HOLY_POWER_MAX) {
+      lines.push(`신성의 힘이 ${wastedHolyPower}개 낭비되었습니다.`);
+    }
+    if (finalOverhealingPct > HOLY_PALADIN_FEEDBACK_OVERHEAL_MAX_PCT) {
+      lines.push(`오버힐이 너무 많습니다. (현재 ${finalOverhealingPct.toFixed(1)}%)`);
+    }
+    return lines;
+  }, [
+    activeCombatHealerSlug,
+    canvasRawDamageTaken,
+    currentSnapshot,
+    finalCpm,
+    finalOverhealingPct,
+    isSuccessfulPracticeResult,
+    selfHealRatioPct
+  ]);
+  const showSuccessBanner =
+    Boolean(
+      GLOBAL_SUCCESS_ON_TIMEOUT_WITHOUT_GAMEOVER &&
+      currentSnapshot?.finished &&
+      !running &&
+      !gameOverReason &&
+      isTimeoutFinishedSnapshot(currentSnapshot)
+    );
+
+  const saveCurrentRunRanking = useCallback(async (options = {}) => {
+    const force = Boolean(options?.force);
+    if (!db || !isLoggedIn || !user?.uid) {
+      return false;
+    }
+    if (!canSaveRankingForCurrentDifficulty || !isSuccessfulPracticeResult) {
+      return false;
+    }
+    if (!currentSnapshot?.finished || !finalScoreBreakdown || !rankingRunKey) {
+      return false;
+    }
+    if (
+      !force &&
+      (rankingSavedRunKeyRef.current === rankingRunKey || rankingSaveAttemptedRunKeyRef.current === rankingRunKey)
+    ) {
+      return false;
+    }
+
+    const rankingCollection = resolveRankingEntriesCollection(
+      activeMapKey,
+      activeDifficultyKey,
+      rankingCurrentPatchVersion,
+      activeCombatHealerSlug
+    );
+    if (!rankingCollection) {
+      return false;
+    }
+    rankingSaveAttemptedRunKeyRef.current = rankingRunKey;
+    setRankingSaveStatus("saving");
+
+    const commonCardsPayload = combatRecordCommonCards.map((card) => ({
+      key: String(card.key ?? ""),
+      title: String(card.title ?? ""),
+      value: String(card.value ?? "")
+    }));
+    const healerCardsPayload = combatRecordHealerSpecificCards.map((card) => ({
+      key: String(card.key ?? ""),
+      title: String(card.title ?? ""),
+      value: String(card.value ?? "")
+    }));
+    const meterRowsPayload = healMeterRows.map((row, index) => ({
+      order: index + 1,
+      spellKey: String(row.spellKey ?? ""),
+      spellName: String(row.spellName ?? ""),
+      spellId: Number.isFinite(Number(row.spellId)) ? Number(row.spellId) : null,
+      amount: Math.max(0, Number(row.amount ?? 0)),
+      ratioPct: Math.max(0, Number(row.ratioPct ?? 0)),
+      casts: Number.isFinite(Number(row.casts)) ? Math.max(0, Number(row.casts)) : null
+    }));
+    const createdAtClientMs = Date.now();
+    const mapLabel = resolveMapLabel(activeMapKey);
+    const difficultyLabel = String(
+      PRACTICE_DIFFICULTY_TUNING[activeDifficultyKey]?.label ?? activeDifficultyKey
+    ).trim();
+    const fallbackPlayerLabel = user?.uid ? `유저-${String(user.uid).slice(0, 6)}` : "게스트";
+    const playerLabel = String(userLabel ?? "").trim() || fallbackPlayerLabel;
+    const totalScore = roundToOneDecimal(Number(finalScoreBreakdown.totalScore ?? 0));
+
+    try {
+      await rankingCollection.add({
+        authUid: user.uid,
+        internalUserId: internalUserId ?? null,
+        playerLabel,
+        healerSlug: activeCombatHealerSlug,
+        difficultyKey: activeDifficultyKey,
+        difficultyLabel,
+        patchVersion: rankingCurrentPatchVersion,
+        mapKey: activeMapKey,
+        mapLabel,
+        score: totalScore,
+        scoreBreakdown: {
+          totalScore,
+          deathsScore: roundToOneDecimal(Number(finalScoreBreakdown.deathsScore ?? 0)),
+          overhealingScore: roundToOneDecimal(Number(finalScoreBreakdown.overhealingScore ?? 0)),
+          averageRaidHealthScore: roundToOneDecimal(Number(finalScoreBreakdown.averageRaidHealthScore ?? 0)),
+          remainingManaScore: roundToOneDecimal(Number(finalScoreBreakdown.remainingManaScore ?? 0)),
+          cpmScore: roundToOneDecimal(Number(finalScoreBreakdown.cpmScore ?? 0)),
+          selfHealScore: roundToOneDecimal(Number(finalScoreBreakdown.selfHealScore ?? 0)),
+          healerSpecificScore: roundToOneDecimal(Number(finalScoreBreakdown.healerSpecificScore ?? 0))
+        },
+        combatRecordSection: {
+          commonCards: commonCardsPayload,
+          healerSpecificCards: healerCardsPayload
+        },
+        meterSection: {
+          rows: meterRowsPayload,
+          summary: {
+            cpm: roundToOneDecimal(finalCpm),
+            selfHealRatioPct: roundToOneDecimal(selfHealRatioPct),
+            skillHitDamage: roundToOneDecimal(canvasRawDamageTaken),
+            damageRecoverySharePct: roundToOneDecimal(canvasDamageHealingSharePct)
+          }
+        },
+        runMeta: {
+          runKey: rankingRunKey,
+          patchVersion: rankingCurrentPatchVersion,
+          setupSeed: Number.isFinite(Number(sessionConfig?.seed)) ? Math.floor(Number(sessionConfig.seed)) : null,
+          durationMs: Math.max(0, Number(currentSnapshot?.durationMs ?? 0)),
+          finishedMs: Math.max(0, Number(currentSnapshot?.nowMs ?? 0))
+        },
+        createdAtClientMs,
+        createdAt: serverTimestamp()
+      });
+      rankingSavedRunKeyRef.current = rankingRunKey;
+      setRankingSaveStatus("saved");
+      return true;
+    } catch {
+      // 동일 전투에서 자동 저장 무한 루프를 피하기 위해 attempted 키는 유지합니다.
+      setRankingSaveStatus("error");
+      return false;
+    }
+  }, [
+    activeCombatHealerSlug,
+    activeDifficultyKey,
+    activeMapKey,
+    canSaveRankingForCurrentDifficulty,
+    canvasDamageHealingSharePct,
+    canvasRawDamageTaken,
+    combatRecordCommonCards,
+    combatRecordHealerSpecificCards,
+    currentSnapshot,
+    finalCpm,
+    finalScoreBreakdown,
+    healMeterRows,
+    internalUserId,
+    isLoggedIn,
+    isSuccessfulPracticeResult,
+    rankingRunKey,
+    rankingCurrentPatchVersion,
+    selfHealRatioPct,
+    sessionConfig,
+    user,
+    userLabel
+  ]);
+
+  const showRankingRegisterControl = isSuccessfulPracticeResult && canSaveRankingForCurrentDifficulty;
+  const rankingSaveButtonLabel =
+    rankingSaveStatus === "saved"
+      ? "랭킹 등록 완료"
+      : rankingSaveStatus === "saving"
+        ? "랭킹 등록 중..."
+        : rankingSaveStatus === "error"
+          ? "랭킹 재등록"
+          : "랭킹 등록";
+  const rankingSelectedHealerOption = rankingHealerTabOptions.find(
+    (entry) => entry.slug === rankingViewHealerSlug
+  );
+  const rankingSelectedHealerLabel = rankingSelectedHealerOption?.shortName ?? rankingViewHealerSlug;
+
+  useEffect(() => {
+    if (!rankingHealerTabOptions.length) {
+      return;
+    }
+    if (rankingHealerTabOptions.some((entry) => entry.slug === rankingViewHealerSlug && entry.enabled)) {
+      return;
+    }
+    const firstEnabledHealer = rankingHealerTabOptions.find((entry) => entry.enabled);
+    if (firstEnabledHealer) {
+      setRankingViewHealerSlug(firstEnabledHealer.slug);
+      return;
+    }
+    setRankingViewHealerSlug(rankingHealerTabOptions[0].slug);
+  }, [rankingHealerTabOptions, rankingViewHealerSlug]);
+
+  useEffect(() => {
+    if (!rankingPatchVersionOptions.length) {
+      return;
+    }
+    if (rankingPatchVersionOptions.includes(rankingViewPatchVersion)) {
+      return;
+    }
+    setRankingViewPatchVersion(rankingCurrentPatchVersion);
+  }, [rankingCurrentPatchVersion, rankingPatchVersionOptions, rankingViewPatchVersion]);
+
+  useEffect(() => {
+    if (!rankingModalOpen) {
+      return;
+    }
+
+    const rankingCollection = resolveRankingEntriesCollection(
+      rankingViewMapKey,
+      rankingViewDifficultyKey,
+      rankingViewPatchVersion,
+      rankingViewHealerSlug
+    );
+    if (!rankingCollection) {
+      setRankingRows([]);
+      setRankingErrorText("랭킹 저장소에 접근할 수 없습니다.");
+      setRankingLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setRankingLoading(true);
+    setRankingErrorText("");
+
+    rankingCollection
+      .orderBy("score", "desc")
+      .limit(RANKING_FETCH_LIMIT)
+      .get()
+      .then((querySnapshot) => {
+        if (cancelled) {
+          return;
+        }
+        const rows = querySnapshot.docs
+          .map((docSnapshot) => {
+            const data = docSnapshot.data() ?? {};
+            const scoreValue = Number(data.score ?? data.totalScore ?? 0);
+            const score = Number.isFinite(scoreValue) ? scoreValue : 0;
+            const nickname = String(
+              data.playerLabel ??
+              data.nickname ??
+              data.userLabel ??
+              data.displayName ??
+              "익명"
+            ).trim();
+            const createdAtMs = toMillisFromUnknownTimestamp(
+              data.createdAt ?? data.createdAtClientMs ?? data.createdAtMs
+            );
+            return {
+              id: docSnapshot.id,
+              nickname: nickname || "익명",
+              score,
+              createdAtMs
+            };
+          })
+          .sort((left, right) => {
+            const byScore = right.score - left.score;
+            if (byScore !== 0) {
+              return byScore;
+            }
+            const leftTime = Number(left.createdAtMs || 0);
+            const rightTime = Number(right.createdAtMs || 0);
+            if (leftTime !== rightTime) {
+              return leftTime - rightTime;
+            }
+            return left.nickname.localeCompare(right.nickname, "ko");
+          });
+        setRankingRows(rows);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setRankingRows([]);
+        setRankingErrorText("랭킹을 불러오지 못했습니다.");
+      })
+      .finally(() => {
+        if (cancelled) {
+          return;
+        }
+        setRankingLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rankingModalOpen, rankingViewDifficultyKey, rankingViewHealerSlug, rankingViewMapKey, rankingViewPatchVersion]);
+
+  useEffect(() => {
+    if (!rankingModalOpen || typeof window === "undefined") {
+      return undefined;
+    }
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setRankingModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [rankingModalOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+    const handleOpenRankingEvent = () => {
+      handleOpenRankingModal();
+    };
+    window.addEventListener(HEALER_PRACTICE_OPEN_RANKING_EVENT, handleOpenRankingEvent);
+    return () => {
+      window.removeEventListener(HEALER_PRACTICE_OPEN_RANKING_EVENT, handleOpenRankingEvent);
+    };
+  }, [activeCombatHealerSlug, activeDifficultyKey, activeMapKey, rankingCurrentPatchVersion, selectedHealerSlug]);
+
+  useEffect(() => {
+    if (!hasCombatSnapshot || !healMeterRows.length) {
+      return;
+    }
+    refreshWowheadTooltips();
+  }, [hasCombatSnapshot, healMeterRows.length]);
+
+  useEffect(() => {
+    if (!hasCombatSnapshot) {
+      if (phaserGameRef.current) {
+        phaserGameRef.current.destroy(true);
+        phaserGameRef.current = null;
+      }
+      if (phaserHostRef.current) {
+        phaserHostRef.current.innerHTML = "";
+      }
+      pointerInPhaserCanvasRef.current = false;
+      return;
+    }
+
+    const host = phaserHostRef.current;
+    if (!host) {
+      return;
+    }
+
+    if (phaserGameRef.current) {
+      phaserGameRef.current.destroy(true);
+      phaserGameRef.current = null;
+    }
+    host.innerHTML = "";
+
+    const phaserDifficultyConfig = activePhaserDifficultyConfig;
+    const showPlayerHealthBar = Boolean(phaserDifficultyConfig.showPlayerHealthBar);
+    const hazardEnabled = Boolean(phaserDifficultyConfig.hazardEnabled);
+    const missileEnabled = Boolean(phaserDifficultyConfig.missileEnabled);
+    const playerMaxHealth = Math.max(1, Number(phaserDifficultyConfig.playerMaxHealth ?? 100));
+    const hazardDamage = Math.max(0, Number(phaserDifficultyConfig.hazardDamage ?? 0));
+    const hazardBarWidthPx = Math.max(8, Number(phaserDifficultyConfig.hazardBarWidthPx ?? 20));
+    const hazardBarLengthPx = Math.max(
+      Math.max(raidGridWidthPx, raidGridHeightPx) + 60,
+      Number(phaserDifficultyConfig.hazardBarLengthPx ?? Math.max(raidGridWidthPx, raidGridHeightPx) * 1.2)
+    );
+    const mechanicsStartDelayMs = Math.max(0, Number(PHASER_ARENA_VISUAL_CONFIG.mechanicsStartDelayMs ?? 5000));
+    const hazardCountdownMs = Math.max(500, Number(PHASER_ARENA_VISUAL_CONFIG.hazardCountdownMs));
+    const hazardSpawnMinMs = Math.max(350, Number(phaserDifficultyConfig.hazardSpawnIntervalMinMs ?? 3000));
+    const hazardSpawnMaxMs = Math.max(hazardSpawnMinMs, Number(phaserDifficultyConfig.hazardSpawnIntervalMaxMs ?? hazardSpawnMinMs));
+    const missileDamage = Math.max(0, Number(phaserDifficultyConfig.missileDamage ?? 0));
+    const missileSpawnMinMs = Math.max(300, Number(phaserDifficultyConfig.missileSpawnIntervalMinMs ?? 1000));
+    const missileSpawnMaxMs = Math.max(missileSpawnMinMs, Number(phaserDifficultyConfig.missileSpawnIntervalMaxMs ?? missileSpawnMinMs));
+    const missileSpeedPerSec = Math.max(80, Number(phaserDifficultyConfig.missileSpeedPerSec ?? 280));
+    const missileWidthPx = Math.max(8, Number(PHASER_ARENA_VISUAL_CONFIG.missileWidthPx ?? 28));
+    const missileHeightPx = Math.max(6, Number(PHASER_ARENA_VISUAL_CONFIG.missileHeightPx ?? 12));
+    const missileCollisionRadiusPx = Math.max(6, Number(PHASER_ARENA_VISUAL_CONFIG.missileCollisionRadiusPx ?? 10));
+    const hazardTargetJitterPx = Math.max(0, Number(PHASER_ARENA_VISUAL_CONFIG.hazardTargetJitterPx ?? 12));
+    const missileTargetJitterPx = Math.max(0, Number(PHASER_ARENA_VISUAL_CONFIG.missileTargetJitterPx ?? 10));
+    const movementKeyLetters = MOVEMENT_PRESET_KEYS[activeMovementKeyPreset] ?? MOVEMENT_PRESET_KEYS.WASD;
+    const restorationDruidTreeantVisualEnabled = activeCombatHealerSlug === RESTORATION_DRUID_HEALER_SLUG;
+    const worldFirstZonePatternEnabled = Boolean(phaserDifficultyConfig.worldFirstKillZonePatternEnabled);
+    const worldFirstZonePatternStartTimesMs = Array.from(
+      new Set(
+        (Array.isArray(phaserDifficultyConfig.worldFirstKillZonePatternStartTimesSec)
+          ? phaserDifficultyConfig.worldFirstKillZonePatternStartTimesSec
+          : []
+        )
+          .map((startAtSec) => Math.floor(Number(startAtSec) * 1000))
+          .filter((startAtMs) => Number.isFinite(startAtMs) && startAtMs >= 0)
+      )
+    ).sort((left, right) => left - right);
+    const worldFirstZonePatternActiveMs = Math.max(
+      3000,
+      Number(phaserDifficultyConfig.worldFirstKillZonePatternActiveMs ?? 9000)
+    );
+    const worldFirstZonePatternStepDurationMs = Math.max(
+      500,
+      Number(phaserDifficultyConfig.worldFirstKillZonePatternStepDurationMs ?? 3000)
+    );
+    const worldFirstZonePatternStripeCount = Math.max(
+      2,
+      Math.floor(Number(phaserDifficultyConfig.worldFirstKillZonePatternStripeCount ?? 20))
+    );
+    const worldFirstZonePatternDangerColorHex = Number(
+      phaserDifficultyConfig.worldFirstKillZonePatternDangerColorHex ?? 0xdc2626
+    );
+    const worldFirstZonePatternDangerAlpha = Math.max(
+      0.08,
+      Math.min(0.95, Number(phaserDifficultyConfig.worldFirstKillZonePatternDangerAlpha ?? 0.4))
+    );
+    const worldFirstZonePatternStepDamage = Math.max(
+      0,
+      Number(phaserDifficultyConfig.worldFirstKillZonePatternStepDamage ?? 0)
+    );
+    const worldFirstZonePatternStepInstantKill = Boolean(phaserDifficultyConfig.worldFirstKillZonePatternStepInstantKill);
+    const worldFirstZonePatternLabel = worldFirstZonePatternStepInstantKill ? "즉사 바닥" : "위험 바닥";
+    const worldFirstZoneHazardSpawnMinMs = Math.max(
+      120,
+      Number(phaserDifficultyConfig.worldFirstKillZoneHazardSpawnIntervalMinMs ?? hazardSpawnMinMs)
+    );
+    const worldFirstZoneHazardSpawnMaxMs = Math.max(
+      worldFirstZoneHazardSpawnMinMs,
+      Number(phaserDifficultyConfig.worldFirstKillZoneHazardSpawnIntervalMaxMs ?? worldFirstZoneHazardSpawnMinMs)
+    );
+    const worldFirstZoneHazardTargetedChance = Math.max(
+      0,
+      Math.min(1, Number(phaserDifficultyConfig.worldFirstKillZoneHazardTargetedChance ?? 0.6))
+    );
+    const worldFirstZoneHazardRandomCountWhenUntargeted = Math.max(
+      0,
+      Math.floor(Number(phaserDifficultyConfig.worldFirstKillZoneHazardRandomCountWhenUntargeted ?? 3))
+    );
+    const scheduledRaidBurstStartTimesMs = Array.from(
+      new Set(
+        (Array.isArray(PRACTICE_DIFFICULTY_TUNING[activeDifficultyKey]?.scheduledRaidBursts)
+          ? PRACTICE_DIFFICULTY_TUNING[activeDifficultyKey].scheduledRaidBursts
+          : []
+        )
+          .filter((pattern) => pattern && pattern.enabled !== false)
+          .map((pattern) => {
+            const startAtMsRaw = Number(pattern.startAtMs);
+            const startAtSecRaw = Number(pattern.startAtSec);
+            const resolvedStartAtMs = Number.isFinite(startAtMsRaw)
+              ? startAtMsRaw
+              : Number.isFinite(startAtSecRaw)
+                ? startAtSecRaw * 1000
+                : 0;
+            return Math.max(0, Math.floor(resolvedStartAtMs));
+          })
+      )
+    ).sort((left, right) => left - right);
+    const raidBurstCountdownWindowMs = 10000;
+    const playerHitCryFaceDurationMs = 1500;
+
+    const initialPlayerHpRatio = Math.max(0, Math.min(1, Number(phaserSelfHpRatioRef.current ?? 1)));
+    let player = null;
+    let playerHealth = playerMaxHealth * initialPlayerHpRatio;
+    let healthBarBg = null;
+    let healthBarFill = null;
+    let healthBarText = null;
+    let combatTimeText = null;
+    let raidBurstCountdownText = null;
+    let playerStatusText = null;
+    let playerLeftEye = null;
+    let playerRightEye = null;
+    let playerLeftTear = null;
+    let playerRightTear = null;
+    let playerMouth = null;
+    let infusionLeftArc = null;
+    let infusionRightArc = null;
+    let treeOfLifeAvatarVisual = null;
+    let treeantVisuals = [];
+    let recentHitUntilMs = 0;
+    let nextHazardSpawnAtMs = Number.POSITIVE_INFINITY;
+    let nextMissileSpawnAtMs = Number.POSITIVE_INFINITY;
+    let worldFirstZoneOverlays = [];
+    let worldFirstZoneStatusText = null;
+    let worldFirstZoneCurrentMask = [];
+    let worldFirstZoneOrder = [];
+    let worldFirstZoneVariants = [];
+    let worldFirstZoneActive = false;
+    let worldFirstZoneNextScheduledStartIndex = 0;
+    let worldFirstZoneCurrentStepIndex = -1;
+    let worldFirstZoneCurrentStepStartAtMs = Number.POSITIVE_INFINITY;
+    let worldFirstZoneCurrentStepEndAtMs = Number.POSITIVE_INFINITY;
+    let hazards = [];
+    let missiles = [];
+    let playerDeathNotified = false;
+    let mechanicsScheduleInitialized = false;
+    let sceneStartAtMs = 0;
+
+    const randomBetween = (min, max) => min + Math.random() * (max - min);
+    const clampPlayerHpRatio = (value) => Math.max(0, Math.min(1, Number(value) || 0));
+    const syncSharedPlayerHpRatio = () => {
+      phaserSelfHpRatioRef.current = clampPlayerHpRatio(playerHealth / playerMaxHealth);
+    };
+    const syncPlayerHealthFromSharedRatio = () => {
+      const nextHealth = playerMaxHealth * clampPlayerHpRatio(phaserSelfHpRatioRef.current);
+      if (Math.abs(nextHealth - playerHealth) < 0.05) {
+        return;
+      }
+      playerHealth = nextHealth;
+    };
+    const addCanvasRawDamage = (amount) => {
+      const safeAmount = Math.max(0, Number(amount) || 0);
+      if (safeAmount <= 0) {
+        return;
+      }
+      const nextAmount = Math.round((canvasRawDamageTakenRef.current + safeAmount) * 10) / 10;
+      canvasRawDamageTakenRef.current = nextAmount;
+      setCanvasRawDamageTaken(nextAmount);
+    };
+    const addCanvasHitCount = (patternKey) => {
+      const key = String(patternKey ?? "").trim();
+      if (!key || !Object.prototype.hasOwnProperty.call(canvasHitCountsRef.current, key)) {
+        return;
+      }
+      const nextHitCounts = {
+        ...canvasHitCountsRef.current,
+        [key]: Math.max(0, Number(canvasHitCountsRef.current[key] ?? 0) + 1)
+      };
+      canvasHitCountsRef.current = nextHitCounts;
+      setCanvasHitCounts(nextHitCounts);
+    };
+    const forceRaidFrameSelfDeathFromCanvas = () => {
+      const engine = engineRef.current;
+      if (!engine || engine.finished) {
+        return;
+      }
+      let selfPlayerId = String(selfPlayerIdRef.current ?? "").trim();
+      if (!selfPlayerId) {
+        const snapshotMyPlayer = findMyPlayerInSnapshot(latestSnapshotRef.current);
+        if (snapshotMyPlayer?.id) {
+          selfPlayerId = snapshotMyPlayer.id;
+          selfPlayerIdRef.current = selfPlayerId;
+        }
+      }
+      if (!selfPlayerId) {
+        return;
+      }
+      engine.setExternalPlayerHpRatio(selfPlayerId, 0);
+      const syncedSnapshot = engine.getSnapshot();
+      latestSnapshotRef.current = syncedSnapshot;
+      setSnapshot(syncedSnapshot);
+    };
+    const blendColorHex = (fromColorHex, toColorHex, ratio) => {
+      const clamped = Math.max(0, Math.min(1, ratio));
+      const fromR = (fromColorHex >> 16) & 0xff;
+      const fromG = (fromColorHex >> 8) & 0xff;
+      const fromB = fromColorHex & 0xff;
+      const toR = (toColorHex >> 16) & 0xff;
+      const toG = (toColorHex >> 8) & 0xff;
+      const toB = toColorHex & 0xff;
+      const r = Math.round(fromR + (toR - fromR) * clamped);
+      const g = Math.round(fromG + (toG - fromG) * clamped);
+      const b = Math.round(fromB + (toB - fromB) * clamped);
+      return (r << 16) | (g << 8) | b;
+    };
+    const formatHazardCountdownLabel = (remainingMs) => {
+      const steppedSeconds = Math.max(0.5, Math.ceil(Math.max(0, remainingMs) / 500) * 0.5);
+      return steppedSeconds.toFixed(1);
+    };
+    const resolveWorldFirstZoneLabelCenter = (mask) => {
+      const stripeWidthPx = raidGridWidthPx / worldFirstZonePatternStripeCount;
+      let bestStart = -1;
+      let bestLen = 0;
+      let index = 0;
+
+      while (index < mask.length) {
+        if (!mask[index]) {
+          index += 1;
+          continue;
+        }
+        const start = index;
+        while (index < mask.length && mask[index]) {
+          index += 1;
+        }
+        const runLen = index - start;
+        if (runLen > bestLen) {
+          bestLen = runLen;
+          bestStart = start;
+        }
+      }
+
+      if (bestStart < 0 || bestLen <= 0) {
+        return { x: raidGridWidthPx / 2, y: raidGridHeightPx / 2 };
+      }
+
+      const firstCenterX = stripeWidthPx * bestStart + stripeWidthPx / 2;
+      const lastCenterX = stripeWidthPx * (bestStart + bestLen - 1) + stripeWidthPx / 2;
+      return {
+        x: (firstCenterX + lastCenterX) / 2,
+        y: raidGridHeightPx / 2
+      };
+    };
+    const getInfusionOfLightRemainingMs = () =>
+      Math.max(0, Number(latestSnapshotRef.current?.buffs?.infusionOfLightMs ?? 0));
+    const getInfusionOfLightCharges = () =>
+      Math.max(0, Math.floor(Number(latestSnapshotRef.current?.buffs?.infusionOfLightCharges ?? 0)));
+    const getDivineProtectionRemainingMs = () =>
+      Math.max(0, Number(latestSnapshotRef.current?.buffs?.divineProtectionMs ?? 0));
+    const getTreeOfLifeRemainingMs = () =>
+      Math.max(0, Number(latestSnapshotRef.current?.buffs?.treeOfLifeMs ?? 0));
+    const destroyTreeantVisual = (treeantVisual) => {
+      treeantVisual?.container?.destroy(true);
+    };
+    const destroyTreeOfLifeAvatarVisual = (visual) => {
+      visual?.container?.destroy(true);
+    };
+    const createTreeOfLifeAvatarVisual = (sceneRef) => {
+      const trunkWidth = Math.max(6, Math.round(PHASER_ARENA_VISUAL_CONFIG.playerSizePx * 0.36));
+      const trunkHeight = Math.max(4, Math.round(PHASER_ARENA_VISUAL_CONFIG.playerSizePx * 0.24));
+      const trunk = sceneRef.add.rectangle(0, 0, trunkWidth, trunkHeight, 0x8b5a2b, 0.98);
+      trunk.setStrokeStyle(1, 0x5b3419, 0.9);
+
+      const container = sceneRef.add.container(0, 0, [trunk]);
+      container.setDepth(4.05);
+      container.setVisible(false);
+      return { container };
+    };
+    const updateTreeOfLifeAvatarVisual = (nowMs = 0) => {
+      if (!player || !treeOfLifeAvatarVisual?.container) {
+        return;
+      }
+
+      const treeOfLifeActive =
+        restorationDruidTreeantVisualEnabled && playerHealth > 0 && getTreeOfLifeRemainingMs() > 0;
+      treeOfLifeAvatarVisual.container.setVisible(treeOfLifeActive);
+      if (!treeOfLifeActive) {
+        if (!playerDeathNotified && playerHealth > 0) {
+          player.setFillStyle(selectedHealerColorHex, 1);
+          player.setStrokeStyle(2, 0x831843, 0.95);
+        }
+        player.setVisible(true);
+        return;
+      }
+
+      const pulse = 1 + Math.sin(nowMs / 220) * 0.02;
+      const trunkOffsetY = Math.max(7, Math.round(PHASER_ARENA_VISUAL_CONFIG.playerSizePx * 0.58));
+      treeOfLifeAvatarVisual.container.setPosition(player.x, player.y + trunkOffsetY);
+      treeOfLifeAvatarVisual.container.setScale(pulse);
+      player.setFillStyle(0x22c55e, 1);
+      player.setStrokeStyle(2, 0x166534, 0.95);
+      player.setVisible(true);
+    };
+    const createTreeantVisual = (sceneRef) => {
+      // Draw as a single graphics object so crown/trunk cannot drift apart.
+      const treeGraphic = sceneRef.add.graphics();
+      treeGraphic.fillStyle(0x16a34a, 0.96);
+      treeGraphic.fillTriangle(0, -8.2, -6.4, 2.5, 6.4, 2.5);
+      treeGraphic.fillStyle(0x22c55e, 0.98);
+      treeGraphic.fillTriangle(0, -6.4, -5.2, 2, 5.2, 2);
+      treeGraphic.fillStyle(0x8b5a2b, 0.98);
+      treeGraphic.fillRect(-1.9, 2.1, 3.8, 4.7);
+      treeGraphic.fillStyle(0xf8fafc, 0.95);
+      treeGraphic.fillCircle(-1.35, 0.35, 0.55);
+      treeGraphic.fillCircle(1.35, 0.35, 0.55);
+      treeGraphic.fillStyle(0xbbf7d0, 0.9);
+      treeGraphic.fillCircle(0, -7.8, 1.05);
+
+      const container = sceneRef.add.container(0, 0, [treeGraphic]);
+      container.setDepth(4.1);
+      return { container };
+    };
+    const updateTreeantVisuals = (sceneRef, nowMs = 0) => {
+      if (!player) {
+        return;
+      }
+      const treeantSnapshots = restorationDruidTreeantVisualEnabled && Array.isArray(latestSnapshotRef.current?.treeants)
+        ? latestSnapshotRef.current.treeants
+        : [];
+      const desiredCount = treeantSnapshots.length;
+
+      while (treeantVisuals.length < desiredCount) {
+        treeantVisuals.push(createTreeantVisual(sceneRef));
+      }
+      while (treeantVisuals.length > desiredCount) {
+        const removed = treeantVisuals.pop();
+        destroyTreeantVisual(removed);
+      }
+      if (!desiredCount) {
+        return;
+      }
+
+      const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
+      const sideBaseOffsetPx = playerRadius + 11;
+      const stackSpacingPx = 10;
+      const maxDurationMs = Math.max(1, Number(RESTORATION_DRUID_TREEANT_CONFIG.durationMs ?? 8000));
+
+      for (let index = 0; index < desiredCount; index += 1) {
+        const treeantVisual = treeantVisuals[index];
+        const treeantSnapshot = treeantSnapshots[index];
+        const remainingRatio = Math.max(
+          0,
+          Math.min(1, Number(treeantSnapshot?.remainingMs ?? maxDurationMs) / maxDurationMs)
+        );
+        const bobOffset = Math.sin(nowMs / 180 + index * 0.9) * 1.2;
+        const isLeftSide = index % 2 === 0;
+        const stackRank = Math.floor(index / 2);
+        const sideDirection = isLeftSide ? -1 : 1;
+        const x = Phaser.Math.Clamp(
+          player.x + sideDirection * (sideBaseOffsetPx + stackRank * stackSpacingPx),
+          playerRadius + 7,
+          raidGridWidthPx - playerRadius - 7
+        );
+        const y = Phaser.Math.Clamp(
+          player.y + (stackRank % 2 === 0 ? -2.2 : 2.2) + bobOffset,
+          playerRadius + 7,
+          raidGridHeightPx - playerRadius - 7
+        );
+        treeantVisual.container.setPosition(x, y);
+        treeantVisual.container.setScale(1 + remainingRatio * 0.18);
+        treeantVisual.container.setAlpha(0.84 + remainingRatio * 0.16);
+      }
+    };
+
+    const scheduleNextHazardSpawn = (nowMs) => {
+      if (!hazardEnabled) {
+        nextHazardSpawnAtMs = Number.POSITIVE_INFINITY;
+        return;
+      }
+      const spawnMinMs = worldFirstZoneActive ? worldFirstZoneHazardSpawnMinMs : hazardSpawnMinMs;
+      const spawnMaxMs = worldFirstZoneActive ? worldFirstZoneHazardSpawnMaxMs : hazardSpawnMaxMs;
+      nextHazardSpawnAtMs = nowMs + randomBetween(spawnMinMs, spawnMaxMs);
+    };
+
+    const scheduleNextMissileSpawn = (nowMs) => {
+      if (!missileEnabled) {
+        nextMissileSpawnAtMs = Number.POSITIVE_INFINITY;
+        return;
+      }
+      nextMissileSpawnAtMs = nowMs + randomBetween(missileSpawnMinMs, missileSpawnMaxMs);
+    };
+
+    const buildWorldFirstZoneMask = (patternType, variant) => {
+      const stripeCount = worldFirstZonePatternStripeCount;
+      const mask = Array.from({ length: stripeCount }, () => false);
+
+      if (patternType === "half") {
+        const split = Math.floor(stripeCount / 2);
+        const leftDanger = variant === 0;
+        for (let stripeIndex = 0; stripeIndex < stripeCount; stripeIndex += 1) {
+          const isLeft = stripeIndex < split;
+          mask[stripeIndex] = leftDanger ? isLeft : !isLeft;
+        }
+        return mask;
+      }
+
+      if (patternType === "twoTwo") {
+        const startsWithDanger = variant === 0;
+        for (let stripeIndex = 0; stripeIndex < stripeCount; stripeIndex += 1) {
+          const blockIndex = Math.floor(stripeIndex / 2) % 2;
+          mask[stripeIndex] = startsWithDanger ? blockIndex === 0 : blockIndex === 1;
+        }
+        return mask;
+      }
+
+      const startsWithDanger = variant === 0;
+      for (let stripeIndex = 0; stripeIndex < stripeCount; stripeIndex += 1) {
+        const blockIndex = Math.floor(stripeIndex / 5) % 2;
+        mask[stripeIndex] = startsWithDanger ? blockIndex === 0 : blockIndex === 1;
+      }
+      return mask;
+    };
+
+    const applyWorldFirstZoneMaskVisual = (mask) => {
+      for (let stripeIndex = 0; stripeIndex < worldFirstZoneOverlays.length; stripeIndex += 1) {
+        const overlay = worldFirstZoneOverlays[stripeIndex];
+        if (!overlay) {
+          continue;
+        }
+        if (mask[stripeIndex]) {
+          overlay.setVisible(true);
+          overlay.setAlpha(worldFirstZonePatternDangerAlpha);
+        } else {
+          overlay.setVisible(false);
+          overlay.setAlpha(0);
+        }
+      }
+    };
+
+    const clearWorldFirstZonePattern = () => {
+      worldFirstZoneCurrentMask = Array.from({ length: worldFirstZonePatternStripeCount }, () => false);
+      applyWorldFirstZoneMaskVisual(worldFirstZoneCurrentMask);
+      if (worldFirstZoneStatusText) {
+        worldFirstZoneStatusText.setText("");
+      }
+    };
+
+    const applyWorldFirstZoneStep = (stepIndex, stepStartAtMs) => {
+      const patternType = worldFirstZoneOrder[stepIndex];
+      if (!patternType) {
+        return;
+      }
+      const variant = worldFirstZoneVariants[stepIndex] ?? 0;
+      worldFirstZoneCurrentMask = buildWorldFirstZoneMask(patternType, variant);
+      worldFirstZoneCurrentStepIndex = stepIndex;
+      worldFirstZoneCurrentStepStartAtMs = stepStartAtMs;
+      worldFirstZoneCurrentStepEndAtMs = stepStartAtMs + worldFirstZonePatternStepDurationMs;
+      applyWorldFirstZoneMaskVisual(worldFirstZoneCurrentMask);
+
+      if (worldFirstZoneStatusText) {
+        const center = resolveWorldFirstZoneLabelCenter(worldFirstZoneCurrentMask);
+        worldFirstZoneStatusText.setPosition(center.x, center.y);
+        worldFirstZoneStatusText.setText(`${worldFirstZonePatternLabel} ${stepIndex + 1}/${worldFirstZoneOrder.length}`);
+      }
+    };
+
+    const isPlayerInsideWorldFirstDangerMask = (mask) => {
+      if (!player || !mask?.length) {
+        return false;
+      }
+      const normalizedX = Phaser.Math.Clamp(player.x / Math.max(1, raidGridWidthPx), 0, 0.999999);
+      const stripeIndex = Math.max(
+        0,
+        Math.min(worldFirstZonePatternStripeCount - 1, Math.floor(normalizedX * worldFirstZonePatternStripeCount))
+      );
+      return Boolean(mask[stripeIndex]);
+    };
+
+    const resolveWorldFirstZoneStepImpact = (sceneRef) => {
+      if (!worldFirstZonePatternEnabled || !worldFirstZoneActive || worldFirstZoneCurrentStepIndex < 0) {
+        return;
+      }
+
+      if (!isPlayerInsideWorldFirstDangerMask(worldFirstZoneCurrentMask)) {
+        return;
+      }
+
+      addCanvasHitCount("zoneFloor");
+
+      if (worldFirstZonePatternStepInstantKill) {
+        applyInstantKillByWorldFirstZone(sceneRef);
+        return;
+      }
+
+      if (worldFirstZonePatternStepDamage > 0) {
+        applyPlayerDamage(sceneRef, worldFirstZonePatternStepDamage);
+      }
+    };
+
+    const startWorldFirstZoneCycle = (nowMs) => {
+      worldFirstZoneActive = true;
+      const totalStepCount = Math.max(1, Math.round(worldFirstZonePatternActiveMs / worldFirstZonePatternStepDurationMs));
+      worldFirstZoneOrder = Array.from({ length: totalStepCount }, () => "half");
+      const firstVariant = Math.random() < 0.5 ? 0 : 1;
+      worldFirstZoneVariants = worldFirstZoneOrder.map((_, stepIndex) =>
+        stepIndex % 2 === 0 ? firstVariant : firstVariant === 0 ? 1 : 0
+      );
+      missiles.forEach((missile) => missile?.sprite?.destroy());
+      missiles = [];
+      nextMissileSpawnAtMs = Number.POSITIVE_INFINITY;
+      scheduleNextHazardSpawn(nowMs);
+      applyWorldFirstZoneStep(0, nowMs);
+    };
+
+    const advanceWorldFirstZoneStep = (nextStepStartAtMs) => {
+      const nextStepIndex = worldFirstZoneCurrentStepIndex + 1;
+      if (nextStepIndex >= worldFirstZoneOrder.length) {
+        stopWorldFirstZoneCycle(nextStepStartAtMs);
+        return;
+      }
+      applyWorldFirstZoneStep(nextStepIndex, nextStepStartAtMs);
+    };
+
+    const stopWorldFirstZoneCycle = (nowMs = Number.NaN) => {
+      worldFirstZoneActive = false;
+      worldFirstZoneCurrentStepIndex = -1;
+      worldFirstZoneCurrentStepStartAtMs = Number.POSITIVE_INFINITY;
+      worldFirstZoneCurrentStepEndAtMs = Number.POSITIVE_INFINITY;
+      worldFirstZoneOrder = [];
+      worldFirstZoneVariants = [];
+      if (Number.isFinite(nowMs) && missileEnabled) {
+        scheduleNextMissileSpawn(nowMs);
+      }
+      if (Number.isFinite(nowMs) && hazardEnabled) {
+        scheduleNextHazardSpawn(nowMs);
+      }
+      clearWorldFirstZonePattern();
+    };
+
+    const updateWorldFirstZoneCycle = (sceneRef, nowMs) => {
+      if (!worldFirstZonePatternEnabled) {
+        return;
+      }
+
+      const startScheduledWorldFirstZoneCycleIfNeeded = () => {
+        const combatElapsedMs = resolveCombatElapsedMs(nowMs);
+        while (
+          !worldFirstZoneActive &&
+          worldFirstZoneNextScheduledStartIndex < worldFirstZonePatternStartTimesMs.length
+        ) {
+          const startOffsetMs = worldFirstZonePatternStartTimesMs[worldFirstZoneNextScheduledStartIndex];
+          if (combatElapsedMs < startOffsetMs) {
+            return;
+          }
+          worldFirstZoneNextScheduledStartIndex += 1;
+          startWorldFirstZoneCycle(nowMs);
+        }
+      };
+      startScheduledWorldFirstZoneCycleIfNeeded();
+
+      if (!worldFirstZoneActive) {
+        return;
+      }
+
+      while (worldFirstZoneActive && nowMs >= worldFirstZoneCurrentStepEndAtMs) {
+        resolveWorldFirstZoneStepImpact(sceneRef);
+        if (playerHealth <= 0) {
+          return;
+        }
+        advanceWorldFirstZoneStep(worldFirstZoneCurrentStepEndAtMs);
+        if (!worldFirstZoneActive) {
+          startScheduledWorldFirstZoneCycleIfNeeded();
+        }
+      }
+
+      if (worldFirstZoneActive && worldFirstZoneStatusText) {
+        const remainingMs = Math.max(0, worldFirstZoneCurrentStepEndAtMs - nowMs);
+        const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+        worldFirstZoneStatusText.setText(
+          `${worldFirstZonePatternLabel} ${worldFirstZoneCurrentStepIndex + 1}/${worldFirstZoneOrder.length} ${remainingSeconds}s`
+        );
+      }
+    };
+
+    const updatePlayerHealthUi = () => {
+      if (!showPlayerHealthBar || !player || !healthBarBg || !healthBarFill || !healthBarText) {
+        return;
+      }
+
+      const hpRatio = Math.max(0, Math.min(1, playerHealth / playerMaxHealth));
+      const healthBarWidth = PHASER_ARENA_VISUAL_CONFIG.healthBarWidthPx;
+      const healthBarOffsetY = PHASER_ARENA_VISUAL_CONFIG.healthBarOffsetYPx;
+
+      healthBarBg.setPosition(player.x, player.y + healthBarOffsetY);
+      healthBarFill.setPosition(player.x - healthBarWidth / 2, player.y + healthBarOffsetY);
+      healthBarFill.setScale(hpRatio, 1);
+      healthBarFill.setFillStyle(hpRatio <= 0.25 ? 0xdc2626 : 0x22c55e, 0.95);
+      healthBarText.setText(`${Math.round(hpRatio * 100)}%`);
+      healthBarText.setPosition(player.x, player.y + healthBarOffsetY - 8);
+    };
+
+    const updatePlayerFaceUi = (nowMs = 0) => {
+      if (!player || !playerLeftEye || !playerRightEye || !playerLeftTear || !playerRightTear || !playerMouth) {
+        return;
+      }
+
+      const isDead = playerDeathNotified || playerHealth <= 0;
+      const isCrying = !isDead && nowMs < recentHitUntilMs;
+      playerLeftEye.setVisible(true);
+      playerRightEye.setVisible(true);
+      playerMouth.setVisible(true);
+
+      const eyeOffsetX = Math.max(2.2, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx * 0.28);
+      const eyeOffsetY = Math.max(1.4, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx * 0.2);
+      const mouthRadius = Math.max(1.8, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx * 0.24);
+      const mouthCenterY = player.y + Math.max(1.8, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx * 0.18);
+      const eyeColorHex = isDead ? 0x7f1d1d : 0x3f1d2e;
+      const mouthColorHex = isDead ? 0x7f1d1d : isCrying ? 0x1d4ed8 : 0x831843;
+
+      playerLeftEye.setPosition(player.x - eyeOffsetX, player.y - eyeOffsetY);
+      playerRightEye.setPosition(player.x + eyeOffsetX, player.y - eyeOffsetY);
+      playerLeftEye.setFillStyle(eyeColorHex, 1);
+      playerRightEye.setFillStyle(eyeColorHex, 1);
+      playerLeftTear.setPosition(player.x - eyeOffsetX, player.y - eyeOffsetY + 3.1);
+      playerRightTear.setPosition(player.x + eyeOffsetX, player.y - eyeOffsetY + 3.1);
+      playerLeftTear.setVisible(isCrying);
+      playerRightTear.setVisible(isCrying);
+
+      playerMouth.clear();
+      playerMouth.lineStyle(1.6, mouthColorHex, 1);
+      playerMouth.beginPath();
+      if (isDead || isCrying) {
+        playerMouth.arc(
+          player.x,
+          mouthCenterY + 1.9,
+          mouthRadius,
+          Phaser.Math.DegToRad(200),
+          Phaser.Math.DegToRad(340),
+          false
+        );
+      } else {
+        playerMouth.arc(
+          player.x,
+          mouthCenterY,
+          mouthRadius,
+          Phaser.Math.DegToRad(18),
+          Phaser.Math.DegToRad(162),
+          false
+        );
+      }
+      playerMouth.strokePath();
+    };
+    const updateInfusionOfLightVisual = (nowMs = 0) => {
+      if (!player || !infusionLeftArc || !infusionRightArc) {
+        return;
+      }
+
+      const remainingMs = getInfusionOfLightRemainingMs();
+      const chargeCount = Math.max(0, Math.min(2, getInfusionOfLightCharges()));
+      const active = playerHealth > 0 && remainingMs > 0 && chargeCount > 0;
+      if (!active) {
+        infusionLeftArc.clear();
+        infusionRightArc.clear();
+        infusionLeftArc.setVisible(false);
+        infusionRightArc.setVisible(false);
+        return;
+      }
+
+      const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
+      const sideOffset = playerRadius + 18;
+      const arcRadius = playerRadius + 4;
+      const arcCenterY = player.y - (playerRadius + 7);
+      const pulse = 0.72 + Math.sin(nowMs / 120) * 0.16;
+      const sparkAlpha = Math.max(0.45, Math.min(0.98, pulse + 0.1));
+      const arcThickness = 3.2;
+
+      if (chargeCount >= 2) {
+        infusionLeftArc.setVisible(true);
+        infusionLeftArc.clear();
+        infusionLeftArc.lineStyle(arcThickness, 0xfacc15, pulse);
+        infusionLeftArc.beginPath();
+        infusionLeftArc.arc(
+          player.x - sideOffset,
+          arcCenterY,
+          arcRadius,
+          Phaser.Math.DegToRad(300),
+          Phaser.Math.DegToRad(60),
+          false
+        );
+        infusionLeftArc.strokePath();
+        infusionLeftArc.fillStyle(0xfef08a, sparkAlpha);
+        infusionLeftArc.fillCircle(player.x - sideOffset + arcRadius * 0.9, arcCenterY, 1.8);
+      } else {
+        infusionLeftArc.clear();
+        infusionLeftArc.setVisible(false);
+      }
+
+      if (chargeCount >= 1) {
+        infusionRightArc.setVisible(true);
+        infusionRightArc.clear();
+        infusionRightArc.lineStyle(arcThickness, 0xfacc15, pulse);
+        infusionRightArc.beginPath();
+        infusionRightArc.arc(
+          player.x + sideOffset,
+          arcCenterY,
+          arcRadius,
+          Phaser.Math.DegToRad(120),
+          Phaser.Math.DegToRad(240),
+          false
+        );
+        infusionRightArc.strokePath();
+        infusionRightArc.fillStyle(0xfef08a, sparkAlpha);
+        infusionRightArc.fillCircle(player.x + sideOffset - arcRadius * 0.9, arcCenterY, 1.8);
+      } else {
+        infusionRightArc.clear();
+        infusionRightArc.setVisible(false);
+      }
+    };
+
+    const resolveCombatElapsedMs = (sceneNowMs = 0) => {
+      const snapshotNowMs = Number(latestSnapshotRef.current?.nowMs);
+      if (Number.isFinite(snapshotNowMs)) {
+        return Math.max(0, snapshotNowMs);
+      }
+      return Math.max(0, sceneNowMs - sceneStartAtMs);
+    };
+
+    const updateCombatTimeText = (sceneNowMs = 0) => {
+      if (!GLOBAL_SHOW_CANVAS_COMBAT_TIME || !combatTimeText) {
+        return;
+      }
+      combatTimeText.setText(`전투 시간 ${formatTime(resolveCombatElapsedMs(sceneNowMs))}`);
+    };
+    const updateRaidBurstCountdownText = (sceneNowMs = 0) => {
+      if (!raidBurstCountdownText) {
+        return;
+      }
+      if (!runningRef.current || gameOverReasonRef.current || !scheduledRaidBurstStartTimesMs.length) {
+        raidBurstCountdownText.setText("");
+        return;
+      }
+
+      const combatElapsedMs = resolveCombatElapsedMs(sceneNowMs);
+      const upcomingStartMs = scheduledRaidBurstStartTimesMs.find((startMs) => {
+        const remainingMs = startMs - combatElapsedMs;
+        return remainingMs > 0 && remainingMs <= raidBurstCountdownWindowMs;
+      });
+      if (!Number.isFinite(upcomingStartMs)) {
+        raidBurstCountdownText.setText("");
+        return;
+      }
+
+      const remainingSeconds = Math.ceil((upcomingStartMs - combatElapsedMs) / 1000);
+      if (remainingSeconds <= 0) {
+        raidBurstCountdownText.setText("");
+        return;
+      }
+      raidBurstCountdownText.setText(`${remainingSeconds}초 후 광뎀 시작`);
+    };
+
+    const applyPlayerDamage = (sceneRef, amount) => {
+      const rawDamage = Math.max(0, Number(amount) || 0);
+      if (rawDamage <= 0 || playerHealth <= 0) {
+        return;
+      }
+      addCanvasRawDamage(rawDamage);
+      const damageTakenMultiplier = getDivineProtectionRemainingMs() > 0 ? 0.8 : 1;
+      const adjustedDamage = rawDamage * damageTakenMultiplier;
+      playerHealth = Math.max(0, playerHealth - adjustedDamage);
+      syncSharedPlayerHpRatio();
+      recentHitUntilMs = Math.max(recentHitUntilMs, sceneRef.time.now + playerHitCryFaceDurationMs);
+      updatePlayerHealthUi();
+      updatePlayerFaceUi(sceneRef.time.now);
+      updateTreeOfLifeAvatarVisual(sceneRef.time.now);
+      updateInfusionOfLightVisual(sceneRef.time.now);
+      sceneRef.cameras.main.flash(90, 255, 80, 80, false);
+
+      if (playerHealth <= 0 && !playerDeathNotified) {
+        playerDeathNotified = true;
+        player.setFillStyle(0x991b1b, 1);
+        playerStatusText?.setText("캐릭터 사망");
+        updatePlayerFaceUi(sceneRef.time.now);
+        forceRaidFrameSelfDeathFromCanvas();
+        triggerGameOver("캐릭터 사망");
+      }
+    };
+
+    const applyInstantKillByWorldFirstZone = (sceneRef) => {
+      if (playerHealth <= 0) {
+        return;
+      }
+      addCanvasRawDamage(playerMaxHealth);
+      playerHealth = 0;
+      syncSharedPlayerHpRatio();
+      recentHitUntilMs = 0;
+      updatePlayerHealthUi();
+      updateTreeOfLifeAvatarVisual(sceneRef.time.now);
+      updateInfusionOfLightVisual(sceneRef.time.now);
+      sceneRef.cameras.main.flash(120, 255, 40, 40, false);
+
+      if (!playerDeathNotified) {
+        playerDeathNotified = true;
+        player.setFillStyle(0x991b1b, 1);
+        playerStatusText?.setText("즉사 바닥 피격");
+        updatePlayerFaceUi(sceneRef.time.now);
+        forceRaidFrameSelfDeathFromCanvas();
+        triggerGameOver("즉사 바닥 피격");
+      }
+    };
+
+    const spawnHazard = (sceneRef, nowMs, options = {}) => {
+      if (!hazardEnabled) {
+        return;
+      }
+      const targeting = String(options.targeting ?? "player");
+      const padding = Math.max(PHASER_ARENA_VISUAL_CONFIG.hazardSafePaddingPx, hazardBarWidthPx * 0.6 + 6);
+      const isTargeted = targeting === "player";
+      let baseX = isTargeted && player ? player.x : randomBetween(padding, raidGridWidthPx - padding);
+      let baseY = isTargeted && player ? player.y : randomBetween(padding, raidGridHeightPx - padding);
+      const x = Phaser.Math.Clamp(baseX + randomBetween(-hazardTargetJitterPx, hazardTargetJitterPx), padding, raidGridWidthPx - padding);
+      const y = Phaser.Math.Clamp(baseY + randomBetween(-hazardTargetJitterPx, hazardTargetJitterPx), padding, raidGridHeightPx - padding);
+      const angleRad = worldFirstZoneActive
+        ? Phaser.Math.DegToRad(randomBetween(-30, 30))
+        : Phaser.Math.DegToRad(randomBetween(0, 360));
+
+      const barOuter = sceneRef.add.rectangle(
+        x,
+        y,
+        hazardBarLengthPx,
+        hazardBarWidthPx,
+        PHASER_ARENA_VISUAL_CONFIG.hazardBarOuterColorHex,
+        PHASER_ARENA_VISUAL_CONFIG.hazardBarOuterAlpha
+      );
+      barOuter.setRotation(angleRad);
+      barOuter.setStrokeStyle(1, 0x93c5fd, 0.95);
+
+      const barInner = sceneRef.add.rectangle(
+        x,
+        y,
+        hazardBarLengthPx,
+        Math.max(2, hazardBarWidthPx * 0.34),
+        PHASER_ARENA_VISUAL_CONFIG.hazardBarInnerColorHex,
+        PHASER_ARENA_VISUAL_CONFIG.hazardBarInnerAlpha
+      );
+      barInner.setRotation(angleRad);
+
+      const label = sceneRef.add
+        .text(x, y, formatHazardCountdownLabel(hazardCountdownMs), {
+          color: "#ffffff",
+          fontFamily: "Pretendard, Noto Sans KR, sans-serif",
+          fontSize: "16px",
+          fontStyle: "700"
+        })
+        .setOrigin(0.5);
+
+      hazards.push({
+        x,
+        y,
+        width: hazardBarWidthPx,
+        length: hazardBarLengthPx,
+        angleRad,
+        explodeAtMs: nowMs + hazardCountdownMs,
+        barOuter,
+        barInner,
+        label
+      });
+    };
+
+    const spawnMissile = (sceneRef, nowMs) => {
+      if (!missileEnabled || !player) {
+        return;
+      }
+
+      const targetX = Phaser.Math.Clamp(
+        player.x + randomBetween(-missileTargetJitterPx, missileTargetJitterPx),
+        missileWidthPx * 0.5,
+        raidGridWidthPx - missileWidthPx * 0.5
+      );
+      const spawnX = Phaser.Math.Clamp(
+        targetX + randomBetween(-missileWidthPx, missileWidthPx),
+        missileWidthPx * 0.5,
+        raidGridWidthPx - missileWidthPx * 0.5
+      );
+      const spawnY = -missileHeightPx;
+      const dx = targetX - spawnX;
+      const dy = Math.max(1, player.y - spawnY);
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const vx = (dx / dist) * missileSpeedPerSec;
+      const vy = (dy / dist) * missileSpeedPerSec;
+      const angleRad = Math.atan2(vy, vx);
+      const radius = missileCollisionRadiusPx;
+      const tailLength = Math.max(missileWidthPx * 1.9, radius * 3.2);
+      const tailThickness = Math.max(missileHeightPx * 0.9, radius * 1.35);
+
+      const tailBack = sceneRef.add.ellipse(
+        -tailLength * 0.54,
+        0,
+        tailLength * 1.02,
+        tailThickness * 1.12,
+        0x0b1f58,
+        0.24
+      );
+      const tailMid = sceneRef.add.ellipse(
+        -tailLength * 0.36,
+        0,
+        tailLength * 0.78,
+        tailThickness * 0.8,
+        0x1e40af,
+        0.34
+      );
+
+      const headGlow = sceneRef.add.circle(0, 0, radius * 1.26, 0x3b82f6, 0.34);
+      const headOuter = sceneRef.add.circle(0, 0, radius * 0.96, 0x0f172a, 0.96);
+      const headInner = sceneRef.add.circle(0, 0, radius * 0.72, 0x172554, 0.92);
+      const headCore = sceneRef.add.circle(0, 0, radius * 0.45, 0x060b1f, 0.98);
+      const highlight = sceneRef.add.circle(radius * 0.28, -radius * 0.26, Math.max(1.2, radius * 0.2), 0x93c5fd, 0.82);
+
+      const missile = sceneRef.add.container(spawnX, spawnY, [
+        tailBack,
+        tailMid,
+        headGlow,
+        headOuter,
+        headInner,
+        headCore,
+        highlight
+      ]);
+      missile.setDepth(2.2);
+      missile.setRotation(angleRad);
+
+      missiles.push({
+        sprite: missile,
+        headGlow,
+        tailMid,
+        vx,
+        vy,
+        radius,
+        spawnedAtMs: nowMs
+      });
+    };
+
+    const clearHazard = (hazard) => {
+      hazard.barOuter?.destroy();
+      hazard.barInner?.destroy();
+      hazard.label?.destroy();
+    };
+
+    const clearMissile = (missile) => {
+      missile.sprite?.destroy();
+    };
+
+    const scene = {
+      preload() { },
+      create() {
+        sceneStartAtMs = this.time.now;
+        this.cameras.main.setBackgroundColor("#1e293b");
+        this.add.grid(0, 0, raidGridWidthPx * 2, raidGridHeightPx * 2, 28, 28, 0x0f172a, 0.35, 0x334155, 0.2).setOrigin(0);
+        this.add.text(8, 6, `${movementKeyLetters.up}${movementKeyLetters.down}${movementKeyLetters.left}${movementKeyLetters.right} 이동`, {
+          color: "#cbd5e1",
+          fontFamily: "Pretendard, Noto Sans KR, sans-serif",
+          fontSize: "12px"
+        });
+        if (GLOBAL_SHOW_CANVAS_COMBAT_TIME) {
+          combatTimeText = this.add
+            .text(raidGridWidthPx - 8, 6, "전투 시간 00:00", {
+              color: "#cbd5e1",
+              fontFamily: "Pretendard,Noto Sans KR, sans-serif",
+              fontSize: "12px",
+              fontStyle: "700"
+            })
+            .setOrigin(1, 0);
+          updateCombatTimeText(this.time.now);
+        }
+        raidBurstCountdownText = this.add
+          .text(raidGridWidthPx / 2, 10, "", {
+            color: "#fde68a",
+            fontFamily: "Pretendard, Noto Sans KR, sans-serif",
+            fontSize: "13px",
+            fontStyle: "700"
+          })
+          .setOrigin(0.5, 0)
+          .setDepth(5)
+          .setStroke("#1e293b", 3);
+        updateRaidBurstCountdownText(this.time.now);
+        if (worldFirstZonePatternEnabled) {
+          const stripeWidthPx = raidGridWidthPx / worldFirstZonePatternStripeCount;
+          const zoneTopColorHex = blendColorHex(worldFirstZonePatternDangerColorHex, 0x0f172a, 0.35);
+          const zoneBottomColorHex = blendColorHex(worldFirstZonePatternDangerColorHex, 0xffffff, 0.16);
+          worldFirstZoneOverlays = Array.from({ length: worldFirstZonePatternStripeCount }, (_, stripeIndex) => {
+            const overlay = this.add.graphics();
+            overlay.fillGradientStyle(
+              zoneTopColorHex,
+              zoneTopColorHex,
+              zoneBottomColorHex,
+              zoneBottomColorHex,
+              0.25,
+              0.25,
+              0.9,
+              0.9
+            );
+            overlay.fillRect(stripeWidthPx * stripeIndex, 0, stripeWidthPx + 0.5, raidGridHeightPx);
+            overlay.setDepth(1);
+            overlay.setVisible(false);
+            overlay.setAlpha(0);
+            return overlay;
+          });
+          worldFirstZoneStatusText = this.add
+            .text(raidGridWidthPx / 2, raidGridHeightPx / 2, "", {
+              color: "#f8fafc",
+              fontFamily: "Pretendard, Noto Sans KR, sans-serif",
+              fontSize: "12px",
+              fontStyle: "700"
+            })
+            .setOrigin(0.5)
+            .setDepth(5)
+            .setStroke("#1e293b", 3);
+          clearWorldFirstZonePattern();
+        }
+
+        const playerStartX = raidGridWidthPx / 2;
+        const playerStartY = Phaser.Math.Clamp(
+          raidGridHeightPx * 0.76,
+          PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx + 4,
+          raidGridHeightPx - PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx - 8
+        );
+
+        player = this.add.rectangle(
+          playerStartX,
+          playerStartY,
+          PHASER_ARENA_VISUAL_CONFIG.playerSizePx,
+          PHASER_ARENA_VISUAL_CONFIG.playerSizePx,
+          selectedHealerColorHex,
+          1
+        );
+        player.setStrokeStyle(2, 0x831843, 0.95);
+
+        playerLeftEye = this.add.circle(player.x - 3, player.y - 2, 1.45, 0x3f1d2e, 1);
+        playerRightEye = this.add.circle(player.x + 3, player.y - 2, 1.45, 0x3f1d2e, 1);
+        playerLeftTear = this.add.circle(player.x - 3, player.y + 1, 1.15, 0x7dd3fc, 0.95);
+        playerRightTear = this.add.circle(player.x + 3, player.y + 1, 1.15, 0x7dd3fc, 0.95);
+        playerMouth = this.add.graphics();
+        playerLeftEye.setDepth(4);
+        playerRightEye.setDepth(4);
+        playerLeftTear.setDepth(4);
+        playerRightTear.setDepth(4);
+        playerMouth.setDepth(4);
+        infusionLeftArc = this.add.graphics();
+        infusionRightArc = this.add.graphics();
+        infusionLeftArc.setDepth(3);
+        infusionRightArc.setDepth(3);
+        treeOfLifeAvatarVisual = createTreeOfLifeAvatarVisual(this);
+        updatePlayerFaceUi(this.time.now);
+        updateInfusionOfLightVisual(this.time.now);
+        updateTreeantVisuals(this, this.time.now);
+        updateTreeOfLifeAvatarVisual(this.time.now);
+
+        playerStatusText = this.add
+          .text(raidGridWidthPx - 8, GLOBAL_SHOW_CANVAS_COMBAT_TIME ? 21 : 6, "", {
+            color: "#fca5a5",
+            fontFamily: "Pretendard, Noto Sans KR, sans-serif",
+            fontSize: "11px",
+            fontStyle: "700"
+          })
+          .setOrigin(1, 0);
+
+        if (showPlayerHealthBar) {
+          healthBarBg = this.add.rectangle(
+            player.x,
+            player.y + PHASER_ARENA_VISUAL_CONFIG.healthBarOffsetYPx,
+            PHASER_ARENA_VISUAL_CONFIG.healthBarWidthPx,
+            PHASER_ARENA_VISUAL_CONFIG.healthBarHeightPx,
+            0x020617,
+            0.95
+          );
+          healthBarBg.setStrokeStyle(1, 0x0f172a, 1);
+
+          healthBarFill = this.add.rectangle(
+            player.x - PHASER_ARENA_VISUAL_CONFIG.healthBarWidthPx / 2,
+            player.y + PHASER_ARENA_VISUAL_CONFIG.healthBarOffsetYPx,
+            PHASER_ARENA_VISUAL_CONFIG.healthBarWidthPx,
+            PHASER_ARENA_VISUAL_CONFIG.healthBarHeightPx,
+            0x22c55e,
+            0.95
+          );
+          healthBarFill.setOrigin(0, 0.5);
+
+          healthBarText = this.add
+            .text(player.x, player.y + PHASER_ARENA_VISUAL_CONFIG.healthBarOffsetYPx - 8, "100%", {
+              color: "#dcfce7",
+              fontFamily: "Pretendard,Noto Sans KR, sans-serif",
+              fontSize: "10px",
+              fontStyle: "700"
+            })
+            .setOrigin(0.5);
+          updatePlayerHealthUi();
+        }
+        syncSharedPlayerHpRatio();
+
+        const forceSelfDeathOnCanvas = () => {
+          if (!player) {
+            return;
+          }
+          if (playerHealth > 0) {
+            playerHealth = 0;
+          }
+          playerDeathNotified = true;
+          phaserSelfHpRatioRef.current = 0;
+          player.setFillStyle(0x991b1b, 1);
+          playerStatusText?.setText("캐릭터 사망");
+          updatePlayerHealthUi();
+          updatePlayerFaceUi(this.time.now);
+          updateTreeOfLifeAvatarVisual(this.time.now);
+          updateInfusionOfLightVisual(this.time.now);
+          updateTreeantVisuals(this, this.time.now);
+          syncSharedPlayerHpRatio();
+        };
+        this.events.on("force-self-death", forceSelfDeathOnCanvas);
+        this.events.once("shutdown", () => {
+          this.events.off("force-self-death", forceSelfDeathOnCanvas);
+        });
+
+        nextHazardSpawnAtMs = Number.POSITIVE_INFINITY;
+        nextMissileSpawnAtMs = Number.POSITIVE_INFINITY;
+      },
+      update(time, delta) {
+        if (!player) {
+          return;
+        }
+
+        updateCombatTimeText(time);
+        updateRaidBurstCountdownText(time);
+
+        if (!runningRef.current || gameOverReasonRef.current) {
+          return;
+        }
+
+        syncPlayerHealthFromSharedRatio();
+        if (playerHealth <= 0 && !playerDeathNotified) {
+          playerDeathNotified = true;
+          player.setFillStyle(0x991b1b, 1);
+          playerStatusText?.setText("캐릭터 사망");
+        }
+
+        if (!mechanicsScheduleInitialized) {
+          mechanicsScheduleInitialized = true;
+          const firstMechanicAtMs = time + mechanicsStartDelayMs;
+          nextHazardSpawnAtMs = hazardEnabled ? firstMechanicAtMs : Number.POSITIVE_INFINITY;
+          nextMissileSpawnAtMs = missileEnabled ? firstMechanicAtMs : Number.POSITIVE_INFINITY;
+          worldFirstZoneNextScheduledStartIndex = 0;
+        }
+        updateWorldFirstZoneCycle(this, time);
+        if (playerHealth <= 0) {
+          updatePlayerHealthUi();
+          updatePlayerFaceUi(time);
+          updateTreeOfLifeAvatarVisual(time);
+          updateInfusionOfLightVisual(time);
+          updateTreeantVisuals(this, time);
+          return;
+        }
+
+        const speedPerSec = PHASER_ARENA_VISUAL_CONFIG.playerSpeedPerSec;
+        const step = (speedPerSec * delta) / 1000;
+
+        let dx = 0;
+        let dy = 0;
+        const movementState = movementStateRef.current;
+        if (playerHealth > 0) {
+          if (movementState.left) {
+            dx -= 1;
+          }
+          if (movementState.right) {
+            dx += 1;
+          }
+          if (movementState.up) {
+            dy -= 1;
+          }
+          if (movementState.down) {
+            dy += 1;
+          }
+        }
+
+        if (dx !== 0 && dy !== 0) {
+          const normalize = Math.SQRT1_2;
+          dx *= normalize;
+          dy *= normalize;
+        }
+
+        const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
+        player.x = Phaser.Math.Clamp(player.x + dx * step, playerRadius, raidGridWidthPx - playerRadius);
+        player.y = Phaser.Math.Clamp(player.y + dy * step, playerRadius, raidGridHeightPx - playerRadius);
+        updatePlayerFaceUi(time);
+        updateTreeOfLifeAvatarVisual(time);
+        updateInfusionOfLightVisual(time);
+        updateTreeantVisuals(this, time);
+
+        if (showPlayerHealthBar) {
+          updatePlayerHealthUi();
+        }
+
+        if (hazardEnabled && time >= nextHazardSpawnAtMs) {
+          if (!worldFirstZoneActive) {
+            spawnHazard(this, time, { targeting: "player" });
+          } else {
+            const spawnTargetedHazard = Math.random() < worldFirstZoneHazardTargetedChance;
+            if (spawnTargetedHazard) {
+              spawnHazard(this, time, { targeting: "player" });
+            } else {
+              for (let index = 0; index < worldFirstZoneHazardRandomCountWhenUntargeted; index += 1) {
+                spawnHazard(this, time, { targeting: "random" });
+              }
+            }
+          }
+          scheduleNextHazardSpawn(time);
+        }
+
+        if (missileEnabled && !worldFirstZoneActive && time >= nextMissileSpawnAtMs) {
+          spawnMissile(this, time);
+          scheduleNextMissileSpawn(time);
+        }
+
+        if (hazardEnabled) {
+          hazards = hazards.filter((hazard) => {
+            const remainingMs = hazard.explodeAtMs - time;
+            if (remainingMs > 0) {
+              hazard.label.setText(formatHazardCountdownLabel(remainingMs));
+              return true;
+            }
+
+            const dxHit = player.x - hazard.x;
+            const dyHit = player.y - hazard.y;
+            const cos = Math.cos(hazard.angleRad);
+            const sin = Math.sin(hazard.angleRad);
+            const localAlong = dxHit * cos + dyHit * sin;
+            const localAcross = -dxHit * sin + dyHit * cos;
+            const halfLength = hazard.length * 0.5 + playerRadius;
+            const halfWidth = hazard.width * 0.5 + playerRadius;
+            const hit = playerHealth > 0 && Math.abs(localAlong) <= halfLength && Math.abs(localAcross) <= halfWidth;
+
+            if (hit && hazardDamage > 0) {
+              addCanvasHitCount("hazardBar");
+              applyPlayerDamage(this, hazardDamage);
+            }
+
+            const explosion = this.add.rectangle(
+              hazard.x,
+              hazard.y,
+              hazard.length,
+              hazard.width + 4,
+              0xe2e8f0,
+              0.45
+            );
+            explosion.setRotation(hazard.angleRad);
+            this.tweens.add({
+              targets: explosion,
+              alpha: 0,
+              scaleX: 1.06,
+              scaleY: 1.18,
+              duration: 170,
+              onComplete: () => {
+                explosion.destroy();
+              }
+            });
+
+            clearHazard(hazard);
+            return false;
+          });
+        }
+
+        if (missileEnabled) {
+          missiles = missiles.filter((missile) => {
+            const ageMs = Math.max(0, time - Number(missile.spawnedAtMs ?? 0));
+            const pulse = 0.72 + Math.sin(ageMs / 72) * 0.2;
+            missile.headGlow?.setAlpha(Math.max(0.2, Math.min(0.52, 0.26 + pulse * 0.34)));
+            missile.tailMid?.setScale(1 + (1 - pulse) * 0.08, 1);
+
+            missile.sprite.x += (missile.vx * delta) / 1000;
+            missile.sprite.y += (missile.vy * delta) / 1000;
+
+            const outOfBounds =
+              missile.sprite.y > raidGridHeightPx + missileHeightPx * 2 ||
+              missile.sprite.x < -missileWidthPx * 2 ||
+              missile.sprite.x > raidGridWidthPx + missileWidthPx * 2;
+            if (outOfBounds) {
+              clearMissile(missile);
+              return false;
+            }
+
+            const dxHit = player.x - missile.sprite.x;
+            const dyHit = player.y - missile.sprite.y;
+            const hitRadius = playerRadius + missile.radius;
+            const hit = playerHealth > 0 && dxHit * dxHit + dyHit * dyHit <= hitRadius * hitRadius;
+            if (!hit) {
+              return true;
+            }
+
+            if (missileDamage > 0) {
+              addCanvasHitCount("missile");
+              applyPlayerDamage(this, missileDamage);
+            }
+
+            const impact = this.add.circle(missile.sprite.x, missile.sprite.y, missile.radius + 5, 0x60a5fa, 0.45);
+            const impactCore = this.add.circle(missile.sprite.x, missile.sprite.y, missile.radius + 2, 0x1d4ed8, 0.35);
+            this.tweens.add({
+              targets: [impact, impactCore],
+              alpha: 0,
+              scale: 1.34,
+              duration: 170,
+              onComplete: () => {
+                impact.destroy();
+                impactCore.destroy();
+              }
+            });
+
+            clearMissile(missile);
+            return false;
+          });
+        }
+      }
+    };
+
+    const game = new Phaser.Game({
+      type: Phaser.AUTO,
+      parent: host,
+      width: raidGridWidthPx,
+      height: raidGridHeightPx,
+      transparent: false,
+      scene,
+      fps: {
+        target: 60,
+        forceSetTimeOut: false
+      },
+      audio: {
+        noAudio: true
+      }
+    });
+
+    phaserGameRef.current = game;
+
+    return () => {
+      stopWorldFirstZoneCycle();
+      worldFirstZoneOverlays.forEach((overlay) => overlay?.destroy());
+      worldFirstZoneOverlays = [];
+      worldFirstZoneStatusText?.destroy();
+      worldFirstZoneStatusText = null;
+      hazards.forEach(clearHazard);
+      hazards = [];
+      missiles.forEach(clearMissile);
+      missiles = [];
+      combatTimeText?.destroy();
+      raidBurstCountdownText?.destroy();
+      playerLeftEye?.destroy();
+      playerRightEye?.destroy();
+      playerLeftTear?.destroy();
+      playerRightTear?.destroy();
+      playerMouth?.destroy();
+      infusionLeftArc?.destroy();
+      infusionRightArc?.destroy();
+      destroyTreeOfLifeAvatarVisual(treeOfLifeAvatarVisual);
+      treeOfLifeAvatarVisual = null;
+      treeantVisuals.forEach(destroyTreeantVisual);
+      treeantVisuals = [];
+      pointerInPhaserCanvasRef.current = false;
+      if (phaserGameRef.current === game) {
+        phaserGameRef.current.destroy(true);
+        phaserGameRef.current = null;
+      } else {
+        game.destroy(true);
+      }
+    };
+  }, [
+    hasCombatSnapshot,
+    raidGridWidthPx,
+    raidGridHeightPx,
+    activeDifficultyKey,
+    activeCombatHealerSlug,
+    activeMovementKeyPreset,
+    activePhaserDifficultyConfig,
+    selectedHealerColorHex
+  ]);
+
+  function renderCooldownManagerBar({
+    iconSizePx,
+    holyPowerCellWidthPx,
+    holyPowerCellHeightPx,
+    spellOrder = managerCooldownSpellOrder,
+    groupKey = "manager",
+    interactive = false,
+    showHolyPower = true,
+    showManaBar = false,
+    showCastBar = false,
+    showBindings = true,
+    enableDragReorder = false
+  }) {
+    const bindingFontPx = Math.max(8, Math.round(iconSizePx * 0.22));
+    const bindingPaddingXPx = Math.max(1, Math.round(iconSizePx * 0.04));
+    const bindingPaddingYPx = Math.max(1, Math.round(iconSizePx * 0.03));
+    const holyPowerValue = Math.max(0, Math.min(5, Number(cooldownBarSnapshot.holyPower ?? 0)));
+    const holyPowerBarWidthPx = Math.max(1, holyPowerCellWidthPx * 5);
+    const manaPct = Math.max(0, Math.min(100, Number(cooldownBarSnapshot.manaPct ?? 0)));
+    const currentCastInfo = cooldownBarSnapshot.currentCast;
+    const castSpell = currentCastInfo?.spellKey ? practiceSpellsByKey[currentCastInfo.spellKey] : null;
+    const castRemainingMs = Math.max(0, Number(currentCastInfo?.remainingMs ?? 0));
+    const castTimeMs = Math.max(1, Number(currentCastInfo?.castTimeMs ?? 1));
+    const castProgress = castSpell && castTimeMs > 0
+      ? Math.max(0, Math.min(1, 1 - castRemainingMs / castTimeMs))
+      : 0;
+    const normalizedGroupKey = groupKey === "reserve" ? "reserve" : "manager";
+    const renderedSpellOrder = Array.isArray(spellOrder) ? spellOrder : managerCooldownSpellOrder;
+
+    return (
+      <div
+        className="select-none rounded border border-slate-700 bg-black/70 p-1.5 shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
+        onDragOver={enableDragReorder ? handleCooldownSpellDragOver : undefined}
+        onDrop={enableDragReorder ? (event) => handleCooldownSpellDrop(event, normalizedGroupKey) : undefined}
+      >
+        <div className="flex items-center" style={{ gap: `${COOLDOWN_MANAGER_LAYOUT_CONFIG.iconGapPx}px` }}>
+          {renderedSpellOrder.map((spellKey) => {
+            const spell = practiceSpellsByKey[spellKey];
+            if (!spell) {
+              return null;
+            }
+
+            const meta = practiceCooldownSpellMetaByKey[spellKey] ?? {};
+            const cooldownMs = Math.max(0, Number(cooldownBarSnapshot.cooldowns?.[spellKey] ?? 0));
+            const buffRemainingMs = getSelfBuffRemainingMs(cooldownBarSnapshot, spellKey);
+            const buffActive = buffRemainingMs > 0;
+            const isOneUseSpent =
+              spellKey === "divineBlessing" && Boolean(cooldownBarSnapshot.divineBlessingUsedInCombat);
+            const holyShockCharges = Math.max(0, Number(cooldownBarSnapshot.holyShockCharges ?? 0));
+            const holyShockMaxCharges = Math.max(1, Number(cooldownBarSnapshot.holyShockMaxCharges ?? 2));
+            const holyShockHasCharge = spellKey === "holyShock" ? holyShockCharges > 0 : false;
+            const coolingDown = isOneUseSpent
+              ? true
+              : spellKey === "holyShock"
+                ? !buffActive && !holyShockHasCharge && cooldownMs > 0
+                : !buffActive && cooldownMs > 0;
+            const overlayLabel = buffActive
+              ? `${formatSeconds(buffRemainingMs)}s`
+              : isOneUseSpent
+                ? "소진"
+                : coolingDown
+                  ? `${Math.ceil(cooldownMs / 1000)}s`
+                  : "";
+            const chargeLabel = spellKey === "holyShock" ? `${holyShockCharges}` : "";
+
+            const iconNode = (
+              <div
+                className={`relative overflow-hidden rounded border ${coolingDown ? "border-slate-700" : "border-slate-500/80"} ${enableDragReorder ? "cursor-grab active:cursor-grabbing" : ""}`}
+                style={{
+                  width: `${iconSizePx}px`,
+                  height: `${iconSizePx}px`
+                }}
+              >
+                <img
+                  alt={spell.name}
+                  className={`h-full w-full object-cover ${coolingDown ? "grayscale" : ""}`}
+                  onError={(event) => {
+                    if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                      return;
+                    }
+                    event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                  }}
+                  src={meta.iconUrl || practiceSpellIconsByKey[spellKey] || DEFAULT_SPELL_ICON_URL}
+                />
+                {buffActive ? <div className="absolute inset-0 bg-amber-300/10" /> : null}
+                {overlayLabel ? (
+                  <div className={`absolute inset-0 flex items-center justify-center text-xs font-semibold ${buffActive ? "text-amber-100" : "bg-black/55 text-slate-100"}`}>
+                    {overlayLabel}
+                  </div>
+                ) : null}
+                {chargeLabel ? (
+                  <div className="absolute left-0.5 top-0.5 rounded bg-black/70 px-1 text-[10px] font-semibold leading-none text-violet-100">
+                    {chargeLabel}
+                  </div>
+                ) : null}
+                {showBindings ? (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 leading-none text-slate-100 bg-black/50"
+                    style={{
+                      fontSize: `${bindingFontPx}px`,
+                      paddingLeft: `${bindingPaddingXPx}px`,
+                      paddingRight: `${bindingPaddingXPx}px`,
+                      paddingTop: `${bindingPaddingYPx}px`,
+                      paddingBottom: `${bindingPaddingYPx}px`
+                    }}
+                  >
+                    {bindingLabelsForDisplay[spellKey] ?? "-"}
+                  </div>
+                ) : null}
+              </div>
+            );
+
+            const wrapperProps = enableDragReorder
+              ? {
+                draggable: true,
+                onDragStart: (event) => handleCooldownSpellDragStart(event, spellKey, normalizedGroupKey),
+                onDragOver: handleCooldownSpellDragOver,
+                onDrop: (event) => handleCooldownSpellDrop(event, normalizedGroupKey, spellKey),
+                onDragEnd: handleCooldownSpellDragEnd
+              }
+              : {};
+
+            if (interactive && meta.spellId) {
+              return (
+                <div key={spellKey} {...wrapperProps}>
+                  <a
+                    className="block"
+                    data-wh-rename-link="false"
+                    href={`https://www.wowhead.com/ko/spell=${meta.spellId}`}
+                    rel="noreferrer"
+                    target="_blank"
+                    title={spell.name}
+                  >
+                    {iconNode}
+                  </a>
+                </div>
+              );
+            }
+
+            return (
+              <div key={spellKey} title={spell.name} {...wrapperProps}>
+                {iconNode}
+              </div>
+            );
+          })}
+        </div>
+
+        {showHolyPower ? (
+          <div className="relative mt-1">
+            <div className="flex justify-center">
+              <div
+                className="flex overflow-hidden rounded-[2px] border border-slate-700"
+                style={{ width: `${holyPowerBarWidthPx}px` }}
+              >
+                {Array.from({ length: 5 }, (_, index) => {
+                  const active = index < holyPowerValue;
+                  return (
+                    <div
+                      className={`border-r border-slate-800 last:border-r-0 ${active ? "bg-yellow-300/95" : "bg-slate-900/90"}`}
+                      key={`holy-power-${index + 1}`}
+                      style={{
+                        width: `${holyPowerCellWidthPx}px`,
+                        height: `${holyPowerCellHeightPx}px`
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-semibold leading-none text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.85)]">
+              {holyPowerValue}
+            </div>
+          </div>
+        ) : null}
+
+        {showManaBar ? (
+          <div
+            className="relative mx-auto mt-1.5 h-[10px] overflow-hidden rounded-[2px] border border-slate-700 bg-gray-950/90"
+            style={{ width: `${holyPowerBarWidthPx}px` }}
+          >
+            <div className="h-full bg-blue-500 transition-[width] duration-100 ease-linear" style={{ width: `${manaPct}%` }} />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[9px] font-semibold leading-none text-blue-100">
+              {Math.round(manaPct)}%
+            </div>
+          </div>
+        ) : null}
+
+        {showCastBar ? (
+          <div
+            className="mx-auto mt-1.5 overflow-hidden rounded-[2px] border border-slate-700 bg-slate-900/95"
+            style={{ width: `${holyPowerBarWidthPx}px` }}
+          >
+            {castSpell && currentCastInfo ? (
+              <div className="relative h-5">
+                <div className="absolute inset-y-0 left-0 bg-violet-500/60 transition-[width] duration-100 ease-linear" style={{ width: `${castProgress * 100}%` }} />
+                <div className="absolute inset-0 flex items-center justify-between gap-2 px-1.5 text-[10px] leading-none">
+                  <div className="flex min-w-0 items-center gap-1 text-slate-100">
+                    <img
+                      alt={castSpell.name}
+                      className="h-3.5 w-3.5 rounded-[2px] border border-black/40 object-cover"
+                      onError={(event) => {
+                        if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                          return;
+                        }
+                        event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                      }}
+                      src={practiceSpellIconsByKey[castSpell.key] || DEFAULT_SPELL_ICON_URL}
+                    />
+                    <span className="truncate font-semibold">{castSpell.name}</span>
+                  </div>
+                  <span className="shrink-0 font-semibold text-slate-100">{formatSeconds(castRemainingMs)}s</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-5 items-center justify-center text-[10px] text-slate-400">시전 없음</div>
+            )}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (HEALER_PRACTICE_DESKTOP_ONLY_CONFIG?.enabled !== false && !isDesktopEnvironment) {
+    return (
+      <div className="mt-8">
+        <section className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-6 text-center">
+          <p className="text-lg font-semibold text-rose-100">
+            {String(HEALER_PRACTICE_DESKTOP_ONLY_CONFIG?.unsupportedMessage ?? "데스크탑 환경만 지원됩니다 ㅠㅠ")}
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-8 space-y-5">
+      {!inCombatView ? (
+        <>
+          <section className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+            <div className="flex flex-wrap gap-2">
+              {healers.map((healer) => {
+                const isSelected = hasExplicitHealerSelection && healer.slug === selectedHealerSlug;
+                const isCurrent = IMPLEMENTED_HEALER_SLUGS.has(healer.slug);
+                const isCardDisabled = running || !isCurrent;
+                return (
+                  <button
+                    className={`w-[108px] rounded-xl border p-2 text-center transition ${isSelected
+                      ? "border-violet-300/70 bg-slate-900"
+                      : "border-slate-700 bg-slate-900/50"
+                      } ${isCurrent ? "" : "opacity-70 grayscale"} disabled:cursor-not-allowed`}
+                    disabled={isCardDisabled}
+                    key={healer.slug}
+                    onClick={() => {
+                      if (isCardDisabled) {
+                        return;
+                      }
+                      markSetupDirty();
+                      setHasExplicitHealerSelection(true);
+                      const nextRuntime = resolveHealerPracticeRuntime(healer.slug);
+                      setSelectedHealerSlug(healer.slug);
+                      setKeyboardBindings(
+                        buildDefaultKeyboardBindings(nextRuntime.activeSpellKeys, nextRuntime.defaultKeybinds)
+                      );
+                      setClickCastBindings(
+                        buildDefaultClickCastBindings(
+                          nextRuntime.clickCastableKeys,
+                          nextRuntime.defaultClickCastPreferred
+                        )
+                      );
+                      const nextCooldownOrderBuckets = buildCooldownManagerSpellOrderBuckets(
+                        nextRuntime.activeSpellKeys,
+                        nextRuntime.cooldownManagerSpellKeys,
+                        nextRuntime.cooldownManagerNonDisplaySpellKeys
+                      );
+                      cooldownSpellOrderRef.current = nextCooldownOrderBuckets.manager;
+                      cooldownReserveSpellOrderRef.current = nextCooldownOrderBuckets.reserve;
+                      setCooldownSpellOrder(nextCooldownOrderBuckets.manager);
+                      setCooldownReserveSpellOrder(nextCooldownOrderBuckets.reserve);
+                    }}
+                    type="button"
+                  >
+                    <img
+                      alt={`${healer.shortName} icon`}
+                      className="mx-auto h-10 w-10 rounded-lg border border-slate-700 object-cover"
+                      src={healer.classIcon}
+                    />
+                    <p className="mt-1 text-xs font-semibold text-slate-100">{healer.shortName}</p>
+                    <p className={`text-[10px] ${isCurrent ? "text-violet-200" : "text-slate-400"}`}>{isCurrent ? "사용 가능" : "준비중"}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {!hasExplicitHealerSelection ? (
+              <p className="mt-3 text-xs text-slate-300">아래 세팅을 열려면 힐러 아이콘을 선택하세요.</p>
+            ) : null}
+            {hasExplicitHealerSelection && selectedHealerMeta && (selectedHealerDisclaimers.length || selectedHealerPatchMeta) ? (
+              <div className="mt-3 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs text-violet-100">
+                <p className="font-semibold">{selectedHealerMeta.shortName} 안내</p>
+                {selectedHealerPatchMeta ? (
+                  <p className="mt-1 text-[11px] leading-tight text-amber-200">
+                    {selectedHealerPatchMeta.lastUpdatedAt ? `최종 수정: ${selectedHealerPatchMeta.lastUpdatedAt}` : ""}
+                    {selectedHealerPatchMeta.lastUpdatedAt && selectedHealerPatchMeta.patchVersion ? " | " : ""}
+                    {selectedHealerPatchMeta.patchVersion ? `패치 버전: ${selectedHealerPatchMeta.patchVersion}` : ""}
+                  </p>
+                ) : null}
+                {selectedHealerDisclaimers.length ? (
+                  <ul className="mt-1 list-disc space-y-1 pl-4">
+                    {selectedHealerDisclaimers.map((line, index) => (
+                      <li key={`${selectedHealerSlug}-disclaimer-${index}`}>{line}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+
+          {showPreCombatSetupSections ? (
+            <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="rounded-2xl border border-slate-700 bg-gray-950/50 p-4">
+                <h2 className="text-base font-semibold text-violet-100">연습 시작 전 설정</h2>
+                <p className="mt-1 text-xs text-slate-400">마우스오버/클릭캐스팅/단축키를 먼저 확정한 뒤 시작하세요.</p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <label className="text-sm text-slate-200">
+                    난이도
+                    <select
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                      disabled={running}
+                      onChange={(event) => {
+                        markSetupDirty();
+                        setDifficultyKey(event.target.value);
+                      }}
+                      value={difficultyKey}
+                    >
+                      {DIFFICULTY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="text-sm text-slate-200">
+                    이동키
+                    <select
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                      disabled={running}
+                      onChange={(event) => {
+                        markSetupDirty();
+                        setMovementKeyPreset(normalizeMovementPreset(event.target.value));
+                      }}
+                      value={movementKeyPreset}
+                    >
+                      {MOVEMENT_KEY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="text-sm text-slate-200">
+                    맵
+                    <select
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                      disabled={running}
+                      onChange={(event) => {
+                        markSetupDirty();
+                        setSelectedMapKey(event.target.value);
+                      }}
+                      value={selectedMapKey}
+                    >
+                      {HEALER_PRACTICE_MAP_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="text-sm text-slate-200">
+                    레이드 프레임 (Row x Col)
+                    <select
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                      disabled={running}
+                      onChange={(event) => {
+                        markSetupDirty();
+                        setRaidFrameLayout(event.target.value);
+                      }}
+                      value={raidFrameLayout}
+                    >
+                      {RAID_LAYOUT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="text-sm text-slate-200">
+                    내 위치
+                    <select
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                      disabled={running}
+                      onChange={(event) => {
+                        markSetupDirty();
+                        setMyRaidFramePositionMode(normalizeMyRaidFramePositionMode(event.target.value));
+                      }}
+                      value={myRaidFramePositionMode}
+                    >
+                      {MY_RAID_FRAME_POSITION_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  <label className="flex items-center gap-2 text-sm text-slate-200">
+                    <input
+                      checked={useMouseover}
+                      disabled={running}
+                      onChange={(event) => {
+                        markSetupDirty();
+                        setUseMouseover(event.target.checked);
+                      }}
+                      type="checkbox"
+                    />
+                    마우스오버 타겟 사용
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-200">
+                    <input
+                      checked={useClickCasting}
+                      disabled={running}
+                      onChange={(event) => {
+                        markSetupDirty();
+                        setUseClickCasting(event.target.checked);
+                      }}
+                      type="checkbox"
+                    />
+                    클릭캐스팅 사용
+                  </label>
+                </div>
+
+                {useClickCasting ? (
+                  <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+                    <p className="text-xs font-semibold text-slate-100">클릭캐스팅 설정</p>
+                    <div className="mt-1.5 space-y-1.5">
+                      {clickCastableKeys.map((spellKey) => {
+                        const spell = practiceSpellsByKey[spellKey];
+                        if (!spell) {
+                          return null;
+                        }
+                        const clickCastSpellMeta = practiceCooldownSpellMetaByKey[spell.key] ?? {};
+                        const clickCastSpellId = Number.isFinite(clickCastSpellMeta.spellId)
+                          ? Number(clickCastSpellMeta.spellId)
+                          : null;
+                        return (
+                          <label className="grid grid-cols-[1fr_168px] items-center gap-1.5" key={spell.key}>
+                            <div className="min-w-0">
+                              {clickCastSpellId ? (
+                                <a
+                                  className="block min-w-0 truncate text-xs font-semibold leading-tight text-slate-200"
+                                  data-wh-icon-size="small"
+                                  data-wh-rename-link="false"
+                                  href={`https://www.wowhead.com/ko/spell=${clickCastSpellId}`}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                  title={spell.name}
+                                >
+                                  {spell.name}
+                                </a>
+                              ) : (
+                                <span className="block truncate text-xs font-semibold leading-tight text-slate-200">{spell.name}</span>
+                              )}
+                            </div>
+                            <select
+                              className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs leading-tight text-slate-100"
+                              disabled={running}
+                              onChange={(event) => handleClickCastBindingChange(spell.key, event.target.value)}
+                              value={clickCastBindings[spell.key] ?? ""}
+                            >
+                              {MOUSE_BINDING_OPTIONS.map((option) => (
+                                <option key={option.token || "none"} value={option.token}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+              </div>
+
+              <div className="rounded-2xl border border-slate-700 bg-gray-950/50 p-4">
+                <h2 className="text-sm font-semibold text-violet-100">단축키 맵</h2>
+                <p className="mt-1 text-[11px] leading-tight text-slate-400">
+                  조합키 + 키를 설정합니다. 클릭캐스팅에 배정된 스킬은 자동으로 마우스 조합이 표시됩니다.
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  {activeSpells.map((spell) => {
+                    const assignedMouseToken = useClickCasting ? clickCastBindings[spell.key] : "";
+                    const mouseBound = Boolean(assignedMouseToken && clickCastableSet.has(spell.key));
+                    const keybindSpellMeta = practiceCooldownSpellMetaByKey[spell.key] ?? {};
+                    return (
+                      <div className="grid grid-cols-[1fr_95px_90px] items-center gap-1.5" key={spell.key}>
+                        <div className="min-w-0">
+                          {Number.isFinite(keybindSpellMeta.spellId) ? (
+                            <a
+                              className="block min-w-0 truncate text-xs font-semibold leading-tight text-slate-200"
+                              data-wh-icon-size="small"
+                              data-wh-rename-link="false"
+                              href={`https://www.wowhead.com/ko/spell=${keybindSpellMeta.spellId}`}
+                              rel="noreferrer"
+                              target="_blank"
+                              title={spell.name}
+                            >
+                              {spell.name}
+                            </a>
+                          ) : (
+                            <span className="block truncate text-xs font-semibold leading-tight text-slate-200">{spell.name}</span>
+                          )}
+                        </div>
+                        {mouseBound ? (
+                          <div className="col-span-2 rounded-lg border border-violet-600/50 bg-violet-900/20 px-2 py-1 text-center text-xs leading-tight text-violet-100">
+                            {MOUSE_UI_LABEL_BY_TOKEN[assignedMouseToken] ?? assignedMouseToken}
+                          </div>
+                        ) : (
+                          <>
+                            <select
+                              className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs leading-tight text-slate-100"
+                              disabled={running}
+                              onChange={(event) => handleModifierChange(spell.key, event.target.value)}
+                              value={keyboardBindings[spell.key]?.modifier ?? ""}
+                            >
+                              {MODIFIER_OPTIONS.map((option) => (
+                                <option key={option.value || "none"} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs leading-tight text-slate-100"
+                              disabled={running}
+                              maxLength={12}
+                              onChange={(event) => handleKeyInputChange(spell.key, event.target.value)}
+                              value={keyboardBindings[spell.key]?.key ?? ""}
+                            />
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {showPreCombatSetupSections ? (
+            <section className="rounded-xl border border-slate-700 bg-gray-950/40 px-4 py-3">
+              <p className={`text-sm ${setupConfirmed ? "text-emerald-300" : "text-amber-300"}`}>
+                설정 상태: {setupConfirmed ? "완료" : "미완료 (아래의 설정 완료 버튼을 누르세요)"}
+                {setupConfirmed
+                  ? ` | 난이도: ${PRACTICE_DIFFICULTY_TUNING[difficultyKey]?.label ?? difficultyKey} (${resolveCombatDurationMinutesByDifficulty(difficultyKey)}분)`
+                  : ""}
+              </p>
+              {setupConfirmed && Number.isFinite(Number(setupSeed)) ? (
+                <p className="mt-1 text-[11px] text-slate-400">Seed: {Math.floor(Number(setupSeed))}</p>
+              ) : null}
+              {statusText ? <p className="mt-2 text-xs text-slate-300">{statusText}</p> : null}
+              {duplicateKeyboardBindings.length ? (
+                <p className="mt-1 text-xs text-amber-300">중복 키보드 단축키: {duplicateKeyboardBindings.join(", ")}</p>
+              ) : null}
+              {blockedKeyboardBindings.length ? (
+                <p className="mt-1 text-xs text-amber-300">사용 불가 조합: {blockedKeyboardBindings.join(", ")}</p>
+              ) : null}
+              {useClickCasting && duplicateMouseBindings.length ? (
+                <p className="mt-1 text-xs text-amber-300">
+                  중복 클릭캐스팅 조합: {duplicateMouseBindings.map((token) => MOUSE_UI_LABEL_BY_TOKEN[token] ?? token).join(", ")}
+                </p>
+              ) : null}
+              <div className="flex justify-center">
+                <button
+                  className="rounded-lg border border-violet-400/60 bg-violet-500/15 px-3 py-2 text-sm text-violet-100 transition hover:bg-violet-500/25"
+                  disabled={running}
+                  onClick={handleConfirmSetup}
+                  type="button"
+                >
+                  설정 완료!
+                </button>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  className="rounded-lg border border-sky-400/60 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!canUseCloudKeybindProfile || running || keybindProfileSyncBusy}
+                  onClick={handleSaveCloudKeybindProfile}
+                  type="button"
+                >
+                  내 바인딩 저장
+                </button>
+                <button
+                  className="rounded-lg border border-slate-500/70 bg-slate-700/25 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-slate-700/40 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!canUseCloudKeybindProfile || running || keybindProfileSyncBusy}
+                  onClick={() => {
+                    void loadCloudKeybindProfile({ silent: false });
+                  }}
+                  type="button"
+                >
+                  내 바인딩 불러오기
+                </button>
+              </div>
+              {keybindProfileSyncBusy ? (
+                <p className="mt-1 text-center text-[11px] text-sky-200">개인 키바인드 동기화 중...</p>
+              ) : null}
+              {!isLoggedIn ? (
+                <p className="mt-1 text-center text-[11px] text-slate-400">
+                  로그인하면 힐러별 키바인드를 DB에 저장하고 자동으로 불러옵니다.
+                </p>
+              ) : null}
+              <p className="mt-2 text-center text-[11px] leading-tight text-slate-400">
+                "설정 완료"를 한 번 더 누르면, seed가 바뀌어서 데미지 그래프가 달라지지만 전체 데미지 총합은 유지됩니다.
+              </p>
+              {isLoggedIn ? (
+                <p className="mt-1 text-center text-[11px] leading-tight text-slate-400">
+                  영웅/신화/월퍼킬 난이도에서 전투 성공 후 랭킹 저장이 가능합니다.
+                </p>
+              ) : null}
+
+            </section>
+          ) : null}
+          {showPreCombatSetupSections && setupConfirmed ? (
+            <section className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-semibold text-violet-100">보스 데미지 그래프</h2>
+                <p className="text-[11px] text-slate-400">
+                  Seed {bossDamageGraphPreview ? bossDamageGraphPreview.seed : "-"} · {BOSS_DAMAGE_GRAPH_BUCKET_MS / 1000}s 버킷
+                </p>
+              </div>
+              <p className="mt-1 text-[11px] leading-tight text-slate-400">
+                WCL 시간축 느낌으로, 전투 중 공대가 받는 기본 피해량을 초 단위로 미리 보여줍니다.
+              </p>
+              {bossDamageGraphPreview ? (
+                <div className="mt-2 overflow-x-auto">
+                  <svg
+                    className="h-48 min-w-[680px] w-full"
+                    preserveAspectRatio="none"
+                    viewBox={`0 0 ${BOSS_DAMAGE_GRAPH_VIEWBOX_WIDTH} ${BOSS_DAMAGE_GRAPH_VIEWBOX_HEIGHT}`}
+                  >
+                    <defs>
+                      <linearGradient id="boss-damage-area-gradient" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#f97316" stopOpacity="0.06" />
+                      </linearGradient>
+                    </defs>
+                    {bossDamageGraphPreview.yTicks.map((tick, index) => (
+                      <g key={`boss-dmg-y-tick-${index}`}>
+                        <line
+                          stroke="#334155"
+                          strokeDasharray="3 3"
+                          strokeWidth="1"
+                          x1={BOSS_DAMAGE_GRAPH_PADDING.left}
+                          x2={BOSS_DAMAGE_GRAPH_VIEWBOX_WIDTH - BOSS_DAMAGE_GRAPH_PADDING.right}
+                          y1={tick.y}
+                          y2={tick.y}
+                        />
+                        <text
+                          fill="#94a3b8"
+                          fontSize="10"
+                          textAnchor="end"
+                          x={BOSS_DAMAGE_GRAPH_PADDING.left - 6}
+                          y={tick.y + 3}
+                        >
+                          {formatHealingAmount(tick.value)}
+                        </text>
+                      </g>
+                    ))}
+                    {bossDamageGraphPreview.timeTicks.map((tick, index) => (
+                      <g key={`boss-dmg-x-tick-${index}`}>
+                        <line
+                          stroke="#1e293b"
+                          strokeWidth="1"
+                          x1={tick.x}
+                          x2={tick.x}
+                          y1={BOSS_DAMAGE_GRAPH_PADDING.top}
+                          y2={BOSS_DAMAGE_GRAPH_VIEWBOX_HEIGHT - BOSS_DAMAGE_GRAPH_PADDING.bottom}
+                        />
+                        <text
+                          fill="#94a3b8"
+                          fontSize="10"
+                          textAnchor="middle"
+                          x={tick.x}
+                          y={BOSS_DAMAGE_GRAPH_VIEWBOX_HEIGHT - 8}
+                        >
+                          {formatTime(tick.timeMs)}
+                        </text>
+                      </g>
+                    ))}
+                    {bossDamageGraphPreview.areaPath ? (
+                      <path d={bossDamageGraphPreview.areaPath} fill="url(#boss-damage-area-gradient)" />
+                    ) : null}
+                    {bossDamageGraphPreview.linePath ? (
+                      <path
+                        d={bossDamageGraphPreview.linePath}
+                        fill="none"
+                        stroke="#fb923c"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                      />
+                    ) : null}
+                  </svg>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300">
+                    <p>총 기본 피해: {formatHealingAmount(bossDamageGraphPreview.totalDamage)}</p>
+                    <p>최대 초당 피해: {formatHealingAmount(bossDamageGraphPreview.maxDamage)}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 text-[11px] text-slate-500">설정 완료 후 그래프가 생성됩니다.</p>
+              )}
+            </section>
+          ) : null}
+          {showPreCombatSetupSections && setupConfirmed ? (
+            <section className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-semibold text-violet-100">쿨다운 매니저</h2>
+                {/* <p className="text-xs text-slate-400">하단 오버레이로 현재 키바인딩이 함께 표시됩니다.</p> */}
+              </div>
+              <p className="mt-1 text-sm text-slate-400">
+                각 아이콘을 드래그해서 스킬 순서를 바꾸면, 실제 레이드 프레임 위 쿨다운 매니저에도 같은 순서로 반영됩니다.
+              </p>
+
+              <div className="mt-3 flex justify-center">
+                {renderCooldownManagerBar({
+                  iconSizePx: COOLDOWN_MANAGER_LAYOUT_CONFIG.iconSizePx,
+                  holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.holyPowerCellWidthPx,
+                  holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.holyPowerCellHeightPx,
+                  spellOrder: managerCooldownSpellOrder,
+                  groupKey: "manager",
+                  interactive: false,
+                  showHolyPower: false,
+                  showBindings: true,
+                  enableDragReorder: true
+                })}
+              </div>
+
+              <div className="mt-3 flex justify-center">
+                <div
+                  className="rounded-lg border border-slate-800 bg-slate-900/35 p-3"
+                  style={{ width: `min(100%, ${reserveCooldownSectionWidthPx}px)` }}
+                >
+
+                  {renderCooldownManagerBar({
+                    iconSizePx: COOLDOWN_MANAGER_LAYOUT_CONFIG.iconSizePx,
+                    holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.holyPowerCellWidthPx,
+                    holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.holyPowerCellHeightPx,
+                    spellOrder: reserveCooldownSpellOrder,
+                    groupKey: "reserve",
+                    interactive: false,
+                    showHolyPower: false,
+                    showManaBar: false,
+                    showCastBar: false,
+                    showBindings: true,
+                    enableDragReorder: true
+                  })}
+                  <p className="mt-2 text-center text-xs text-slate-400">
+                    스킬은 있지만 쿨다운 매니저에는 표시되지 않는 애들
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <button
+                  className="rounded-lg border border-emerald-400/60 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-45"
+                  disabled={!canStartSimulation || running}
+                  onClick={handleStartSimulation}
+                  type="button"
+                >
+                  연습 시작!
+                </button>
+              </div>
+            </section>
+          ) : null}
+        </>
+      ) : currentSnapshot ? (
+        <div className="space-y-4" ref={combatViewRef}>
+          <section
+            className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4"
+            onMouseEnter={() => {
+              pointerInRaidFramesRef.current = true;
+            }}
+            onMouseLeave={() => {
+              pointerInRaidFramesRef.current = false;
+            }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-semibold text-violet-100">20인 레이드 프레임</h2>
+              <p className="text-xs text-slate-400">
+                대상 규칙: {sessionConfig?.useMouseover ? "마우스오버 우선" : "선택 대상 우선"} | 레이아웃 {activeRaidFrameLayout}
+              </p>
+            </div>
+
+            {gameOverReason ? (
+              <div className="mt-3 rounded-lg border border-rose-400/40 bg-rose-950/35 px-4 py-3 text-center">
+                <p className="text-2xl font-extrabold tracking-[0.08em] text-rose-200">GAME OVER</p>
+                <p className="mt-1 text-sm text-rose-100">{gameOverReason}</p>
+              </div>
+            ) : null}
+            {showSuccessBanner ? (
+              <div className="mt-3 rounded-lg border border-emerald-300/55 bg-emerald-900/35 px-4 py-3 text-center">
+                <p className="text-3xl font-extrabold tracking-[0.08em] text-emerald-100">{GLOBAL_SUCCESS_MESSAGE_TEXT}</p>
+              </div>
+            ) : null}
+
+            <div className="mt-3 overflow-x-auto">
+              <div className="flex justify-center">
+                <div
+                  className="mb-2 overflow-hidden rounded-md border border-slate-800"
+                  onMouseEnter={() => {
+                    pointerInPhaserCanvasRef.current = true;
+                  }}
+                  onMouseLeave={() => {
+                    pointerInPhaserCanvasRef.current = false;
+                  }}
+                  style={{ width: `${raidGridWidthPx}px`, height: `${raidGridHeightPx}px` }}
+                >
+                  <div className="h-full w-full" ref={phaserHostRef} />
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <div
+                  className="relative"
+                  style={{
+                    width: `${raidGridWidthPx}px`,
+                    paddingTop: `${RAID_FRAME_VISUAL_CONFIG.topOverlayReservedHeightPx}px`
+                  }}
+                >
+                  <div
+                    className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2"
+                    style={{
+                      top: `${RAID_FRAME_VISUAL_CONFIG.topOverlayBaseOffsetYPx}px`
+                    }}
+                  >
+                    {overlayTopProcIndicators.map((proc, index) => {
+                      const horizontalOffsetPx =
+                        (index - (overlayTopProcIndicators.length - 1) / 2) * (proc.iconSizePx + 4);
+                      return (
+                        <div
+                          className="absolute z-20"
+                          key={`top-proc-${proc.id}`}
+                          style={{
+                            top: `${proc.topOffsetPx}px`,
+                            left: `calc(50% + ${horizontalOffsetPx}px)`,
+                            transform: "translateX(-50%)"
+                          }}
+                        >
+                          <div
+                            className="relative overflow-hidden rounded border border-amber-300/70 bg-black/70 shadow-[0_4px_14px_rgba(0,0,0,0.45)]"
+                            style={{ width: `${proc.iconSizePx}px`, height: `${proc.iconSizePx}px` }}
+                          >
+                            <img
+                              alt={proc.label}
+                              className="h-full w-full object-cover"
+                              onError={(event) => {
+                                if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                  return;
+                                }
+                                event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                              }}
+                              src={proc.iconUrl}
+                            />
+                            {proc.showStackCountOnOverlay ? (
+                              <div className="absolute right-0 top-0 min-w-[10px] rounded-bl bg-black/80 px-[2px] text-center text-[8px] font-semibold leading-none text-amber-100">
+                                {Math.max(0, Number(proc.stackCount ?? 0))}
+                              </div>
+                            ) : null}
+                            {proc.showCountdownOnOverlay ? (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-center text-[7px] font-semibold leading-none text-amber-100">
+                                {Math.ceil(proc.remainingMs / 1000)}s
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {renderCooldownManagerBar({
+                      iconSizePx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayIconSizePx,
+                      holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellWidthPx,
+                      holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellHeightPx,
+                      interactive: false,
+                      showHolyPower: activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG,
+                      showManaBar: true,
+                      showCastBar: true,
+                      showBindings: true,
+                      enableDragReorder: false
+                    })}
+                  </div>
+
+                  <div className="grid gap-0 overflow-hidden rounded-md border border-slate-900" style={raidGridStyle}>
+                    {orderedRaidFramePlayers.map((player) => {
+                      const isSelected = selectedTargetId === player.id;
+                      const isHovered = hoveredTargetId === player.id;
+                      const isHolyPaladinCombat = activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG;
+                      const isRestorationDruidCombat = activeCombatHealerSlug === RESTORATION_DRUID_HEALER_SLUG;
+                      const isBeaconLight = currentSnapshot.beacons.light === player.id;
+                      const isBeaconFaith = currentSnapshot.beacons.faith === player.id;
+                      const isBeaconSavior = currentSnapshot.beacons.savior === player.id;
+                      const eternalFlameRemainingMs = Math.max(0, Number(player.eternalFlameRemainingMs ?? 0));
+                      const rejuvenationRemainingMs = Math.max(0, Number(player.rejuvenationRemainingMs ?? 0));
+                      const germinationRemainingMs = Math.max(0, Number(player.germinationRemainingMs ?? 0));
+                      const regrowthHotRemainingMs = Math.max(0, Number(player.regrowthHotRemainingMs ?? 0));
+                      const wildGrowthHotRemainingMs = Math.max(0, Number(player.wildGrowthHotRemainingMs ?? 0));
+                      const lifebloomRemainingMs = Math.max(0, Number(player.lifebloomRemainingMs ?? 0));
+                      const lifebloomStack = Math.max(0, Math.floor(Number(player.lifebloomStack ?? 0)));
+                      const fillPercent = player.alive ? raidFrameFillPercent(player) : 0;
+                      const classColor = raidFrameClassColor(player);
+                      const roleIconUrl = String(player.roleIconUrl ?? "").trim();
+                      const roleName = String(player.roleName ?? "").trim();
+                      const isMyFrame =
+                        player.id === selfPlayerIdRef.current || String(player.name ?? "").trim() === MY_PLAYER_NAME;
+                      const topLeftFrameAuraIcons = [];
+
+                      if (isHolyPaladinCombat) {
+                        if (isBeaconLight || isBeaconFaith) {
+                          topLeftFrameAuraIcons.push({
+                            key: isBeaconFaith ? "beaconOfFaith" : "beaconOfLight",
+                            iconUrl: SPELL_ICON_URL_BY_KEY[isBeaconFaith ? "beaconOfFaith" : "beaconOfLight"] || DEFAULT_SPELL_ICON_URL,
+                            label: isBeaconFaith ? "신념의 봉화" : "빛의 봉화",
+                            stackText: ""
+                          });
+                        }
+
+                        if (isBeaconSavior) {
+                          topLeftFrameAuraIcons.push({
+                            key: "beaconOfSavior",
+                            iconUrl: SPELL_ICON_URL_BY_KEY.beaconOfSavior || DEFAULT_SPELL_ICON_URL,
+                            label: "구세주의 봉화",
+                            stackText: ""
+                          });
+                        }
+
+                        if (eternalFlameRemainingMs > 0) {
+                          topLeftFrameAuraIcons.push({
+                            key: "eternalFlame",
+                            iconUrl: SPELL_ICON_URL_BY_KEY.eternalFlame || DEFAULT_SPELL_ICON_URL,
+                            label: "영원의 불꽃",
+                            stackText: `${Math.ceil(eternalFlameRemainingMs / 1000)}`
+                          });
+                        }
+                      }
+
+                      if (isRestorationDruidCombat) {
+                        if (rejuvenationRemainingMs > 0) {
+                          topLeftFrameAuraIcons.push({
+                            key: "rejuvenation",
+                            iconUrl:
+                              activeCombatSpellIconsByKey.rejuvenation ||
+                              RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.rejuvenation ||
+                              DEFAULT_SPELL_ICON_URL,
+                            label: "회복",
+                            stackText: `${Math.ceil(rejuvenationRemainingMs / 1000)}`
+                          });
+                        }
+
+                        if (germinationRemainingMs > 0) {
+                          topLeftFrameAuraIcons.push({
+                            key: "germination",
+                            iconUrl:
+                              activeCombatSpellIconsByKey.germination ||
+                              RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.germination ||
+                              DEFAULT_SPELL_ICON_URL,
+                            label: "싹틔우기",
+                            stackText: `${Math.ceil(germinationRemainingMs / 1000)}`
+                          });
+                        }
+                      }
+
+                      const topRightFrameAura =
+                        isRestorationDruidCombat && regrowthHotRemainingMs > 0
+                          ? {
+                            key: "regrowth",
+                            iconUrl:
+                              activeCombatSpellIconsByKey.regrowth ||
+                              RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.regrowth ||
+                              DEFAULT_SPELL_ICON_URL,
+                            label: "재생",
+                            stackText: `${Math.ceil(regrowthHotRemainingMs / 1000)}`
+                          }
+                          : null;
+                      const bottomRightFrameAura =
+                        isRestorationDruidCombat && wildGrowthHotRemainingMs > 0
+                          ? {
+                            key: "wildGrowth",
+                            iconUrl:
+                              activeCombatSpellIconsByKey.wildGrowth ||
+                              RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.wildGrowth ||
+                              DEFAULT_SPELL_ICON_URL,
+                            label: "급속 성장",
+                            stackText: `${Math.ceil(wildGrowthHotRemainingMs / 1000)}`
+                          }
+                          : null;
+                      const centerFrameAura =
+                        isRestorationDruidCombat && lifebloomRemainingMs > 0
+                          ? {
+                            key: "lifebloom",
+                            iconUrl:
+                              activeCombatSpellIconsByKey.lifebloom ||
+                              RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.lifebloom ||
+                              DEFAULT_SPELL_ICON_URL,
+                            label: "피어나는 생명",
+                            stackText: `${Math.ceil(lifebloomRemainingMs / 1000)}`,
+                            topRightText: `${Math.max(1, lifebloomStack)}`
+                          }
+                          : null;
+
+                      return (
+                        <button
+                          className={`relative overflow-hidden border border-slate-900 text-left ${isSelected ? "z-10 ring-1 ring-violet-300" : ""} ${isHovered ? "z-10 ring-1 ring-violet-200/80" : ""}`}
+                          key={player.id}
+                          onContextMenu={(event) => event.preventDefault()}
+                          onMouseDown={(event) => handleFrameMouseDown(event, player.id)}
+                          onMouseEnter={() => {
+                            setHoveredTargetId(player.id);
+                            hoveredTargetRef.current = player.id;
+                          }}
+                          onMouseLeave={() => {
+                            if (hoveredTargetRef.current === player.id) {
+                              setHoveredTargetId("");
+                              hoveredTargetRef.current = "";
+                            }
+                          }}
+                          style={{ height: `${raidFrameHeightPx}px` }}
+                          type="button"
+                        >
+                          <div className="absolute inset-0 bg-slate-900/95" />
+                          <div
+                            className="absolute inset-y-0 left-0 transition-[width] duration-100 ease-linear"
+                            style={{
+                              width: `${fillPercent}%`,
+                              backgroundColor: classColor
+                            }}
+                          />
+                          {!player.alive ? (
+                            <div className="pointer-events-none absolute inset-x-0 top-1 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-100">
+                              Dead
+                            </div>
+                          ) : null}
+                          {player.alive && topLeftFrameAuraIcons.length ? (
+                            <div className="pointer-events-none absolute left-1 top-1 flex items-start gap-0.5">
+                              {topLeftFrameAuraIcons.map((aura) => (
+                                <div
+                                  className="relative h-5 w-5 overflow-hidden rounded-[2px] border border-black/60 bg-slate-900/90"
+                                  key={`${player.id}-${aura.key}`}
+                                  title={aura.label}
+                                >
+                                  <img
+                                    alt={aura.label}
+                                    className="h-full w-full object-cover"
+                                    onError={(event) => {
+                                      if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                        return;
+                                      }
+                                      event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                    }}
+                                    src={aura.iconUrl}
+                                  />
+                                  {aura.stackText ? (
+                                    <span className="absolute bottom-0 right-0 bg-black/70 px-[1px] text-[8px] font-semibold leading-none text-white">
+                                      {aura.stackText}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+                          {player.alive && topRightFrameAura ? (
+                            <div
+                              className="pointer-events-none absolute right-1 top-1 z-20 h-5 w-5 overflow-hidden rounded-[2px] border border-black/60 bg-slate-900/90"
+                              title={topRightFrameAura.label}
+                            >
+                              <img
+                                alt={topRightFrameAura.label}
+                                className="h-full w-full object-cover"
+                                onError={(event) => {
+                                  if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                    return;
+                                  }
+                                  event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                }}
+                                src={topRightFrameAura.iconUrl}
+                              />
+                              <span className="absolute bottom-0 right-0 bg-black/70 px-[1px] text-[8px] font-semibold leading-none text-white">
+                                {topRightFrameAura.stackText}
+                              </span>
+                            </div>
+                          ) : null}
+                          {player.alive && bottomRightFrameAura ? (
+                            <div
+                              className="pointer-events-none absolute right-1 bottom-1 h-5 w-5 overflow-hidden rounded-[2px] border border-black/60 bg-slate-900/90"
+                              title={bottomRightFrameAura.label}
+                            >
+                              <img
+                                alt={bottomRightFrameAura.label}
+                                className="h-full w-full object-cover"
+                                onError={(event) => {
+                                  if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                    return;
+                                  }
+                                  event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                }}
+                                src={bottomRightFrameAura.iconUrl}
+                              />
+                              <span className="absolute bottom-0 right-0 bg-black/70 px-[1px] text-[8px] font-semibold leading-none text-white">
+                                {bottomRightFrameAura.stackText}
+                              </span>
+                            </div>
+                          ) : null}
+                          {player.alive && centerFrameAura ? (
+                            <div
+                              className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-5 w-5 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[2px] border border-black/60 bg-slate-900/90"
+                              title={centerFrameAura.label}
+                            >
+                              <img
+                                alt={centerFrameAura.label}
+                                className="h-full w-full object-cover"
+                                onError={(event) => {
+                                  if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                    return;
+                                  }
+                                  event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                }}
+                                src={centerFrameAura.iconUrl}
+                              />
+                              {centerFrameAura.topRightText ? (
+                                <span className="absolute right-0 top-0 bg-black/70 px-[1px] text-[8px] font-semibold leading-none text-yellow-300">
+                                  {centerFrameAura.topRightText}
+                                </span>
+                              ) : null}
+                              <span className="absolute bottom-0 right-0 bg-black/70 px-[1px] text-[8px] font-semibold leading-none text-white">
+                                {centerFrameAura.stackText}
+                              </span>
+                            </div>
+                          ) : null}
+                          {roleIconUrl ? (
+                            <div className="pointer-events-none absolute right-1 top-1 h-5 w-5 overflow-hidden rounded-[2px]">
+                              <img
+                                alt={roleName ? `${roleName} 아이콘` : "역할 아이콘"}
+                                className="h-full w-full object-contain"
+                                onError={(event) => {
+                                  if (event.currentTarget.getAttribute("src") === TANK_ROLE_META.iconUrl) {
+                                    return;
+                                  }
+                                  event.currentTarget.src = TANK_ROLE_META.iconUrl;
+                                }}
+                                src={roleIconUrl}
+                              />
+                            </div>
+                          ) : null}
+                          {overlayMyFrameProcIndicators.length && isMyFrame ? (
+                            <div className="pointer-events-none absolute left-1/2 top-0 z-20 flex -translate-x-1/2 -translate-y-[35%] items-center gap-1">
+                              {overlayMyFrameProcIndicators.map((proc) => (
+                                <div
+                                  className="relative overflow-hidden rounded border border-amber-300/70 bg-black/70 shadow-[0_3px_10px_rgba(0,0,0,0.45)]"
+                                  key={`frame-proc-${player.id}-${proc.id}`}
+                                  style={{ width: `${proc.iconSizePx}px`, height: `${proc.iconSizePx}px` }}
+                                >
+                                  <img
+                                    alt={proc.label}
+                                    className="h-full w-full object-cover"
+                                    onError={(event) => {
+                                      if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                        return;
+                                      }
+                                      event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                    }}
+                                    src={proc.iconUrl}
+                                  />
+                                  {proc.showCountdownOnRaidFrame ? (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-center text-[7px] font-semibold leading-none text-amber-100">
+                                      {Math.ceil(proc.remainingMs / 1000)}s
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-1">
+                            <span
+                              className="truncate text-center font-semibold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
+                              style={{ fontSize: `${RAID_FRAME_VISUAL_CONFIG.frameNameFontPx}px` }}
+                            >
+                              {player.name}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-center">
+              <button
+                className="rounded-lg border border-rose-400/60 bg-rose-500/15 px-3 py-2 text-sm text-rose-100 transition hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={!running}
+                onClick={handleStopSimulation}
+                type="button"
+              >
+                연습 중지
+              </button>
+            </div>
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+            <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+              <h2 className="text-base font-semibold text-violet-100">전투 기록</h2>
+              {currentSnapshot.finished ? (
+                <div className="mt-3 space-y-2">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {combatRecordCommonCards.map((card) => (
+                      <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300" key={card.key}>
+                        {card.title}
+                        <p className={`mt-1 text-sm font-semibold ${card.valueClassName}`}>{card.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {combatRecordHealerSpecificCards.length ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {combatRecordHealerSpecificCards.map((card) => (
+                        <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300" key={card.key}>
+                          {card.title}
+                          <p className={`mt-1 text-sm font-semibold ${card.valueClassName}`}>{card.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-slate-400">
+                  전투 종료 후 공통 기록(평균 공대 체력/오버힐 비율/사망자 수/남은 마나/트리아지 힐 총량 및 비중)과 직업별 기록을 표시합니다.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+              <h2 className="text-base font-semibold text-violet-100">힐 미터기</h2>
+              {healMeterRows.length ? (
+                <div className="mt-3 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/60">
+                  <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,2.2fr)_72px] border-b border-slate-700 bg-slate-900/90 px-2 pt-1.5 pb-1 text-[11px] font-semibold text-slate-400">
+                    <span>스킬</span>
+                    <span className="ml-4">치유량</span>
+                    <span className="text-right">시전 수</span>
+                  </div>
+                  <div className="divide-y divide-slate-800/80">
+                    {healMeterRows.map((row) => {
+                      return (
+                        <div
+                          className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,2.2fr)_72px] items-center px-2 py-1.5"
+                          key={`heal-meter-${row.spellKey}`}
+                        >
+                          <div className="min-w-0">
+                            {row.spellId ? (
+                              <a
+                                className="block min-w-0 truncate text-xs font-semibold text-slate-100"
+                                data-wh-icon-size="small"
+                                data-wh-rename-link="false"
+                                href={`https://www.wowhead.com/ko/spell=${row.spellId}`}
+                                rel="noreferrer"
+                                target="_blank"
+                                title={row.spellName}
+                              >
+                                {row.spellName}
+                              </a>
+                            ) : (
+                              <div className="flex min-w-0 items-center gap-2" title={row.spellName}>
+                                <img
+                                  alt={row.spellName}
+                                  className="h-4 w-4 shrink-0 rounded-[2px] border border-black/50 object-cover"
+                                  onError={(event) => {
+                                    if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                      return;
+                                    }
+                                    event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                  }}
+                                  src={row.iconUrl}
+                                />
+                                <span className="truncate text-xs font-semibold text-slate-100">{row.spellName}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-14 shrink-0 text-right text-[11px] font-semibold text-slate-200">
+                              {row.ratioPct.toFixed(2)}%
+                            </span>
+                            <div className="h-4 min-w-0 flex-1 overflow-hidden rounded-[2px] border border-slate-700 bg-gray-950/90">
+                              <div
+                                className="h-full bg-violet-400/80"
+                                style={{ width: `${Math.max(2, Math.min(100, row.ratioPct))}%` }}
+                              />
+                            </div>
+                            <span className="w-16 shrink-0 text-right text-xs font-semibold text-violet-100">
+                              {formatHealingAmount(row.amount)}
+                            </span>
+                          </div>
+                          <div className="text-right text-xs font-semibold text-slate-200">
+                            {row.casts === null ? "-" : row.casts}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-slate-400">치유량 집계가 아직 없습니다.</p>
+              )}
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                  CPM
+                  <p className="mt-1 text-sm font-semibold text-violet-200">{finalCpm.toFixed(1)}</p>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                  자힐 비중
+                  <p className="mt-1 text-sm font-semibold text-emerald-200">{selfHealRatioPct.toFixed(1)}%</p>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                  <p className="font-semibold text-slate-200">스킬 맞은 피해</p>
+                  <p className="mt-0.5 text-[11px] leading-tight text-slate-400">100이면 1회 사망</p>
+                  <p className="mt-1 text-sm font-semibold text-rose-200">{canvasRawDamageTaken.toFixed(1)}</p>
+                  <p className="mt-1 text-[11px] leading-tight text-slate-400">미사일: {canvasHitCounts.missile}회</p>
+                  <p className="text-[11px] leading-tight text-slate-400">막대 바닥: {canvasHitCounts.hazardBar}회</p>
+                  {showZoneFloorHitCount ? (
+                    <p className="text-[11px] leading-tight text-slate-400">
+                      장판 바닥: {canvasHitCounts.zoneFloor}회
+                    </p>
+                  ) : null}
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                  <p className="font-semibold text-slate-200">피격 복구 힐 비중</p>
+                  <p className="mt-0.5 text-[11px] leading-tight text-slate-400">
+                    전체 힐 대비 비율
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-violet-200">{canvasDamageHealingSharePct.toFixed(1)}%</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-violet-100">피드백</h2>
+                  <p className="mt-1 text-xs text-slate-400">전투 종료 후 기준치 기반으로 결과가 표시됩니다.</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="rounded-xl border border-violet-400/45 bg-violet-500/10 px-3 py-2 text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-violet-200">Score</p>
+                    <p className="mt-0.5 text-2xl font-extrabold leading-none text-violet-100">
+                      {isSuccessfulPracticeResult && finalScoreBreakdown ? `${finalScoreBreakdown.totalScore.toFixed(1)}점` : "-"}
+                    </p>
+                  </div>
+                  {showRankingRegisterControl ? (
+                    isLoggedIn ? (
+                      <button
+                        className="rounded-lg border border-violet-400/70 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-100 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={rankingSaveStatus === "saving" || rankingSaveStatus === "saved"}
+                        onClick={() => {
+                          void saveCurrentRunRanking({ force: rankingSaveStatus === "error" });
+                        }}
+                        type="button"
+                      >
+                        {rankingSaveButtonLabel}
+                      </button>
+                    ) : (
+                      <p className="text-[11px] text-slate-400">로그인 시 랭킹 등록 가능</p>
+                    )
+                  ) : null}
+                </div>
+              </div>
+              <div className="mt-3">
+                <article className="rounded-lg border border-slate-700 bg-slate-900/65 p-3">
+                  {feedbackGameOverReason ? (
+                    <p className="text-[12px] font-semibold leading-tight text-rose-200">
+                      전투 결과: 실패 ({feedbackGameOverReason})
+                    </p>
+                  ) : isSuccessfulPracticeResult ? (
+                    <p className="text-[12px] font-semibold leading-tight text-rose-200">
+                      {`전투 결과: 성공 (${Math.max(0, Math.round(Number(currentSnapshot?.metrics?.deaths ?? 0))) > 0
+                        ? `사망자 ${Math.max(0, Math.round(Number(currentSnapshot?.metrics?.deaths ?? 0)))}명`
+                        : "전원 생존"
+                        })`}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] font-semibold leading-tight text-slate-300">
+                      전투 결과: 전투 종료 후 표시됩니다.
+                    </p>
+                  )}
+                  {/* {finalScoreBreakdown ? (
+                    <p className="mt-2 text-[11px] leading-tight text-slate-300">
+                      점수 상세: 사망 {finalScoreBreakdown.deathsScore.toFixed(1)}/20, 오버힐 {finalScoreBreakdown.overhealingScore.toFixed(1)}/15,
+                      평균 공대 체력 {finalScoreBreakdown.averageRaidHealthScore.toFixed(1)}/20, 남은 마나 {finalScoreBreakdown.remainingManaScore.toFixed(1)}/10,
+                      CPM {finalScoreBreakdown.cpmScore.toFixed(1)}/10, 자힐 비중 {finalScoreBreakdown.selfHealScore.toFixed(1)}/5,
+                      힐러 전용 {finalScoreBreakdown.healerSpecificScore.toFixed(1)}/20
+                    </p>
+                  ) : null} */}
+                  {activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG ? (
+                    isSuccessfulPracticeResult ? (
+                      holyPaladinFeedbackLines.length ? (
+                        <div className="mt-2 space-y-1">
+                          {holyPaladinFeedbackLines.map((line, index) => (
+                            <p className="text-[11px] leading-tight text-amber-200" key={`holy-paladin-feedback-${index}`}>
+                              - {line}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-[11px] leading-tight text-emerald-200">기준치를 모두 만족했습니다.</p>
+                      )
+                    ) : (
+                      <p className="mt-2 text-[11px] leading-tight text-slate-400">
+                        신기 피드백은 전투 성공 후 표시됩니다.
+                      </p>
+                    )
+                  ) : (
+                    <p className="mt-2 text-[11px] leading-tight text-slate-400">
+                      선택한 힐러 전용 평가 항목이 표시됩니다.
+                    </p>
+                  )}
+                </article>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+              <h2 className="text-base font-semibold text-violet-100">이벤트 로그</h2>
+              <div className="mt-3 max-h-64 space-y-1 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/60 p-2">
+                {sortedEventLogs.map((log) => (
+                  <p className={`text-xs ${logColorClass(log.type)}`} key={log.id}>
+                    [{formatTime(log.timeMs)}] {log.text}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {!running ? (
+            <div className="flex justify-center">
+              <button
+                className="rounded-lg border border-violet-300/70 bg-violet-500/20 px-5 py-2 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/30"
+                onClick={handleRestartPractice}
+                type="button"
+              >
+                다시 시작하기
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <section className="rounded-2xl border border-slate-700 bg-gray-950/45 p-4 text-sm text-slate-400">
+          전투 화면을 준비 중입니다.
+        </section>
+      )}
+      {rankingModalOpen ? (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4"
+          onClick={() => {
+            setRankingModalOpen(false);
+          }}
+          role="presentation"
+        >
+          <section
+            className="w-full max-w-3xl rounded-2xl border border-slate-700 bg-slate-950/95 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-violet-300">힐러 연습 랭킹</h2>
+              </div>
+              <button
+                className="rounded-lg border border-slate-600 bg-slate-800/80 px-2.5 py-1 text-xs font-semibold text-slate-200 transition hover:bg-slate-700"
+                onClick={() => {
+                  setRankingModalOpen(false);
+                }}
+                type="button"
+              >
+                닫기
+              </button>
+            </div>
+            <div className="mt-3 grid gap-2 lg:grid-cols-[2.5fr_1fr]">
+              <div className="text-xs text-slate-300">
+                힐러
+                <div className="mt-1 grid grid-cols-7 gap-0.5 sm:grid-cols-7">
+                  {rankingHealerTabOptions.map((healerOption) => {
+                    const isActive = rankingViewHealerSlug === healerOption.slug;
+                    const isDisabled = !healerOption.enabled;
+                    return (
+                      <button
+                        className={`flex items-center justify-center gap-1 rounded-lg border py-1.5 text-[13px] font-semibold transition ${isDisabled
+                          ? "cursor-not-allowed border-slate-700 bg-slate-900/60 text-slate-500 grayscale opacity-60"
+                          : isActive
+                            ? "border-violet-400/70 bg-violet-500/20 text-violet-100"
+                            : "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                          }`}
+                        disabled={isDisabled}
+                        key={`ranking-healer-tab-${healerOption.slug}`}
+                        onClick={() => {
+                          if (isDisabled) {
+                            return;
+                          }
+                          setRankingViewHealerSlug(healerOption.slug);
+                        }}
+                        type="button"
+                      >
+                        <img
+                          alt={`${healerOption.shortName} icon`}
+                          className="h-4 w-4 rounded-[2px] border border-black/40 object-cover"
+                          onError={(event) => {
+                            if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                              return;
+                            }
+                            event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                          }}
+                          src={healerOption.iconUrl}
+                        />
+                        <span className="truncate">{healerOption.shortName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <label className="text-xs text-slate-300">
+                맵
+                <select
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-slate-100"
+                  onChange={(event) => {
+                    setRankingViewMapKey(event.target.value);
+                  }}
+                  value={rankingViewMapKey}
+                >
+                  {HEALER_PRACTICE_MAP_OPTIONS.map((option) => (
+                    <option key={`ranking-map-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="mt-2 text-xs text-slate-300">
+              난이도
+              <div className="mt-1 grid grid-cols-3 overflow-hidden rounded-lg border border-slate-700">
+                {RANKING_DIFFICULTY_TAB_KEYS.map((difficultyTabKey) => {
+                  const isActive = rankingViewDifficultyKey === difficultyTabKey;
+                  const tabLabel =
+                    PRACTICE_DIFFICULTY_TUNING[difficultyTabKey]?.label ?? difficultyTabKey;
+                  return (
+                    <button
+                      className={`px-2.5 py-1.5 text-xs font-semibold transition ${isActive
+                        ? "bg-violet-500/20 text-violet-200"
+                        : "bg-slate-900 text-slate-300 hover:bg-slate-800"
+                        }`}
+                      key={`ranking-tab-${difficultyTabKey}`}
+                      onClick={() => {
+                        setRankingViewDifficultyKey(difficultyTabKey);
+                      }}
+                      type="button"
+                    >
+                      {tabLabel}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-slate-300">
+              패치
+              <div className="mt-1 flex flex-wrap gap-1">
+                {rankingPatchVersionOptions.map((patchVersion) => {
+                  const isActive = rankingViewPatchVersion === patchVersion;
+                  return (
+                    <button
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${isActive
+                        ? "border-violet-400/70 bg-violet-500/20 text-violet-100"
+                        : "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                        }`}
+                      key={`ranking-patch-tab-${patchVersion}`}
+                      onClick={() => {
+                        setRankingViewPatchVersion(patchVersion);
+                      }}
+                      type="button"
+                    >
+                      {patchVersion}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/55 p-3">
+              <p className="text-[11px] text-slate-400">
+                {rankingSelectedHealerLabel} · {resolveMapLabel(rankingViewMapKey)} ·{" "}
+                {PRACTICE_DIFFICULTY_TUNING[rankingViewDifficultyKey]?.label ?? rankingViewDifficultyKey} · 패치 {rankingViewPatchVersion}
+              </p>
+              {rankingLoading ? (
+                <p className="mt-2 text-xs text-slate-300">랭킹을 불러오는 중입니다...</p>
+              ) : rankingErrorText ? (
+                <p className="mt-2 text-xs text-rose-200">{rankingErrorText}</p>
+              ) : !rankingRows.length ? (
+                <p className="mt-2 text-xs text-slate-300">저장된 랭킹이 없습니다.</p>
+              ) : (
+                <div className="mt-2 max-h-[52vh] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/65">
+                  <div className="grid grid-cols-[56px_1fr_90px] border-b border-slate-700 bg-slate-900/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                    <span>Rank</span>
+                    <span>닉네임</span>
+                    <span className="text-right">Score</span>
+                  </div>
+                  <div className="divide-y divide-slate-800/80">
+                    {rankingRows.map((row, index) => {
+                      const isMine = isLoggedIn && String(row.nickname) === String(userLabel ?? "");
+                      return (
+                        <div
+                          className={`grid grid-cols-[56px_1fr_90px] items-center px-3 py-1.5 text-xs ${isMine ? "bg-violet-500/10" : ""
+                            }`}
+                          key={row.id}
+                        >
+                          <span className="font-semibold text-slate-300">#{index + 1}</span>
+                          <span className={`truncate ${isMine ? "text-amber-100" : "text-slate-100"}`}>{row.nickname}</span>
+                          <span className={`text-right font-semibold ${isMine ? "text-amber-100" : "text-violet-100"}`}>
+                            {roundToOneDecimal(row.score).toFixed(1)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </div>
+  );
+}

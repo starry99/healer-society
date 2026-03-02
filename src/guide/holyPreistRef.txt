@@ -1,0 +1,181 @@
+개요 섹션
+
+Holy Priest is a fantastic reactive healer. With a response to almost all damage types, there is always a tool on hand to deal with the situation and keep you thinking while you play.
+
+Healing as a Holy Priest revolves around the chosen talents and the two Holy Words, Holy Word: Sanctify and Holy Word: Serenity. Outside of these, the bulk of your spell casts are the Mana-efficient Prayer of Mending alongside the variety of "filler" spells used to reduce the cooldown of our strong Holy Words. Apotheosis combined with Divine Hymn gives Holy Priest two easy-to-use cooldowns, which can be invaluable to keeping your allies alive.
+
+To properly play a healing role, you will need more than just class-specific information. To better understand healing in general, we recommend that you read our healing guide.
+
+Holy Priest is primarily a reactive healer, excelling during periods of sustained damage taken by utilising a multitude of short-cooldown spells. Although limited by a lack of burst healing, you will have tools to heal your group through almost every situation.
+
+
+특성 섹션
+
+The periodic Benediction Icon Benediction procs are triggered by regularly casting Prayer of Mending Icon Prayer of Mending. When triggered, Flash Heal Icon Flash Heal is replaced with Benediction Icon Benediction for your next cast, doing increased healing and triggering a Cosmic Ripple Icon Cosmic Ripple. Due to the added healing, Benediction Icon Benediction is a high value spell to use and should be prioritised as part of your rotation whenever it triggers.
+
+
+주요 스킬 섹션
+
+- 레이드
+
+Raid healing is primarily focused on group healing and priority triage on targets that may be in danger of death. The next section outlines the priority you should follow in raids. You should not cast a spell that will mostly overheal, so keep this in mind as you work through the priority list and skip an item if there is likely to be significant overheal. Apotheosis Icon Apotheosis and Divine Hymn Icon Divine Hymn are powerful cooldowns you should be using regularly. For more information on how and when to use them, see the Major Cooldowns section below.
+
+Holy Word: Sanctify Icon Holy Word: Sanctify when a cluster of your raid is injured.
+Holy Word: Serenity Icon Holy Word: Serenity on an injured ally.
+Halo Icon Halo when most of your raid is injured.
+Benediction Icon Benediction on an injured ally.
+Prayer of Mending Icon Prayer of Mending on cooldown, usually on melee.
+Prayer of Healing Icon Prayer of Healing with 1 or more stacks of Surge of Light Icon Surge of Light
+Prayer of Healing Icon Prayer of Healing with 1 or more stacks of Lightweaver Icon Lightweaver
+Flash Heal Icon Flash Heal with 0 stacks of Lightweaver Icon Lightweaver
+Holy Nova Icon Holy Nova while moving or when little healing is required.
+Smite Icon Smite an enemy when no healing is required.
+Your general goal while healing is casting as many short-cooldown spells as possible. Holy Word: Serenity Icon Holy Word: Serenity, Holy Word: Sanctify Icon Holy Word: Sanctify and Prayer of Mending Icon Prayer of Mending despite all having a cooldown, should be thought of as rotational spells and cast almost as soon as they are available. Using lower priority spells when one of your Holy Words is available is considered a mistake as it wastes mana and does less healing. An example of this mistake would be casting Flash Heal Icon Flash Heal instead of Holy Word: Serenity Icon Holy Word: Serenity, or Prayer of Healing Icon Prayer of Healing instead of Holy Word: Sanctify Icon Holy Word: Sanctify.
+
+Some tips for utilising your talents:
+
+Flash Heal Icon Flash Heal is used to generate Lightweaver Icon Lightweaver stacks. These stacks should then be spent on Prayer of Healing Icon Prayer of Healing for increased healing. Casting Flash Heal Icon Flash Heal while at maximum Lightweaver Icon Lightweaver stacks wastes mana and does less healing.
+With  Archon, Halo Icon Halo should be paired with your major cooldowns Apotheosis Icon Apotheosis and Divine Hymn Icon Divine Hymn as much as possible. See the cooldowns section below for more details on maximising their usage.
+With  Archon's talent Spiritwell Icon Spiritwell, you should aim to use all of your Surge of Light Icon Surge of Light procs on Prayer of Healing Icon Prayer of Healing. This maximises the healing output from Empowered Surges Icon Empowered Surges and also makes the most of the mana reduction from Surge of Light Icon Surge of Light.
+
+- 쐐기
+Dungeon healing is primarily focused on casting your short-cooldown spells regularly. A lot of your decision-making will be based on incoming damage and the cooldowns you have available. It is better to use your cooldowns early and often rather than save them for unknown future situations.
+
+Below is the priority you should follow in dungeons. You should not cast a spell that will result in mostly overhealing; keep this in mind as you work through the priority list and skip an item if there is likely to be significant overhealing.
+
+Divine Hymn Icon Divine Hymn for large amounts of group-wide damage.
+Apotheosis Icon Apotheosis with 0 or 1 charge of each Holy Word.
+Holy Word: Sanctify Icon Holy Word: Sanctify when a cluster of allies are injured.
+Holy Word: Serenity Icon Holy Word: Serenity on an injured ally.
+Halo Icon Halo when most of your allies are injured.
+Benediction Icon Benediction on an injured ally.
+Prayer of Mending Icon Prayer of Mending on cooldown, usually on melee.
+Prayer of Healing Icon Prayer of Healing with 1 or more stacks of Surge of Light Icon Surge of Light.
+Prayer of Healing Icon Prayer of Healing with 1 or more stacks of Lightweaver Icon Lightweaver for general purpose healing.
+Flash Heal Icon Flash Heal with less than 4 stacks of Lightweaver Icon Lightweaver.
+Holy Nova Icon Holy Nova while moving or when little healing is required.
+Smite Icon Smite an enemy when no healing is required.
+
+
+
+
+추가 활용법 섹션
+
+The playstyle of Holy Priest remains very similar in Midnight. There is still a heavy focus on using your Holy Words Holy Word: Serenity Icon Holy Word: Serenity and Holy Word: Sanctify Icon Holy Word: Sanctify as much as you can, along with your short cooldown spells like Prayer of Mending Icon Prayer of Mending, and for  Archon, Halo Icon Halo. Between your short cooldown spells, you heal your group with Flash Heal Icon Flash Heal, Prayer of Healing Icon Prayer of Healing, and sometimes Holy Nova Icon Holy Nova depending on the talents you've taken and the style of damage coming in. Our powerful cooldowns Divine Hymn Icon Divine Hymn and Apotheosis Icon Apotheosis have not seen any major changes.
+
+Notable talents that have been removed include Renew, Heal, Lightwell, Shadowfiend, and Symbol of Hope. Some other more situational spells have also been removed; Power Word: Shield, Power Word: Life, Divine Star, and Divine Word.
+
+The healing amount and mana costs of most spells have also been rebalanced in an attempt to try and put more focus on active healing spells and reducing the amount of healing that passive talents contribute to your overall throughput. This doesn't have an impact on your playstyle beyond making it feel better when you use direct healing spells like Prayer of Healing Icon Prayer of Healing as it comparatively does more healing than passive spells like Renew Icon Renew procs.
+
+Ultimate Serenity Icon Ultimate Serenity is a notable new talent, which grants additional power to Holy Word: Serenity Icon Holy Word: Serenity and causes it to heal nearby allies for a portion of the amount it heals your primary target. It also causes Holy Word: Serenity Icon Holy Word: Serenity to gain some benefit from talents that would normally affect Holy Word: Sanctify Icon Holy Word: Sanctify such as Prayer of Healing Icon Prayer of Healing reducing the cooldown of Holy Word: Serenity Icon Holy Word: Serenity. The trade-off is that while talented into Ultimate Serenity Icon Ultimate Serenity you are unable to cast Holy Word: Sanctify Icon Holy Word: Sanctify. This talent aims to land somewhere between the functionality of the two Holy Words offering a simpler, single button that performs similar amounts of healing.
+
+- 절정 
+
+Apotheosis Icon Apotheosis is a major cooldown you want to be pressing as often as possible. There are several talents that improve Apotheosis:
+
+Eternal Sanctity Icon Eternal Sanctity increases duration of Apotheosis.
+Divinity Icon Divinity improves the burst healing of Apotheosis making it more potent and increasing your mobility.
+Divine Image Icon Divine Image has no direct interactions, but more Holy Words make Divine Image a more effective talent.
+ Archon's Perfected Form Icon Perfected Form increases healing done while Apotheosis is active.
+ Archon's Sustained Potency Icon Sustained Potency is great at granting an extra few seconds of Apotheosis uptime per minute.
+Because Apotheosis Icon Apotheosis also increases the Holy Word cooldown reduction gained from casting abilities, it amplifies the priority of some spells during Apotheosis to help get Holy Words back off cooldown quickly:
+
+Prayer of Mending Icon Prayer of Mending - When talented into Voice of Harmony Icon Voice of Harmony and Epiphany Icon Epiphany, Prayer of Mending becomes a high priority cast. Due to the number of Holy Word casts during Apotheosis Icon Apotheosis, resets on Prayer of Mending cooldowns are frequent.
+Flash Heal Icon Flash Heal - When talented into  Archon's Energy Cycle Icon Energy Cycle and with a Surge of Light Icon Surge of Light proc, Flash Heal is a high priority due to the additional cooldown reduction.
+Halo Icon Halo - Due to  Archon's Manifested Power Icon Manifested Power, Halo either just before, or during Apotheosis Icon Apotheosis is important for the additional Surge of Light Icon Surge of Light procs. This is in addition to the extra healing from  Archon's Resonant Energy Icon Resonant Energy.
+While not always possible due to how things line up, an ideal usage of Apotheosis Icon Apotheosis with  Archon would look like:
+
+Holy Word: Sanctify Icon Holy Word: Sanctify - to get it off cooldown.
+Holy Word: Serenity Icon Holy Word: Serenity - to get it off cooldown.
+Prayer of Mending Icon Prayer of Mending - to get it off cooldown.
+Halo Icon Halo - to start generating Surge of Light Icon Surge of Light procs and start stacking Resonant Energy Icon Resonant Energy.
+Apotheosis Icon Apotheosis - getting back a charge of each Holy Word.
+Power Infusion Icon Power Infusion - if you don't need to use it at a specific time.
+Resume normal rotation.
+
+- Divine Hymn
+
+Divine Hymn Icon Divine Hymn is a major cooldown that heals all nearby allies, pulsating healing as it channels. It is best used when your group is taking a large amount of damage and you need to heal everyone quickly. Keep in mind that the spell is channelled, so you cannot perform other actions while casting it.
+
+When raiding, your raid leader will generally assign you to use this spell at a certain time in the fight to counter a heavy burst of damage. If this is the case, make sure your spell is available at that time. Otherwise, you should simply try to find a moment when using this spell is beneficial. Most often, this will happen during a period of very intense raid damage.
+
+While doing Mythic+ dungeons, Divine Hymn Icon Divine Hymn is commonly used just before damage hits your group, as the healing it does isn't strong enough to completely counter the highest AoE damage abilities. This is typically timed so the last second or two of Divine Hymn is while your group is taking damage. That way you fully stack up the Divine Hymn buff on all of your allies, but are still able to triage heal anyone near death.
+
+- 수호 천사
+
+Guardian Spirit Icon Guardian Spirit is one of the most useful tools you can bring to a raid. Using it places a buff on the target, which lasts for 10 seconds and increases all healing received by the target by 60%. If the target receives a killing blow during this time, they will not die and instead be healed for 40% of their maximum health, consuming the Guardian Spirit effect.
+
+While you can use this on any raid member who is about to die and whom you have no other means of saving, it is by far better used on a tank that is about to take a large amount of damage. You should make sure to communicate with the tank and other healers to ensure that you do not use multiple powerful cooldowns at the same time.
+
+You can also use this spell to allow tanks (or other players) to survive an ability that should otherwise have been avoided, either as part of your raid's strategy or to recover from a mistake.
+
+Keep in mind that your raid leader may assign you to use this spell for a specific event in the encounter.
+
+- Holy Words
+
+Casting your Holy Words as often as possible is an important part of playing Holy Priest. Each Holy Word gains cooldown reduction when an associated spell is cast, allowing you to cast them even more frequently:
+
+Holy Word: Serenity Icon Holy Word: Serenity - 6 seconds each from Flash Heal Icon Flash Heal.
+Holy Word: Sanctify Icon Holy Word: Sanctify - 6 seconds from Prayer of Healing Icon Prayer of Healing.
+Holy Word: Chastise Icon Holy Word: Chastise - 4 seconds each from Smite Icon Smite and Holy Nova Icon Holy Nova.
+When talented into Voice of Harmony Icon Voice of Harmony you also gain cooldown reduction from additional spells:
+
+Holy Word: Serenity Icon Holy Word: Serenity - 4 seconds from Prayer of Mending Icon Prayer of Mending.
+Holy Word: Sanctify Icon Holy Word: Sanctify - 4 seconds from Halo Icon Halo.
+Holy Word: Chastise Icon Holy Word: Chastise - 4 seconds from Holy Fire Icon Holy Fire.
+When talented into Ultimate Serenity Icon Ultimate Serenity, anything that would ordinarily trigger cooldown reduction for Holy Word: Sanctify Icon Holy Word: Sanctify instead reduces the cooldown of Holy Word: Serenity Icon Holy Word: Serenity.
+
+There are multiple ways to further increase the cooldown reduction you gain from casting spells:
+
+Apotheosis Icon Apotheosis - While this buff is active, you gain 3 times as much cooldown reduction to all Holy Words.
+Light of the Naaru Icon Light of the Naaru - When talented, you gain 10% increased cooldown reduction to all Holy Words per point.
+ Archons Energy Cycle Icon Energy Cycle - When talented, provides Holy Word cooldown reduction when consuming Surge of Light Icon Surge of Light.
+While you do not need to actively manage this mechanic in any way, it is very important that you are aware of its existence and that you constantly monitor the remaining cooldowns of your Holy Words so that you can use them as soon as they become available.
+
+- Mastery: Echo of Light
+
+Mastery: Echo of Light Icon Mastery: Echo of Light is a passive ability that causes your direct healing spells to leave a heal over time effect on the target. This effect lasts for 4 seconds and heals for a percentage of the original heal. The amount healed is increased by your Mastery stat. Successive applications of this HoT stack and will extend the duration of the HoT for a short period. Mastery healing is never lost by successive casts on the same target, the additional casts just make the Echo of Light healing ticks stronger.
+
+There is no benefit in tracking this buff, as there are no interactions with it worth cluttering your UI with the buff.
+
+Mastery: Echo of Light Icon Mastery: Echo of Light also increases the amount that your Renew Icon Renews tick for.
+
+The talent Prismatic Echoes Icon Prismatic Echoes slightly increases the healing Mastery does, while also increasing the healing done by Renew Icon Renew.
+
+- Divine Image
+
+When talented into Divine Image Icon Divine Image, your playstyle shouldn't really change whether or not you have a Naaru active. You still want to emphasize casting whatever suits your current situation, and the Naaru will mirror that appropriately. The only exception to this is Holy Word: Chastise Icon Holy Word: Chastise, which can be used right before periods of intense healing to provide an added burst.
+
+The only worthwhile minor playstyle adjustment that can be made to better utilise Divine Image Icon Divine Image, is to ensure you try to cast Prayer of Mending Icon Prayer of Mending on a tightly grouped clump of allies, as the bounce radius of Blessed Light Icon Blessed Light is quite small. This is most often the melee DPS in your raid, and is not a significant enough gain to worry about if doing so will delay your Prayer of Mending Icon Prayer of Mending casts.
+
+- etc
+
+Lightweaver Icon Lightweaver is fairly simple to use. The goal is to alternate between Flash Heal Icon Flash Heal and Prayer of Healing Icon Prayer of Healing, utilizing the buff that Flash Heal Icon Flash Heal generates to buff the Prayer of Healing Icon Prayer of Healing casts. Ideally, you shouldn't be casting Prayer of Healing Icon Prayer of Healing without having the Lightweaver Icon Lightweaver buff active. Also, be mindful as  Archon with Spiritwell Icon Spiritwell talented to try and keep a charge of Lightweaver Icon Lightweaver so you can consume your next Surge of Light Icon Surge of Light with a Lightweaver buffed Prayer of Healing Icon Prayer of Healing.
+
+Miracle Worker
+Miracle Worker Icon Miracle Worker provides you with an additional charge of both Holy Word: Serenity Icon Holy Word: Serenity and Holy Word: Sanctify Icon Holy Word: Sanctify. When playing with Miracle Worker, you still want to avoid capping at 2 charges to maximize the cooldown reduction provided by casting your other spells. Exceptions to this are when there is large amounts of damage upcoming in the very near future, in which case it can be beneficial to sit on 2 charges for a very short period of time.
+
+Epiphany
+Epiphany Icon Epiphany has a lot of potential that is often missed by many Holy Priests. Ensuring you have a good way to track when Prayer of Mending Icon Prayer of Mending is ready is essential to maximising the value of the talent.
+
+You can further maximise the value of Epiphany Icon Epiphany by trying to avoid casting two holy words (Holy Word: Serenity Icon Holy Word: Serenity or Holy Word: Sanctify Icon Holy Word: Sanctify) back-to-back when you get an Epiphany proc, and casting Prayer of Mending Icon Prayer of Mending instead.
+
+
+
+스탯 섹션
+
+- 레이드
+
+When raiding, our secondaries are all similar in value. We do get slightly more value from Critical Strike, but you should not completely neglect Versatility or Mastery as they're still strong throughput stats.
+
+Critical Strike
+Versatility = Mastery
+Haste
+
+- 쐐기 
+
+When healing dungeons, you want to maximize your throughput in short fights. Since you can drink quite often, raw throughput stats are important. Damage-reducing stats also gain in importance as they allow you to survive things you usually cannot in the highest Mythic keystone dungeons.
+
+Critical Strike
+Versatility = Haste
+Mastery
