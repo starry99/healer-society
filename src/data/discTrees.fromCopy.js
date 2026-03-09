@@ -310,7 +310,7 @@ export const disciplinePriestTreesFromCopy = [
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_layonhands.jpg",
         "selected": false,
         "spellId": 390676,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-class-102",
@@ -517,7 +517,7 @@ export const disciplinePriestTreesFromCopy = [
         "name": "망령의 손아귀",
         "href": "https://www.wowhead.com/ko/spell=459559/망령의-손아귀",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_chilltouch.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 459559,
         "rank": "1/1"
       },
@@ -844,10 +844,10 @@ export const disciplinePriestTreesFromCopy = [
         "row": 7,
         "col": 3,
         "name": "대천사 / 환각의 마귀",
-        "href": "https://www.wowhead.com/ko/spell=197862/대천사",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_archangel.jpg",
+        "href": "https://www.wowhead.com/ko/spell=1280137",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_soulleech_3.jpg",
         "selected": true,
-        "spellId": 197862,
+        "spellId": 1280137,
         "rank": "1/1"
       },
       {
@@ -1094,10 +1094,10 @@ export const disciplinePriestTreesFromCopy = [
         "row": 2,
         "col": 1,
         "name": "거룩한 깃털 / 위기 모면",
-        "href": "https://www.wowhead.com/ko/spell=440669/위기-모면",
+        "href": "https://www.wowhead.com/ko/spell=440670/%EA%B1%B0%EB%A3%A9%ED%95%9C-%EA%B9%83%ED%84%B8",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_angelicfeather.jpg",
         "selected": true,
-        "spellId": 440669,
+        "spellId": 440670,
         "rank": "1/1"
       },
       {
@@ -1127,9 +1127,10 @@ export const disciplinePriestTreesFromCopy = [
         "row": 3,
         "col": 0,
         "name": "예언자의 의지 / 궁여지책",
-        "href": "javascript:",
+        "href": "https://www.wowhead.com/ko/spell=433905/%EC%98%88%EC%96%B8%EC%9E%90%EC%9D%98-%EC%9D%98%EC%A7%80?spellModifier=137032",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_clarityofpurpose.jpg",
         "selected": true,
+        "spellId": 433905,
         "rank": "1/1"
       },
       {

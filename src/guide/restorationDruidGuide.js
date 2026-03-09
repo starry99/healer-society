@@ -155,7 +155,7 @@ export const restorationDruidGuideContent = {
     }
   },
   "recommended-sites": {
-    intro: "회드는 패치/튜닝에 따라 특성과 운용 무게중심이 자주 변합니다. 아래 자료를 병행하면 업데이트 대응이 훨씬 빠릅니다.",
+    intro: "힐러는 정보가 중요하므로 아래 사이트들을 자주 참고하시면 좋습니다.",
     items: [
       {
         title: "Wowhead Restoration Druid Guide",

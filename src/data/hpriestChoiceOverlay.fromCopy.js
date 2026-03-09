@@ -138,14 +138,14 @@ export const hpriestChoiceOverlayFromCopy = {
     "hpriest-hero-63": {
       "options": [
         {
-          "href": "https://www.wowhead.com/ko/spell=433905/예언자의-의지",
+          "href": "https://www.wowhead.com/ko/spell=449874",
           "name": "예언자의 의지",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_clarityofpurpose.jpg"
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_circleofrenewal.jpg"
         },
         {
-          "href": "https://www.wowhead.com/ko/spell=458718/궁여지책",
-          "name": "궁여지책",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_testoffaith.jpg"
+          "href": "https://www.wowhead.com/ko/spell=454001/%EC%A7%80%EC%86%8D%EB%90%98%EB%8A%94-%EC%9E%A0%EC%9E%AC%EB%A0%A5?spellModifier=137031",
+          "name": "지속되는 잠재력",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_ascension.jpg"
         }
       ],
       "selectedIndex": 1

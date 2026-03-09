@@ -294,7 +294,7 @@ export function GuidePage({ healerMap }) {
       <main className="relative z-10 mx-auto flex-grow w-full max-w-[1280px] px-3 py-8 md:px-5 pointer-events-none">
         <div className="grid gap-4 lg:grid-cols-[170px_minmax(0,800px)_360px] lg:items-start lg:justify-center">
           <aside className="pointer-events-auto hidden lg:sticky lg:top-20 lg:block lg:h-fit lg:rounded-2xl lg:border lg:border-slate-700/80 lg:bg-slate-900/70 lg:p-4 lg:shadow-panel">
-            <h2 className="site-accent-text text-sm font-semibold uppercase tracking-[0.14em]">소제목 목차</h2>
+            <h2 className="site-accent-text text-sm font-semibold uppercase">목차</h2>
             <nav className="mt-4 space-y-2">
               {healer.sections.map((section, index) => (
                 <button

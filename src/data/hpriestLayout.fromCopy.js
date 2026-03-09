@@ -1,21 +1,12 @@
 export const holyPriestTalentLayout = {
-  "refWidth": 1200,
-  "refHeight": 560,
-  "background": "https://assets-ng.maxroll.gg/wow/talents/talents-background-priest-holy.webp",
+  "refWidth": 1160,
+  "refHeight": 540,
   "leftHeader": {
     "titleColor": "rgb(255, 255, 255)",
-    "title": "Priest Tree",
-    "spent": "Spent: 31",
-    "level": "Requires level 70"
+    "title": "레이드 추천 특성",
   },
-  "rightHeader": {
-    "titleColor": "",
-    "title": "Holy Tree",
-    "spent": "Spent: 30",
-    "level": "Requires level 69"
-  },
-  "heroName": "Oracle",
-  "exportText": "Export (12.0.1.65337)",
+  "heroName": "집정관",
+  "exportText": "Export",
   "nodes": [
     {
       "id": "392988",
@@ -963,7 +954,7 @@ export const holyPriestTalentLayout = {
       "name": "우주의 파장"
     },
     {
-      "id": "1215241",
+      "id": "1215245",
       "x": 920,
       "y": 382,
       "shape": "choice",

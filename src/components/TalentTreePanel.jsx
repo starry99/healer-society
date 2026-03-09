@@ -117,6 +117,7 @@ export function TalentTreePanel({ healer, mode = "raid" }) {
         healerSlug={healer.slug}
         key={`${healer.slug}-${mode}`}
         layout={resolvedModeTalentData.layout}
+        mode={mode}
         trees={resolvedModeTalentData.trees}
       />
     );

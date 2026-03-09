@@ -36,9 +36,9 @@ export const holyPriestTreesFromCopy = [
         "name": "신성한 불꽃",
         "href": "https://www.wowhead.com/ko/spell=14914/%EC%8B%A0%EC%84%B1%ED%95%9C-%EB%B6%88%EA%BD%83",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_searinglight.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 14914,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-class-22",
@@ -58,9 +58,9 @@ export const holyPriestTreesFromCopy = [
         "name": "마법 무효화",
         "href": "https://www.wowhead.com/ko/spell=528/마법-무효화",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_nullifydisease.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 528,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-class-30",
@@ -80,9 +80,9 @@ export const holyPriestTreesFromCopy = [
         "name": "영혼의 절규",
         "href": "https://www.wowhead.com/ko/spell=8122/%EC%98%81%ED%98%BC%EC%9D%98-%EC%A0%88%EA%B7%9C",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_psychicscream.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 8122,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-class-39",
@@ -91,9 +91,9 @@ export const holyPriestTreesFromCopy = [
         "name": "빛 폭발",
         "href": "https://www.wowhead.com/ko/spell=1246549/빛-폭발",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_holyfire_nova.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 1246549,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-class-43",
@@ -135,9 +135,9 @@ export const holyPriestTreesFromCopy = [
         "name": "고통의 기원",
         "href": "https://www.wowhead.com/ko/spell=1251030/%EA%B3%A0%ED%86%B5%EC%9D%98-%EA%B8%B0%EC%9B%90?spellModifier=14914",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_mindsooth.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 1251030,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-class-55",
@@ -242,9 +242,9 @@ export const holyPriestTreesFromCopy = [
         "name": "우아한 자태",
         "href": "https://www.wowhead.com/ko/spell=390620/우아한-자태",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_savinggrace.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 390620,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-class-83",
@@ -473,9 +473,9 @@ export const holyPriestTreesFromCopy = [
         "name": "주문 수호",
         "href": "https://www.wowhead.com/ko/spell=390667/%EC%A3%BC%EB%AC%B8-%EC%88%98%ED%98%B8?def=139612&rank=1",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_spellwarding.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390667,
-        "rank": "0/2"
+        "rank": "2/2"
       },
       {
         "id": "hpriest-class-165",
@@ -517,9 +517,9 @@ export const holyPriestTreesFromCopy = [
         "name": "망령의 손아귀",
         "href": "https://www.wowhead.com/ko/spell=459559/망령의-손아귀",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_chilltouch.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 459559,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-class-186",
@@ -582,9 +582,9 @@ export const holyPriestTreesFromCopy = [
         "name": "빛의 권능: 응징",
         "href": "https://www.wowhead.com/ko/spell=88625/%EB%B9%9B%EC%9D%98-%EA%B6%8C%EB%8A%A5-%EC%9D%91%EC%A7%95?spellModifier=1215275",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_chastise.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 88625,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-spec-43",
@@ -626,9 +626,9 @@ export const holyPriestTreesFromCopy = [
         "name": "최고천의 불길",
         "href": "https://www.wowhead.com/ko/spell=372616/최고천의-불길",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_empyrealblaze.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 372616,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-spec-60",
@@ -681,9 +681,9 @@ export const holyPriestTreesFromCopy = [
         "name": "타오르는 열의",
         "href": "https://www.wowhead.com/ko/spell=372307/타오르는-열의",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_paladin_sacredcleansing.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 372307,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-spec-81",
@@ -703,9 +703,9 @@ export const holyPriestTreesFromCopy = [
         "name": "우주의 파장",
         "href": "https://www.wowhead.com/ko/spell=1248418/우주의-파장",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_holyfire_wave.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 1248418,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-spec-85",
@@ -747,9 +747,9 @@ export const holyPriestTreesFromCopy = [
         "name": "효율적인 기도",
         "href": "https://www.wowhead.com/ko/spell=1247131/효율적인-기도",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_finalprayer.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 1247131,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-spec-102",
@@ -780,9 +780,9 @@ export const holyPriestTreesFromCopy = [
         "name": "천상의 보은",
         "href": "https://www.wowhead.com/ko/spell=391233/천상의-보은",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_prayerofspirit.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 391233,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-spec-110",
@@ -833,10 +833,11 @@ export const holyPriestTreesFromCopy = [
         "row": 7,
         "col": 0,
         "name": "흩어지는 빛 / 빛의 흔적",
-        "href": "javascript:",
+        "href": "https://www.wowhead.com/ko/spell=200128",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_spiritoftheredeemer.jpg",
-        "selected": false,
-        "rank": "0/1"
+        "selected": true,
+        "spellId": 200128,
+        "rank": "1/1"
       },
       {
         "id": "hpriest-spec-140",
@@ -878,9 +879,9 @@ export const holyPriestTreesFromCopy = [
         "name": "소리 내어 기원을",
         "href": "https://www.wowhead.com/ko/spell=391186/소리-내어-기원을",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_bindingprayers.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 391186,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-spec-155",
@@ -889,9 +890,9 @@ export const holyPriestTreesFromCopy = [
         "name": "위기 관리",
         "href": "https://www.wowhead.com/ko/spell=390954/위기-관리",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_flashheal.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390954,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-spec-157",
@@ -911,9 +912,9 @@ export const holyPriestTreesFromCopy = [
         "name": "어둠 속의 빛",
         "href": "https://www.wowhead.com/ko/spell=471668/%EC%96%B4%EB%91%A0-%EC%86%8D%EC%9D%98-%EB%B9%9B?def=133138&rank=1&spellModifier=1246517",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_divineprovidence.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 471668,
-        "rank": "0/2"
+        "rank": "2/2"
       },
       {
         "id": "hpriest-spec-161",
@@ -922,9 +923,9 @@ export const holyPriestTreesFromCopy = [
         "name": "오색 메아리",
         "href": "https://www.wowhead.com/ko/spell=390967/%EC%98%A4%EC%83%89-%EB%A9%94%EC%95%84%EB%A6%AC?def=108749&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_aspiration.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 390967,
-        "rank": "2/2"
+        "rank": "0/2"
       },
       {
         "id": "hpriest-spec-165",
@@ -944,9 +945,9 @@ export const holyPriestTreesFromCopy = [
         "name": "광휘의 간청",
         "href": "https://www.wowhead.com/ko/spell=1250684/광휘의-간청",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_pontifex.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 1250684,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-spec-176",
@@ -955,9 +956,9 @@ export const holyPriestTreesFromCopy = [
         "name": "빛술사",
         "href": "https://www.wowhead.com/ko/spell=390992/빛술사",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_greaterheal.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390992,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-spec-178",
@@ -966,9 +967,9 @@ export const holyPriestTreesFromCopy = [
         "name": "궁극의 평온",
         "href": "https://www.wowhead.com/ko/spell=1246517/궁극의-평온",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_holywordlife.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 1246517,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-spec-180",
@@ -988,9 +989,9 @@ export const holyPriestTreesFromCopy = [
         "name": "작별의 한마디",
         "href": "https://www.wowhead.com/ko/spell=471504/%EC%9E%91%EB%B3%84%EC%9D%98-%ED%95%9C%EB%A7%88%EB%94%94?spellModifier=1246517",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_renew.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 471504,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-spec-184",
@@ -999,21 +1000,43 @@ export const holyPriestTreesFromCopy = [
         "name": "현신",
         "href": "https://www.wowhead.com/ko/spell=414553/현신",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_mage_studentofthemind.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 414553,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-spec-199",
         "row": 10,
         "col": 3,
-        "name": "축도 / 축도 / 축도",
+        "name": "축도",
         "href": "https://www.wowhead.com/ko/spell=1262755/축도",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/inv12_apextalent_priest_benediction.jpg",
         "selected": false,
         "spellId": 1262755,
-        "rank": "0/4"
-      }
+        "rank": "1/1"
+      },
+      {
+        "id": "hpriest-spec-200",
+        "row": 10,
+        "col": 4,
+        "name": "축도",
+        "href": "https://www.wowhead.com/ko/spell=1262758/축도?def=141757&rank=2",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv12_apextalent_priest_benediction.jpg",
+        "selected": false,
+        "spellId": 1262758,
+        "rank": "2/2"
+      },
+      {
+        "id": "hpriest-spec-201",
+        "row": 10,
+        "col": 5,
+        "name": "축도",
+        "href": "https://www.wowhead.com/ko/spell=1262760",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv12_apextalent_priest_benediction.jpg",
+        "selected": false,
+        "spellId": 1262760,
+        "rank": "1/1"
+      },
     ]
   },
   {
@@ -1028,153 +1051,154 @@ export const holyPriestTreesFromCopy = [
         "id": "hpriest-hero-9",
         "row": 0,
         "col": 2,
-        "name": "인도의 빛",
-        "href": "https://www.wowhead.com/ko/spell=1248423/%EC%9D%B8%EB%8F%84%EC%9D%98-%EB%B9%9B?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_holywordlife.jpg",
+        "name": "후광",
+        "href": "https://www.wowhead.com/ko/spell=120517/%ED%9B%84%EA%B4%91",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_halo.jpg",
         "selected": true,
-        "spellId": 1248423,
+        "spellId": 120517,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-25",
         "row": 1,
         "col": 0,
-        "name": "예방의 기술",
-        "href": "https://www.wowhead.com/ko/spell=440662/%EC%98%88%EB%B0%A9%EC%9D%98-%EA%B8%B0%EC%88%A0?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_powerwordshield.jpg",
+        "name": "완벽한 형상",
+        "href": "https://www.wowhead.com/ko/spell=453917/%EC%99%84%EB%B2%BD%ED%95%9C-%ED%98%95%EC%83%81?spellModifier=137031",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_holyfire_buff.jpg",
         "selected": true,
-        "spellId": 440662,
+        "spellId": 453917,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-27",
         "row": 1,
         "col": 1,
-        "name": "선제적 조처",
-        "href": "https://www.wowhead.com/ko/spell=440671/%EC%84%A0%EC%A0%9C%EC%A0%81-%EC%A1%B0%EC%B2%98?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_renew.jpg",
+        "name": "마력의 쇄도",
+        "href": "https://www.wowhead.com/ko/spell=453109/%EB%A7%88%EB%A0%A5%EC%9D%98-%EC%87%84%EB%8F%84",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_holyfire_groundstate.jpg",
         "selected": true,
-        "spellId": 440671,
+        "spellId": 453109,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-29",
         "row": 1,
         "col": 2,
-        "name": "천금 같은 시간",
-        "href": "https://www.wowhead.com/ko/spell=440681/%EC%B2%9C%EA%B8%88-%EA%B0%99%EC%9D%80-%EC%8B%9C%EA%B0%84?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_timestop.jpg",
+        "name": "현신하는 권능",
+        "href": "https://www.wowhead.com/ko/spell=453783/%ED%98%84%EC%8B%A0%ED%95%98%EB%8A%94-%EA%B6%8C%EB%8A%A5?spellModifier=137031:1247178",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_surgeoflight.jpg",
         "selected": true,
-        "spellId": 440681,
+        "spellId": 453783,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-31",
         "row": 1,
         "col": 3,
-        "name": "현자의 말",
-        "href": "https://www.wowhead.com/ko/spell=1272352/%ED%98%84%EC%9E%90%EC%9D%98-%EB%A7%90?spellModifier=137031:1246517",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_power-word.jpg",
+        "name": "집중된 폭발",
+        "href": "https://www.wowhead.com/ko/spell=1272320/%EC%A7%91%EC%A4%91%EB%90%9C-%ED%8F%AD%EB%B0%9C?spellModifier=137031",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_spiritoftheredeemer.jpg",
         "selected": true,
-        "spellId": 1272352,
+        "spellId": 1272320,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-44",
         "row": 2,
         "col": 0,
-        "name": "보장된 안전",
-        "href": "https://www.wowhead.com/ko/spell=440766/%EB%B3%B4%EC%9E%A5%EB%90%9C-%EC%95%88%EC%A0%84?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_prayerofmendingtga.jpg",
-        "selected": false,
-        "spellId": 440766,
-        "rank": "0/1"
+        "name": "진동 충격파 / 끊임없는 비명",
+        "href": "https://www.wowhead.com/ko/spell=453852/%EC%A7%84%EB%8F%99-%EC%B6%A9%EA%B2%A9%ED%8C%8C",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_pathofdevout.jpg",
+        "selected": true,
+        "spellId": 453852,
+        "rank": "1/1"
       },
       {
         "id": "hpriest-hero-46",
         "row": 2,
         "col": 1,
-        "name": "거룩한 깃털 / 위기 모면",
-        "href": "https://www.wowhead.com/ko/spell=440670/거룩한-깃털",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_angelicfeather.jpg",
+        "name": "마력 보존",
+        "href": "https://www.wowhead.com/ko/spell=1272308/%EB%A7%88%EB%A0%A5-%EB%B3%B4%EC%A1%B4",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_clarityofpurpose.jpg",
         "selected": true,
-        "spellId": 440670,
+        "spellId": 1272308,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-48",
         "row": 2,
         "col": 2,
-        "name": "예견된 상황",
-        "href": "https://www.wowhead.com/ko/spell=440738/%EC%98%88%EA%B2%AC%EB%90%9C-%EC%83%81%ED%99%A9?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_painsupression.jpg",
+        "name": "강화된 쇄도",
+        "href": "https://www.wowhead.com/ko/spell=453799/%EA%B0%95%ED%99%94%EB%90%9C-%EC%87%84%EB%8F%84?spellModifier=137031",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_flashoflight.jpg",
         "selected": true,
-        "spellId": 440738,
+        "spellId": 453799,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-50",
         "row": 2,
         "col": 3,
-        "name": "선지자의 통찰",
-        "href": "https://www.wowhead.com/ko/spell=1272359/%EC%84%A0%EC%A7%80%EC%9E%90%EC%9D%98-%ED%86%B5%EC%B0%B0?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_pontifex.jpg",
+        "name": "우월성의 진언 / 고조된 변이",
+        "href": "https://www.wowhead.com/ko/spell=453726/%EC%9A%B0%EC%9B%94%EC%84%B1%EC%9D%98-%EC%A7%84%EC%96%B8?spellModifier=137031",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_wordfortitude.jpg",
         "selected": true,
-        "spellId": 1272359,
+        "spellId": 453726,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-63",
         "row": 3,
         "col": 0,
-        "name": "예언자의 의지 / 궁여지책",
-        "href": "javascript:",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_clarityofpurpose.jpg",
-        "selected": false,
-        "rank": "0/1"
+        "name": "마력 압축 / 지속되는 잠재력",
+        "href": "https://www.wowhead.com/ko/spell=454001/%EC%A7%80%EC%86%8D%EB%90%98%EB%8A%94-%EC%9E%A0%EC%9E%AC%EB%A0%A5?spellModifier=137031",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_ascension.jpg",
+        "selected": true,
+        "spellId": 454001,
+        "rank": "1/1"
       },
       {
         "id": "hpriest-hero-65",
         "row": 3,
         "col": 1,
-        "name": "즉발적인 예측",
-        "href": "https://www.wowhead.com/ko/spell=1246799/%EC%A6%89%EB%B0%9C%EC%A0%81%EC%9D%B8-%EC%98%88%EC%B8%A1?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_blessedlife.jpg",
+        "name": "공명하는 마력",
+        "href": "https://www.wowhead.com/ko/spell=453845/%EA%B3%B5%EB%AA%85%ED%95%98%EB%8A%94-%EB%A7%88%EB%A0%A5?spellModifier=137031",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_halo.jpg",
         "selected": true,
-        "spellId": 1246799,
+        "spellId": 453845,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-67",
         "row": 3,
         "col": 2,
-        "name": "경건",
-        "href": "https://www.wowhead.com/ko/spell=1246802/경건",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_oraclepriest_premonitionpiety.jpg",
+        "name": "마력 순환",
+        "href": "https://www.wowhead.com/ko/spell=453828/%EB%A7%88%EB%A0%A5-%EC%88%9C%ED%99%98?spellModifier=1246517",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_voidshift.jpg",
         "selected": true,
-        "spellId": 1246802,
+        "spellId": 453828,
         "rank": "1/1"
       },
       {
         "id": "hpriest-hero-69",
         "row": 3,
         "col": 3,
-        "name": "펼쳐지는 시야",
-        "href": "https://www.wowhead.com/ko/spell=1272363/%ED%8E%BC%EC%B3%90%EC%A7%80%EB%8A%94-%EC%8B%9C%EC%95%BC?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_mindvision.jpg",
-        "selected": false,
-        "spellId": 1272363,
-        "rank": "0/1"
+        "name": "실현된 잠재력 / 영혼 우물",
+        "href": "https://www.wowhead.com/ko/spell=1247178/%EC%98%81%ED%98%BC-%EC%9A%B0%EB%AC%BC?spellModifier=137031:1247178",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_prayerofhealing02.jpg",
+        "selected": true,
+        "spellId": 1247178,
+        "rank": "1/1"
       },
       {
         "id": "hpriest-hero-85",
         "row": 4,
         "col": 2,
-        "name": "두 개의 시야",
-        "href": "https://www.wowhead.com/ko/spell=440742/%EB%91%90-%EA%B0%9C%EC%9D%98-%EC%8B%9C%EC%95%BC?spellModifier=137031",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_oraclepriest_clairvoyance.jpg",
+        "name": "천상의 후광",
+        "href": "https://www.wowhead.com/ko/spell=449806/%EC%B2%9C%EC%83%81%EC%9D%98-%ED%9B%84%EA%B4%91",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_holyfire_nova.jpg",
         "selected": true,
-        "spellId": 440742,
+        "spellId": 449806,
         "rank": "1/1"
       }
     ]

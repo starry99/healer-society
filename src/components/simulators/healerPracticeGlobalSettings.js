@@ -57,12 +57,17 @@ export const HEALER_PRACTICE_DISCLAIMER_BY_HEALER = Object.freeze({
   "holy-paladin": Object.freeze([
     "기준치 - 지능:2000, 가속:30%, 특화:40%, 치명타:30%, 유연: 0%, 마나: 275,000",
     "실제 게임 튜닝 수치와 다를 수 있습니다. 특히 특화는 모두 최대 효율로 계산됩니다.",
-    "신성한 목적, 빛의 교부, 새벽빛 연결힐 등 몇몇 특성은 구현되지 않았습니다.",
+    "가이드의 레이드 특성을 기반으로 하며 신성한 목적, 빛의 교부, 새벽빛 연결힐 등 몇몇 특성은 구현되지 않았습니다.",
     "전투시간이 짧으므로 마나 소모가 원래보다 조금 더 많게 변경됩니다."
   ]),
   "restoration-druid": Object.freeze([
     "실제 게임 튜닝 수치와 다를 수 있습니다.",
     "새벽빛 빨대 등 몇몇 사항은 구현되지 않았습니다."
+  ]),
+  "holy-priest": Object.freeze([
+    "기준치 - 지능:2000, 가속:15%, 특화:30%, 치명타:30%, 유연: 0%, 마나: 275,000",
+    "실제 게임 튜닝 수치와 다를 수 있습니다.",
+    "전투시간이 짧으므로 마나 소모가 원래보다 조금 더 많게 변경됩니다."
   ])
 });
 
@@ -81,6 +86,10 @@ export const HEALER_PRACTICE_PATCH_META_BY_HEALER = Object.freeze({
   "restoration-druid": Object.freeze({
     lastUpdatedAt: "",
     patchVersion: ""
+  }),
+  "holy-priest": Object.freeze({
+    lastUpdatedAt: "2026-03-08",
+    patchVersion: "12.0.1"
   })
 });
 
@@ -386,9 +395,9 @@ export const PRACTICE_DIFFICULTY_TUNING = Object.freeze({
     damageBreakEveryMs: 30000,
     damageBreakDurationMs: 3000,
     scheduledRaidBursts: Object.freeze([
-      { id: "raid-pulse-8", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7000 },
-      { id: "raid-pulse-9", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7000 },
-      { id: "raid-pulse-10", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7000 },
+      { id: "raid-pulse-8", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
+      { id: "raid-pulse-9", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
+      { id: "raid-pulse-10", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
     ])
   })
 });
@@ -522,13 +531,36 @@ export const HEALER_PRACTICE_SCORE_HEALER_CONFIG_BY_SLUG = Object.freeze({
       remainingMana: DEFAULT_SCORE_REMAINING_MANA_CONFIG,
       healerSpecific: DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG
     })
+  }),
+  "holy-priest": Object.freeze({
+    normal: Object.freeze({
+      averageRaidHealth: DEFAULT_SCORE_AVERAGE_RAID_HEALTH_CONFIG,
+      remainingMana: DEFAULT_SCORE_REMAINING_MANA_CONFIG,
+      healerSpecific: DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG
+    }),
+    heroic: Object.freeze({
+      averageRaidHealth: DEFAULT_SCORE_AVERAGE_RAID_HEALTH_CONFIG,
+      remainingMana: DEFAULT_SCORE_REMAINING_MANA_CONFIG,
+      healerSpecific: DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG
+    }),
+    mythic: Object.freeze({
+      averageRaidHealth: DEFAULT_SCORE_AVERAGE_RAID_HEALTH_CONFIG,
+      remainingMana: DEFAULT_SCORE_REMAINING_MANA_CONFIG,
+      healerSpecific: DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG
+    }),
+    worldFirstKill: Object.freeze({
+      averageRaidHealth: DEFAULT_SCORE_AVERAGE_RAID_HEALTH_CONFIG,
+      remainingMana: DEFAULT_SCORE_REMAINING_MANA_CONFIG,
+      healerSpecific: DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG
+    })
   })
 });
 
 // CPM은 난이도와 무관하게 힐러별 기준만 사용합니다.
 export const HEALER_PRACTICE_SCORE_CPM_CONFIG_BY_SLUG = Object.freeze({
   "holy-paladin": DEFAULT_SCORE_CPM_CONFIG,
-  "restoration-druid": DEFAULT_SCORE_CPM_CONFIG
+  "restoration-druid": DEFAULT_SCORE_CPM_CONFIG,
+  "holy-priest": DEFAULT_SCORE_CPM_CONFIG
 });
 
 export const PLAYER_MOVE_SPEED_PER_SEC = 220;
@@ -563,15 +595,15 @@ export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
     showPlayerHealthBar: true,
     playerMaxHealth: 100,
     hazardEnabled: true,
-    hazardSpawnIntervalMinMs: 4300,
+    hazardSpawnIntervalMinMs: 5300,
     hazardSpawnIntervalMaxMs: 6400,
     hazardBarWidthPx: 20,
     hazardBarLengthPx: 520,
     hazardDamage: 20,
     missileEnabled: true,
-    missileSpawnIntervalMinMs: 2800,
-    missileSpawnIntervalMaxMs: 4200,
-    missileSpeedPerSec: 220,
+    missileSpawnIntervalMinMs: 3800,
+    missileSpawnIntervalMaxMs: 4500,
+    missileSpeedPerSec: 210,
     missileDamage: 15,
     greenGridZonePatternEnabled: true,
     greenGridZonePatternSpawnIntervalMinMs: 20000,
@@ -592,8 +624,8 @@ export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
     hazardBarLengthPx: 520,
     hazardDamage: 30,
     missileEnabled: true,
-    missileSpawnIntervalMinMs: 2300,
-    missileSpawnIntervalMaxMs: 3700,
+    missileSpawnIntervalMinMs: 3000,
+    missileSpawnIntervalMaxMs: 4500,
     missileSpeedPerSec: 230,
     missileDamage: 25,
     greenGridZonePatternEnabled: true,
@@ -615,10 +647,10 @@ export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
     hazardBarLengthPx: 600,
     hazardDamage: 40,
     missileEnabled: true,
-    missileSpawnIntervalMinMs: 2000,
-    missileSpawnIntervalMaxMs: 3500,
+    missileSpawnIntervalMinMs: 3000,
+    missileSpawnIntervalMaxMs: 4000,
     missileSpeedPerSec: 240,
-    missileDamage: 30,
+    missileDamage: 40,
     greenGridZonePatternEnabled: true,
     greenGridZonePatternSpawnIntervalMinMs: 20000,
     greenGridZonePatternSpawnIntervalMaxMs: 25000,

@@ -163,6 +163,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           "healerSlug",
           "useClickCasting",
+          "movementKeyPreset",
+          "movementCustomKeys",
           "keyboardBindings",
           "clickCastBindings",
           "updatedAt"
@@ -177,6 +179,37 @@ service cloud.firestore {
         && request.resource.data.healerSlug is string
         && request.resource.data.healerSlug == healerSlug
         && request.resource.data.useClickCasting is bool
+        && (
+          !request.resource.data.keys().hasAny(["movementKeyPreset"])
+          || (
+            request.resource.data.movementKeyPreset is string
+            && request.resource.data.movementKeyPreset.size() > 0
+            && request.resource.data.movementKeyPreset.size() <= 16
+          )
+        )
+        && (
+          !request.resource.data.keys().hasAny(["movementCustomKeys"])
+          || (
+            request.resource.data.movementCustomKeys is map
+            && request.resource.data.movementCustomKeys.keys().hasOnly(["up", "down", "left", "right"])
+            && (
+              !request.resource.data.movementCustomKeys.keys().hasAny(["up"])
+              || request.resource.data.movementCustomKeys.up is string
+            )
+            && (
+              !request.resource.data.movementCustomKeys.keys().hasAny(["down"])
+              || request.resource.data.movementCustomKeys.down is string
+            )
+            && (
+              !request.resource.data.movementCustomKeys.keys().hasAny(["left"])
+              || request.resource.data.movementCustomKeys.left is string
+            )
+            && (
+              !request.resource.data.movementCustomKeys.keys().hasAny(["right"])
+              || request.resource.data.movementCustomKeys.right is string
+            )
+          )
+        )
         && request.resource.data.keyboardBindings is map
         && request.resource.data.clickCastBindings is map
         && request.resource.data.updatedAt == request.time;

@@ -8,9 +8,13 @@ const MAIN_NODE_SIZE = 48;
 const HERO_NODE_SIZE = 86;
 const POINT_BADGE_SIZE = 24;
 const HERO_EMBLEM_ICON_OVERRIDES = {
-  "discipline-priest": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-oracle.webp",
+  "discipline-priest": {
+    raid: "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-oracle.webp",
+    mythic: "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-voidweaver.webp"
+  },
   "holy-paladin": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-paladin-heraldofthesun.webp",
   "restoration-druid": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-druid-keeperofthegrove.webp",
+  "holy-priest": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-archon.webp",
 };
 const MOBILE_GROUP_TEMPLATES = [
   { id: "hero", label: "영웅 특성", padX: 20, padY: 16, nodeSize: 28, heroSize: 58, minWidth: 200, minHeight: 264 },
@@ -26,6 +30,19 @@ function refreshWowheadTooltips() {
   if (window?.$WowheadPower?.refreshLinks) {
     window.$WowheadPower.refreshLinks();
   }
+}
+
+function resolveHeroEmblemIconOverride(healerSlug, mode = "raid") {
+  const override = HERO_EMBLEM_ICON_OVERRIDES[healerSlug];
+  if (!override) {
+    return "";
+  }
+  if (typeof override === "string") {
+    return override;
+  }
+
+  const modeKey = mode === "mythic" ? "mythic" : "raid";
+  return override?.[modeKey] || override?.raid || override?.mythic || "";
 }
 
 function toPercent(value, ref) {
@@ -982,7 +999,7 @@ function Arrow({ arrow, layout, active = true }) {
   );
 }
 
-export function TalentTreeView({ healerSlug, layout, trees, choiceOverlay }) {
+export function TalentTreeView({ healerSlug, layout, trees, choiceOverlay, mode = "raid" }) {
   const variantConfig = talentBuildVariants[healerSlug];
   const tooltipOverrideMap = talentNodeTooltips[healerSlug] || {};
   const variants = useMemo(
@@ -1025,7 +1042,7 @@ export function TalentTreeView({ healerSlug, layout, trees, choiceOverlay }) {
     return byNodeId;
   }, [metaByNodeId, tooltipOverrideMap, visibleNodes]);
   const heroIcon = useMemo(() => {
-    const overrideHeroIcon = HERO_EMBLEM_ICON_OVERRIDES[healerSlug];
+    const overrideHeroIcon = resolveHeroEmblemIconOverride(healerSlug, mode);
     if (overrideHeroIcon) {
       return overrideHeroIcon;
     }
@@ -1037,7 +1054,7 @@ export function TalentTreeView({ healerSlug, layout, trees, choiceOverlay }) {
     const topRowNodes = heroTree.nodes.filter((node) => node.row === topRow);
     const selectedTop = topRowNodes.find((node) => node.selected) || topRowNodes[0];
     return selectedTop?.icon || heroTree.nodes.find((node) => node.selected)?.icon || heroTree.nodes[0]?.icon || "";
-  }, [healerSlug, trees]);
+  }, [healerSlug, mode, trees]);
   const layoutForMobile = useMemo(() => ({ ...layout, nodes: visibleNodes }), [layout, visibleNodes]);
   const manualArrows = useMemo(
     () => buildManualArrowsByTreeConnections(healerSlug, trees, visibleNodes, metaByNodeId),

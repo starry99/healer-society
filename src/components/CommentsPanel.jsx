@@ -312,7 +312,7 @@ export function CommentsPanel({
         <p className="text-right text-[11px] text-slate-400">
           {draft.length}/{COMMENT_TEXT_MAX_LENGTH}
         </p>
-        <p className="text-[11px] text-slate-400">스팸 방지를 위해 댓글은 20초에 1회 작성할 수 있습니다.</p>
+        {/* <p className="text-[11px] text-slate-400">스팸 방지를 위해 댓글은 20초에 1회 작성할 수 있습니다.</p> */}
         <button
           className="site-accent-button inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
           disabled={!draft.trim() || !firebaseEnabled || !currentUser || !commentReady || draft.trim().length > COMMENT_TEXT_MAX_LENGTH}

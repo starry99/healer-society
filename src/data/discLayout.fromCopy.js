@@ -1,6 +1,6 @@
 export const disciplinePriestTalentLayout = {
   "refWidth": 1160,
-  "refHeight": 530,
+  "refHeight": 540,
   "leftHeader": {
     "titleColor": "rgb(255, 255, 255)",
     "title": "레이드 추천 특성",

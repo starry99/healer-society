@@ -13,6 +13,13 @@ import {
   buildRandomRaidRoster
 } from "../../lib/simulators/holyPaladinPracticeEngine";
 import {
+  HOLY_PRIEST_ACTIVE_SPELL_KEYS,
+  HOLY_PRIEST_CLICK_CASTABLE_KEYS,
+  HOLY_PRIEST_DEFAULT_KEYBINDS,
+  HOLY_PRIEST_PRACTICE_SPELLS,
+  HolyPriestPracticeEngine
+} from "../../lib/simulators/holyPriestPracticeEngine";
+import {
   RESTORATION_DRUID_ACTIVE_SPELL_KEYS,
   RESTORATION_DRUID_CLICK_CASTABLE_KEYS,
   RESTORATION_DRUID_DEFAULT_KEYBINDS,
@@ -78,6 +85,18 @@ import {
   HOLY_PALADIN_SPECIAL_PROC_DISPLAY_CONFIG,
   SPELL_ICON_URL_BY_KEY
 } from "./holyPaladinPracticeSettings";
+import {
+  HOLY_PRIEST_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
+  HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_KEYS,
+  HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_META,
+  HOLY_PRIEST_ADDED_TALENT_TOGGLES,
+  HOLY_PRIEST_CRIT_CONFIG,
+  HOLY_PRIEST_DEFAULT_CLICK_CAST_PREFERRED,
+  HOLY_PRIEST_DEFAULT_STATS,
+  HOLY_PRIEST_HEALER_SLUG,
+  HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG,
+  HOLY_PRIEST_SPELL_ICON_URL_BY_KEY
+} from "./holyPriestPracticeSettings";
 import {
   RESTORATION_DRUID_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
   RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_KEYS,
@@ -215,6 +234,108 @@ const HEAL_METER_SPELL_META_BY_HEALER = Object.freeze({
       spellId: 143924
     })
   }),
+  [HOLY_PRIEST_HEALER_SLUG]: Object.freeze({
+    flashHeal: Object.freeze({
+      name: HOLY_PRIEST_PRACTICE_SPELLS.flashHeal.name,
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.flashHeal,
+      spellId: 2061
+    }),
+    prayerOfHealing: Object.freeze({
+      name: HOLY_PRIEST_PRACTICE_SPELLS.prayerOfHealing.name,
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.prayerOfHealing,
+      spellId: 596
+    }),
+    serenity: Object.freeze({
+      name: HOLY_PRIEST_PRACTICE_SPELLS.serenity.name,
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.serenity,
+      spellId: 2050
+    }),
+    ultimateSerenity: Object.freeze({
+      name: "궁극의 평온",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.ultimateSerenity || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.serenity,
+      spellId: 1246517
+    }),
+    prayerOfMending: Object.freeze({
+      name: HOLY_PRIEST_PRACTICE_SPELLS.prayerOfMending.name,
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.prayerOfMending,
+      spellId: 33076
+    }),
+    renew: Object.freeze({
+      name: "소생",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.renew || DEFAULT_SPELL_ICON_URL,
+      spellId: 139
+    }),
+    halo: Object.freeze({
+      name: HOLY_PRIEST_PRACTICE_SPELLS.halo.name,
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.halo,
+      spellId: 120517
+    }),
+    cosmicRipple: Object.freeze({
+      name: "우주 파동",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.cosmicRipple || DEFAULT_SPELL_ICON_URL,
+      spellId: 238136
+    }),
+    divineImageHealingLight: Object.freeze({
+      name: "신성한 환영 - 치유의 빛",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.divineImage || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.serenity,
+      spellId: 392990
+    }),
+    divineImageDazzlingLights: Object.freeze({
+      name: "신성한 환영 - 눈부신 빛",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.divineImage || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.serenity,
+      spellId: 392990
+    }),
+    divineImageBlessedLight: Object.freeze({
+      name: "신성한 환영 - 축복받은 빛",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.divineImage || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.serenity,
+      spellId: 392990
+    }),
+    benediction: Object.freeze({
+      name: "축도",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.benediction || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.flashHeal,
+      spellId: 1262763
+    }),
+    trailOfLight: Object.freeze({
+      name: "빛의 흔적",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.trailOfLight || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.flashHeal,
+      spellId: 234946
+    }),
+    bindingHeal: Object.freeze({
+      name: "결속의 치유",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.bindingHeal || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.flashHeal,
+      spellId: 368276
+    }),
+    fade: Object.freeze({
+      name: HOLY_PRIEST_PRACTICE_SPELLS.fade.name,
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.fade,
+      spellId: 586
+    }),
+    apotheosis: Object.freeze({
+      name: HOLY_PRIEST_PRACTICE_SPELLS.apotheosis.name,
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.apotheosis,
+      spellId: 200183
+    }),
+    desperatePrayer: Object.freeze({
+      name: HOLY_PRIEST_PRACTICE_SPELLS.desperatePrayer.name,
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.desperatePrayer,
+      spellId: 19236
+    }),
+    divineHymn: Object.freeze({
+      name: HOLY_PRIEST_PRACTICE_SPELLS.divineHymn.name,
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.divineHymn,
+      spellId: 64843
+    }),
+    echoOfLight: Object.freeze({
+      name: "빛의 반향",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.echoOfLight || DEFAULT_SPELL_ICON_URL,
+      spellId: 77485
+    }),
+    leech: Object.freeze({
+      name: "생기흡수",
+      iconUrl: DEFAULT_SPELL_ICON_URL,
+      spellId: 143924
+    })
+  }),
   [RESTORATION_DRUID_HEALER_SLUG]: Object.freeze({
     rejuvenation: Object.freeze({
       name: RESTORATION_DRUID_PRACTICE_SPELLS.rejuvenation.name,
@@ -325,6 +446,39 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
       dawnlightTotalHealRatio: HOLY_PALADIN_DAWNLIGHT_CONFIG.totalHealRatio,
       dawnlightDurationMs: HOLY_PALADIN_DAWNLIGHT_CONFIG.durationMs,
       dawnlightTickMs: HOLY_PALADIN_DAWNLIGHT_CONFIG.tickMs
+    })
+  }),
+  [HOLY_PRIEST_HEALER_SLUG]: Object.freeze({
+    engineClass: HolyPriestPracticeEngine,
+    activeSpellKeys: HOLY_PRIEST_ACTIVE_SPELL_KEYS,
+    clickCastableKeys: HOLY_PRIEST_CLICK_CASTABLE_KEYS,
+    defaultKeybinds: HOLY_PRIEST_DEFAULT_KEYBINDS,
+    defaultClickCastPreferred: HOLY_PRIEST_DEFAULT_CLICK_CAST_PREFERRED,
+    cooldownManagerSpellKeys: HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_KEYS,
+    cooldownManagerNonDisplaySpellKeys: HOLY_PRIEST_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
+    cooldownManagerSpellMeta: HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_META,
+    spellIconUrlByKey: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY,
+    practiceSpells: HOLY_PRIEST_PRACTICE_SPELLS,
+    specialProcDisplayConfig: HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG,
+    healMeterSpellMeta: HEAL_METER_SPELL_META_BY_HEALER[HOLY_PRIEST_HEALER_SLUG],
+    buildEngineConfig: () => ({
+      haloTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.halo,
+      lightweaverTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.lightweaver,
+      ultimateSerenityTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.ultimateSerenity,
+      divineImageTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.divineImage,
+      upliftingWordsTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.upliftingWords,
+      crisisManagementTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.crisisManagement,
+      trailOfLightTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.trailOfLight,
+      lightsResurgenceTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.lightsResurgence,
+      intellect: HOLY_PRIEST_DEFAULT_STATS.intellect,
+      hastePct: HOLY_PRIEST_DEFAULT_STATS.hastePct,
+      masteryPct: HOLY_PRIEST_DEFAULT_STATS.masteryPct,
+      baseCritChance: pctToChance(HOLY_PRIEST_DEFAULT_STATS.critPct),
+      defaultCritHealMultiplier: HOLY_PRIEST_CRIT_CONFIG.defaultCritHealMultiplier,
+      upliftingWordsSerenityCritChanceBonus: HOLY_PRIEST_CRIT_CONFIG.upliftingWordsSerenityCritChanceBonus,
+      crisisManagementFlashHealCritChanceBonus: HOLY_PRIEST_CRIT_CONFIG.crisisManagementFlashHealCritChanceBonus,
+      crisisManagementPrayerOfHealingCritChanceBonus:
+        HOLY_PRIEST_CRIT_CONFIG.crisisManagementPrayerOfHealingCritChanceBonus
     })
   }),
   [RESTORATION_DRUID_HEALER_SLUG]: Object.freeze({
@@ -1014,11 +1168,11 @@ function buildKeyboardTokenToSpellMap(
     if (disabledSpellSet.has(spellKey)) {
       continue;
     }
-    const key = normalizeKey(keyboardBindings[spellKey]?.key);
-    if (isMovementRestrictedKey(key, movementPreset, movementCustomKeys)) {
+    const binding = keyboardBindings[spellKey];
+    if (isMovementRestrictedBinding(binding, movementPreset, movementCustomKeys)) {
       continue;
     }
-    const token = keyboardBindingToToken(keyboardBindings[spellKey]);
+    const token = keyboardBindingToToken(binding);
     if (!token || map[token]) {
       continue;
     }
@@ -1062,12 +1216,13 @@ function findBlockedKeyboardBindings(
       continue;
     }
 
-    const key = normalizeKey(keyboardBindings[spellKey]?.key);
-    const token = keyboardBindingToRawToken(keyboardBindings[spellKey]);
+    const binding = keyboardBindings[spellKey];
+    const key = normalizeKey(binding?.key);
+    const token = keyboardBindingToRawToken(binding);
     if (token && BLOCKED_KEYBOARD_BINDING_TOKENS.has(token)) {
       blocked.add(token);
     }
-    if (key && isMovementRestrictedKey(key, movementPreset, movementCustomKeys)) {
+    if (key && isMovementRestrictedBinding(binding, movementPreset, movementCustomKeys)) {
       blocked.add(token || key);
     }
   }
@@ -1386,6 +1541,17 @@ function isMovementRestrictedKey(key, movementPreset, movementCustomKeys) {
   return restricted.includes(normalizedKey);
 }
 
+function isMovementRestrictedBinding(binding, movementPreset, movementCustomKeys) {
+  if (!binding || typeof binding !== "object") {
+    return false;
+  }
+  const modifier = normalizeModifier(binding.modifier);
+  if (modifier) {
+    return false;
+  }
+  return isMovementRestrictedKey(binding.key, movementPreset, movementCustomKeys);
+}
+
 function raidLayoutColumnCount(layout) {
   return layout === "4x5" ? 5 : 4;
 }
@@ -1633,6 +1799,7 @@ export function HealerPracticeSimulator() {
   const [customMovementKeys, setCustomMovementKeys] = useState(() => buildDefaultCustomMovementKeys());
   const [useMouseover, setUseMouseover] = useState(true);
   const [useClickCasting, setUseClickCasting] = useState(false);
+  const [showHolyPriestEchoOnRaidFrames, setShowHolyPriestEchoOnRaidFrames] = useState(true);
   const [raidFrameLayout, setRaidFrameLayout] = useState("4x5");
   const [myRaidFramePositionMode, setMyRaidFramePositionMode] = useState("random");
   const [keyboardBindings, setKeyboardBindings] = useState(() =>
@@ -2410,6 +2577,9 @@ export function HealerPracticeSimulator() {
       if (typeof data.useClickCasting === "boolean") {
         setUseClickCasting(Boolean(data.useClickCasting));
       }
+      if (typeof data.showHolyPriestEchoOnRaidFrames === "boolean") {
+        setShowHolyPriestEchoOnRaidFrames(Boolean(data.showHolyPriestEchoOnRaidFrames));
+      }
       if (typeof data.movementKeyPreset === "string") {
         setMovementKeyPreset(normalizeMovementPreset(data.movementKeyPreset));
       }
@@ -2420,9 +2590,13 @@ export function HealerPracticeSimulator() {
         setStatusText("저장된 개인 키바인드를 불러왔습니다.");
       }
       return true;
-    } catch {
+    } catch (error) {
       if (!silent) {
-        setStatusText("개인 키바인드 불러오기에 실패했습니다.");
+        if (error?.code === "permission-denied") {
+          setStatusText("권한 오류로 개인 키바인드 불러오기에 실패했습니다. Firestore rules 배포 상태를 확인해 주세요.");
+        } else {
+          setStatusText("개인 키바인드 불러오기에 실패했습니다.");
+        }
       }
       return false;
     } finally {
@@ -2448,6 +2622,7 @@ export function HealerPracticeSimulator() {
       const payload = {
         healerSlug: selectedHealerSlug,
         useClickCasting: Boolean(useClickCasting),
+        showHolyPriestEchoOnRaidFrames: Boolean(showHolyPriestEchoOnRaidFrames),
         movementKeyPreset: normalizeMovementPreset(movementKeyPreset),
         movementCustomKeys: normalizeMovementCustomKeys(customMovementKeys),
         keyboardBindings: buildPersistableKeyboardBindings(keyboardBindings, activeSpellKeys),
@@ -2456,8 +2631,12 @@ export function HealerPracticeSimulator() {
       };
       await docRef.set(payload, { merge: true });
       setStatusText("개인 키바인드를 저장했습니다.");
-    } catch {
-      setStatusText("개인 키바인드 저장에 실패했습니다.");
+    } catch (error) {
+      if (error?.code === "permission-denied") {
+        setStatusText("권한 오류로 개인 키바인드 저장에 실패했습니다. Firestore rules를 다시 배포해 주세요.");
+      } else {
+        setStatusText("개인 키바인드 저장에 실패했습니다.");
+      }
     } finally {
       setKeybindProfileSyncBusy(false);
     }
@@ -2544,6 +2723,7 @@ export function HealerPracticeSimulator() {
       movementCustomKeys: normalizedMovementCustomKeys,
       useMouseover,
       useClickCasting,
+      showHolyPriestEchoOnRaidFrames,
       raidFrameLayout,
       myRaidFramePositionMode: normalizeMyRaidFramePositionMode(myRaidFramePositionMode),
       tankDamageTakenMultiplier: resolvedTankDamageTakenMultiplier,
@@ -2618,7 +2798,9 @@ export function HealerPracticeSimulator() {
   function handleKeyInputChange(spellKey, rawValue) {
     markSetupDirty();
     const value = normalizeKey(rawValue);
-    const safeKey = isMovementRestrictedKey(value, movementKeyPreset, customMovementKeys) ? "" : value;
+    const currentModifier = normalizeModifier(keyboardBindings?.[spellKey]?.modifier);
+    const movementConflict = !currentModifier && isMovementRestrictedKey(value, movementKeyPreset, customMovementKeys);
+    const safeKey = movementConflict ? "" : value;
     setKeyboardBindings((prev) => ({
       ...prev,
       [spellKey]: {
@@ -2666,11 +2848,19 @@ export function HealerPracticeSimulator() {
   function handleModifierChange(spellKey, modifierValue) {
     markSetupDirty();
     const modifier = normalizeModifier(modifierValue);
+    const currentKey = normalizeKey(keyboardBindings?.[spellKey]?.key);
+    const shouldClearMovementConflict = !modifier && isMovementRestrictedKey(currentKey, movementKeyPreset, customMovementKeys);
+    if (shouldClearMovementConflict && currentKey) {
+      const preset = normalizeMovementPreset(movementKeyPreset);
+      const restrictedKeys = resolveMovementRestrictedKeys(preset, customMovementKeys);
+      const restrictedLabel = restrictedKeys.length ? restrictedKeys.join(", ") : "-";
+      setStatusText(`${currentKey} 키는 이동키(${preset === "CUSTOM" ? `커스텀: ${restrictedLabel}` : preset})와 겹쳐서 사용할 수 없습니다.`);
+    }
     setKeyboardBindings((prev) => ({
       ...prev,
       [spellKey]: {
         modifier,
-        key: normalizeKey(prev[spellKey]?.key)
+        key: shouldClearMovementConflict ? "" : normalizeKey(prev[spellKey]?.key)
       }
     }));
   }
@@ -2752,6 +2942,9 @@ export function HealerPracticeSimulator() {
     const applyMovementStateFromEvent = (event, isPressed) => {
       const config = sessionConfigRef.current;
       if (!config) {
+        return false;
+      }
+      if (isPressed && getEventModifierList(event).length > 0) {
         return false;
       }
 
@@ -2881,6 +3074,9 @@ export function HealerPracticeSimulator() {
   );
   const activeDifficultyKey = sessionConfig?.difficultyKey ?? difficultyKey;
   const activeMapKey = sessionConfig?.mapKey ?? selectedMapKey;
+  const activeShowHolyPriestEchoOnRaidFrames = Boolean(
+    sessionConfig?.showHolyPriestEchoOnRaidFrames ?? showHolyPriestEchoOnRaidFrames
+  );
   const activeMovementKeyPreset = normalizeMovementPreset(sessionConfig?.movementKeyPreset ?? movementKeyPreset);
   const activeMovementCustomKeys = useMemo(
     () => normalizeMovementCustomKeys(sessionConfig?.movementCustomKeys ?? customMovementKeys),
@@ -3332,6 +3528,20 @@ export function HealerPracticeSimulator() {
         }
       ];
     }
+    if (activeCombatHealerSlug === HOLY_PRIEST_HEALER_SLUG) {
+      const effectiveSerenityReductionMs = Math.max(
+        0,
+        Number(currentSnapshot.metrics?.effectiveSerenityCooldownReductionMs ?? 0)
+      );
+      return [
+        {
+          key: "effective-serenity-cdr",
+          title: "평온 유효 쿨감",
+          value: `${(effectiveSerenityReductionMs / 1000).toFixed(1)}초`,
+          valueClassName: "text-cyan-200"
+        }
+      ];
+    }
     if (activeCombatHealerSlug === RESTORATION_DRUID_HEALER_SLUG) {
       const uptime = Math.max(0, Math.min(100, Number(currentSnapshot.metrics?.lifebloomHotUptimePct ?? 0)));
       return [
@@ -3732,7 +3942,7 @@ export function HealerPracticeSimulator() {
         if (cancelled) {
           return;
         }
-        const rows = querySnapshot.docs
+        const normalizedRows = querySnapshot.docs
           .map((docSnapshot) => {
             const data = docSnapshot.data() ?? {};
             const scoreValue = Number(data.score ?? data.totalScore ?? 0);
@@ -3747,8 +3957,12 @@ export function HealerPracticeSimulator() {
             const createdAtMs = toMillisFromUnknownTimestamp(
               data.createdAt ?? data.createdAtClientMs ?? data.createdAtMs
             );
+            const internalUserIdValue = String(data.internalUserId ?? "").trim();
+            const authUidValue = String(data.authUid ?? "").trim();
+            const identityKey = internalUserIdValue || authUidValue || `nickname:${nickname || "익명"}`;
             return {
               id: docSnapshot.id,
+              identityKey,
               nickname: nickname || "익명",
               score,
               createdAtMs
@@ -3766,7 +3980,17 @@ export function HealerPracticeSimulator() {
             }
             return left.nickname.localeCompare(right.nickname, "ko");
           });
-        setRankingRows(rows);
+
+        const identitySet = new Set();
+        const deduplicatedRows = normalizedRows.filter((row) => {
+          if (identitySet.has(row.identityKey)) {
+            return false;
+          }
+          identitySet.add(row.identityKey);
+          return true;
+        });
+
+        setRankingRows(deduplicatedRows);
       })
       .catch(() => {
         if (cancelled) {
@@ -3994,6 +4218,9 @@ export function HealerPracticeSimulator() {
     let playerMouth = null;
     let infusionLeftArc = null;
     let infusionRightArc = null;
+    let divineImageAvatarVisual = null;
+    let haloPulseVisuals = [];
+    let lastProcessedHaloPulseLogId = 0;
     let treeOfLifeAvatarVisual = null;
     let treeantVisuals = [];
     let recentHitUntilMs = 0;
@@ -4129,10 +4356,25 @@ export function HealerPracticeSimulator() {
       Math.max(0, Number(latestSnapshotRef.current?.buffs?.infusionOfLightMs ?? 0));
     const getInfusionOfLightCharges = () =>
       Math.max(0, Math.floor(Number(latestSnapshotRef.current?.buffs?.infusionOfLightCharges ?? 0)));
+    const getHolyPriestSurgeOfLightRemainingMs = () =>
+      Math.max(0, Number(latestSnapshotRef.current?.buffs?.surgeOfLightMs ?? 0));
+    const getHolyPriestSurgeOfLightStacks = () =>
+      Math.max(0, Math.floor(Number(latestSnapshotRef.current?.buffs?.surgeOfLightStacks ?? 0)));
+    const getHolyPriestDivineImageRemainingMs = () =>
+      Math.max(0, Number(latestSnapshotRef.current?.buffs?.divineImageMs ?? 0));
+    const getHolyPriestDivineImageStacks = () =>
+      Math.max(0, Math.floor(Number(latestSnapshotRef.current?.buffs?.divineImageStacks ?? 0)));
     const getDivineProtectionRemainingMs = () =>
       Math.max(0, Number(latestSnapshotRef.current?.buffs?.divineProtectionMs ?? 0));
     const getTreeOfLifeRemainingMs = () =>
       Math.max(0, Number(latestSnapshotRef.current?.buffs?.treeOfLifeMs ?? 0));
+    const destroyHaloPulseVisual = (haloVisual) => {
+      haloVisual?.graphics?.destroy();
+    };
+    const clearHaloPulseVisuals = () => {
+      haloPulseVisuals.forEach(destroyHaloPulseVisual);
+      haloPulseVisuals = [];
+    };
     const destroyTreeantVisual = (treeantVisual) => {
       treeantVisual?.container?.destroy(true);
     };
@@ -4174,6 +4416,83 @@ export function HealerPracticeSimulator() {
       player.setFillStyle(0x22c55e, 1);
       player.setStrokeStyle(2, 0x166534, 0.95);
       player.setVisible(true);
+    };
+    const destroyDivineImageAvatarVisual = (visual) => {
+      visual?.container?.destroy(true);
+    };
+    const createDivineImageAvatarVisual = (sceneRef) => {
+      const aura = sceneRef.add.circle(0, 0, 16, 0xfef08a, 0.2);
+      const coreGlow = sceneRef.add.circle(0, 1, 9, 0xfef9c3, 0.36);
+      const core = sceneRef.add.triangle(0, 2, 0, -14, -6, 6, 6, 6, 0xfffbeb, 0.95);
+      const lowerCore = sceneRef.add.triangle(0, 13, 0, 24, -5, 5, 5, 5, 0xfef3c7, 0.92);
+      const ring = sceneRef.add.ellipse(0, -17, 18, 8, 0xfef3c7, 0.42);
+      const leftWingTop = sceneRef.add.triangle(-13, -1, -2, 0, -11, 5, -7, 14, 0xfef9c3, 0.88);
+      const leftWingBottom = sceneRef.add.triangle(-13, 11, -3, 2, -11, 8, -6, 20, 0xfef9c3, 0.82);
+      const rightWingTop = sceneRef.add.triangle(13, -1, 2, 0, 11, 5, 7, 14, 0xfef9c3, 0.88);
+      const rightWingBottom = sceneRef.add.triangle(13, 11, 3, 2, 11, 8, 6, 20, 0xfef9c3, 0.82);
+      const staff = sceneRef.add.rectangle(0, 18, 2, 20, 0xfff7d6, 0.8);
+
+      const container = sceneRef.add.container(0, 0, [
+        aura,
+        coreGlow,
+        ring,
+        leftWingTop,
+        leftWingBottom,
+        rightWingTop,
+        rightWingBottom,
+        core,
+        lowerCore,
+        staff
+      ]);
+      container.setDepth(4.25);
+      container.setVisible(false);
+
+      return {
+        container,
+        aura,
+        ring,
+        leftWingTop,
+        leftWingBottom,
+        rightWingTop,
+        rightWingBottom
+      };
+    };
+    const updateDivineImageAvatarVisual = (nowMs = 0) => {
+      if (!player || !divineImageAvatarVisual?.container) {
+        return;
+      }
+
+      const stacks = getHolyPriestDivineImageStacks();
+      const remainingMs = getHolyPriestDivineImageRemainingMs();
+      const active =
+        activeCombatHealerSlug === HOLY_PRIEST_HEALER_SLUG &&
+        playerHealth > 0 &&
+        stacks > 0 &&
+        remainingMs > 0;
+      divineImageAvatarVisual.container.setVisible(active);
+      if (!active) {
+        return;
+      }
+
+      const pulse = 0.88 + Math.sin(nowMs / 210) * 0.12;
+      const stackScaleBonus = Math.min(0.32, stacks * 0.06);
+      const stackAlphaBonus = Math.min(0.24, stacks * 0.05);
+      const baseScale = 0.58;
+      const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
+      const sideOffset = playerRadius + 30;
+      const x = Phaser.Math.Clamp(player.x + sideOffset, 16, raidGridWidthPx - 16);
+      const y = Phaser.Math.Clamp(player.y - 8 + Math.sin(nowMs / 450) * 2.5, 16, raidGridHeightPx - 16);
+
+      divineImageAvatarVisual.container.setPosition(x, y);
+      divineImageAvatarVisual.container.setScale(baseScale * (1 + stackScaleBonus + (pulse - 0.88) * 0.2));
+      divineImageAvatarVisual.container.setAlpha(Math.max(0.46, Math.min(0.95, 0.66 + stackAlphaBonus + (pulse - 0.88))));
+      divineImageAvatarVisual.ring.setRotation(nowMs / 1300);
+      divineImageAvatarVisual.aura.setScale(0.92 + pulse * 0.18);
+      const wingYOffset = Math.sin(nowMs / 260) * 0.9;
+      divineImageAvatarVisual.leftWingTop.y = -1 + wingYOffset;
+      divineImageAvatarVisual.rightWingTop.y = -1 + wingYOffset;
+      divineImageAvatarVisual.leftWingBottom.y = 11 + wingYOffset * 0.85;
+      divineImageAvatarVisual.rightWingBottom.y = 11 + wingYOffset * 0.85;
     };
     const createTreeantVisual = (sceneRef) => {
       // Draw as a single graphics object so crown/trunk cannot drift apart.
@@ -4537,8 +4856,21 @@ export function HealerPracticeSimulator() {
         return;
       }
 
-      const remainingMs = getInfusionOfLightRemainingMs();
-      const chargeCount = Math.max(0, Math.min(2, getInfusionOfLightCharges()));
+      let remainingMs = 0;
+      let chargeCount = 0;
+      let leftArcMinChargeCount = 2;
+      let rightArcMinChargeCount = 1;
+      if (activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG) {
+        remainingMs = getInfusionOfLightRemainingMs();
+        chargeCount = Math.max(0, Math.min(2, getInfusionOfLightCharges()));
+        leftArcMinChargeCount = 2;
+        rightArcMinChargeCount = 1;
+      } else if (activeCombatHealerSlug === HOLY_PRIEST_HEALER_SLUG) {
+        remainingMs = getHolyPriestSurgeOfLightRemainingMs();
+        chargeCount = Math.max(0, Math.min(2, getHolyPriestSurgeOfLightStacks()));
+        leftArcMinChargeCount = 1;
+        rightArcMinChargeCount = 2;
+      }
       const active = playerHealth > 0 && remainingMs > 0 && chargeCount > 0;
       if (!active) {
         infusionLeftArc.clear();
@@ -4555,8 +4887,10 @@ export function HealerPracticeSimulator() {
       const pulse = 0.72 + Math.sin(nowMs / 120) * 0.16;
       const sparkAlpha = Math.max(0.45, Math.min(0.98, pulse + 0.1));
       const arcThickness = 3.2;
+      const shouldShowLeftArc = chargeCount >= leftArcMinChargeCount;
+      const shouldShowRightArc = chargeCount >= rightArcMinChargeCount;
 
-      if (chargeCount >= 2) {
+      if (shouldShowLeftArc) {
         infusionLeftArc.setVisible(true);
         infusionLeftArc.clear();
         infusionLeftArc.lineStyle(arcThickness, 0xfacc15, pulse);
@@ -4577,7 +4911,7 @@ export function HealerPracticeSimulator() {
         infusionLeftArc.setVisible(false);
       }
 
-      if (chargeCount >= 1) {
+      if (shouldShowRightArc) {
         infusionRightArc.setVisible(true);
         infusionRightArc.clear();
         infusionRightArc.lineStyle(arcThickness, 0xfacc15, pulse);
@@ -4597,6 +4931,91 @@ export function HealerPracticeSimulator() {
         infusionRightArc.clear();
         infusionRightArc.setVisible(false);
       }
+    };
+    const syncHaloPulseVisualEvents = (sceneRef) => {
+      if (activeCombatHealerSlug !== HOLY_PRIEST_HEALER_SLUG) {
+        if (haloPulseVisuals.length) {
+          clearHaloPulseVisuals();
+        }
+        return;
+      }
+
+      const logs = Array.isArray(latestSnapshotRef.current?.logs) ? latestSnapshotRef.current.logs : [];
+      if (!logs.length) {
+        return;
+      }
+
+      let maxProcessedLogId = lastProcessedHaloPulseLogId;
+      for (const logEntry of logs) {
+        const logId = Math.max(0, Number(logEntry?.id) || 0);
+        maxProcessedLogId = Math.max(maxProcessedLogId, logId);
+        if (logId <= lastProcessedHaloPulseLogId) {
+          continue;
+        }
+
+        const logType = String(logEntry?.type ?? "").trim();
+        const text = String(logEntry?.text ?? "");
+        if (logType !== "heal" || !text.startsWith("후광 파동 ")) {
+          continue;
+        }
+
+        const startCombatMs = Math.max(0, Number(logEntry?.timeMs ?? latestSnapshotRef.current?.nowMs ?? 0));
+        const graphics = sceneRef.add.graphics();
+        graphics.setDepth(2.6);
+        haloPulseVisuals.push({
+          graphics,
+          startCombatMs
+        });
+      }
+      lastProcessedHaloPulseLogId = maxProcessedLogId;
+    };
+    const updateHaloPulseVisuals = (sceneRef, nowMs = 0) => {
+      if (!player) {
+        return;
+      }
+
+      syncHaloPulseVisualEvents(sceneRef);
+      if (!haloPulseVisuals.length) {
+        return;
+      }
+
+      const combatElapsedMs = resolveCombatElapsedMs(nowMs);
+      const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
+      const minRadius = playerRadius + 2;
+      const maxRadius = Math.max(minRadius + 24, Math.min(raidGridWidthPx, raidGridHeightPx) * 0.46 * 1.5);
+      const pulseDurationMs = 5000;
+
+      haloPulseVisuals = haloPulseVisuals.filter((haloVisual) => {
+        const elapsedMs = combatElapsedMs - Math.max(0, Number(haloVisual?.startCombatMs) || 0);
+        const graphics = haloVisual?.graphics;
+        if (!graphics) {
+          return false;
+        }
+        if (elapsedMs < 0) {
+          return true;
+        }
+        if (elapsedMs >= pulseDurationMs) {
+          graphics.clear();
+          graphics.setVisible(false);
+          destroyHaloPulseVisual(haloVisual);
+          return false;
+        }
+
+        const progress = Math.max(0, Math.min(1, elapsedMs / pulseDurationMs));
+        const wave = progress <= 0.5 ? progress * 2 : (1 - progress) * 2;
+        const radius = minRadius + (maxRadius - minRadius) * wave;
+        const lineAlpha = 0.04 + wave * 0.2;
+        const innerAlpha = Math.min(0.28, lineAlpha + 0.08);
+        const thickness = 1.4 + wave * 2.2;
+
+        graphics.setVisible(true);
+        graphics.clear();
+        graphics.lineStyle(thickness, 0xfacc15, lineAlpha);
+        graphics.strokeCircle(player.x, player.y, radius);
+        graphics.lineStyle(Math.max(1, thickness - 0.8), 0xfef08a, innerAlpha);
+        graphics.strokeCircle(player.x, player.y, Math.max(minRadius * 0.7, radius - 4));
+        return true;
+      });
     };
 
     const resolveCombatElapsedMs = (sceneNowMs = 0) => {
@@ -4672,6 +5091,8 @@ export function HealerPracticeSimulator() {
       updatePlayerFaceUi(sceneRef.time.now);
       updateTreeOfLifeAvatarVisual(sceneRef.time.now);
       updateInfusionOfLightVisual(sceneRef.time.now);
+      updateDivineImageAvatarVisual(sceneRef.time.now);
+      updateHaloPulseVisuals(sceneRef, sceneRef.time.now);
       sceneRef.cameras.main.flash(90, 255, 80, 80, false);
 
       if (playerHealth <= 0 && !playerDeathNotified) {
@@ -4695,6 +5116,8 @@ export function HealerPracticeSimulator() {
       updatePlayerHealthUi();
       updateTreeOfLifeAvatarVisual(sceneRef.time.now);
       updateInfusionOfLightVisual(sceneRef.time.now);
+      updateDivineImageAvatarVisual(sceneRef.time.now);
+      updateHaloPulseVisuals(sceneRef, sceneRef.time.now);
       sceneRef.cameras.main.flash(120, 255, 40, 40, false);
 
       if (!playerDeathNotified) {
@@ -4968,6 +5391,11 @@ export function HealerPracticeSimulator() {
       preload() { },
       create() {
         sceneStartAtMs = this.time.now;
+        const initialLogs = Array.isArray(latestSnapshotRef.current?.logs) ? latestSnapshotRef.current.logs : [];
+        lastProcessedHaloPulseLogId = initialLogs.reduce(
+          (maxId, logEntry) => Math.max(maxId, Math.max(0, Number(logEntry?.id) || 0)),
+          0
+        );
         this.cameras.main.setBackgroundColor("#1e293b");
         this.add
           .grid(
@@ -5091,8 +5519,11 @@ export function HealerPracticeSimulator() {
         infusionLeftArc.setDepth(3);
         infusionRightArc.setDepth(3);
         treeOfLifeAvatarVisual = createTreeOfLifeAvatarVisual(this);
+        divineImageAvatarVisual = createDivineImageAvatarVisual(this);
         updatePlayerFaceUi(this.time.now);
         updateInfusionOfLightVisual(this.time.now);
+        updateDivineImageAvatarVisual(this.time.now);
+        updateHaloPulseVisuals(this, this.time.now);
         updateTreeantVisuals(this, this.time.now);
         updateTreeOfLifeAvatarVisual(this.time.now);
 
@@ -5153,6 +5584,8 @@ export function HealerPracticeSimulator() {
           updatePlayerFaceUi(this.time.now);
           updateTreeOfLifeAvatarVisual(this.time.now);
           updateInfusionOfLightVisual(this.time.now);
+          updateDivineImageAvatarVisual(this.time.now);
+          updateHaloPulseVisuals(this, this.time.now);
           updateTreeantVisuals(this, this.time.now);
           syncSharedPlayerHpRatio();
         };
@@ -5198,6 +5631,8 @@ export function HealerPracticeSimulator() {
           updatePlayerFaceUi(time);
           updateTreeOfLifeAvatarVisual(time);
           updateInfusionOfLightVisual(time);
+          updateDivineImageAvatarVisual(time);
+          updateHaloPulseVisuals(this, time);
           updateTreeantVisuals(this, time);
           return;
         }
@@ -5235,6 +5670,8 @@ export function HealerPracticeSimulator() {
         updatePlayerFaceUi(time);
         updateTreeOfLifeAvatarVisual(time);
         updateInfusionOfLightVisual(time);
+        updateDivineImageAvatarVisual(time);
+        updateHaloPulseVisuals(this, time);
         updateTreeantVisuals(this, time);
 
         if (showPlayerHealthBar) {
@@ -5408,6 +5845,9 @@ export function HealerPracticeSimulator() {
       playerMouth?.destroy();
       infusionLeftArc?.destroy();
       infusionRightArc?.destroy();
+      clearHaloPulseVisuals();
+      destroyDivineImageAvatarVisual(divineImageAvatarVisual);
+      divineImageAvatarVisual = null;
       destroyTreeOfLifeAvatarVisual(treeOfLifeAvatarVisual);
       treeOfLifeAvatarVisual = null;
       treeantVisuals.forEach(destroyTreeantVisual);
@@ -5450,11 +5890,22 @@ export function HealerPracticeSimulator() {
     const holyPowerValue = Math.max(0, Math.min(5, Number(cooldownBarSnapshot.holyPower ?? 0)));
     const holyPowerBarWidthPx = Math.max(1, holyPowerCellWidthPx * 5);
     const manaPct = Math.max(0, Math.min(100, Number(cooldownBarSnapshot.manaPct ?? 0)));
+    const serenityCharges = Math.max(
+      0,
+      Math.floor(Number(cooldownBarSnapshot.serenityCharges ?? cooldownBarSnapshot.buffs?.serenityCharges ?? 0))
+    );
     const currentCastInfo = cooldownBarSnapshot.currentCast;
     const castSpell = currentCastInfo?.spellKey ? practiceSpellsByKey[currentCastInfo.spellKey] : null;
+    const castDisplayName = String(currentCastInfo?.spellName ?? castSpell?.name ?? "시전");
+    const castIconKeyFromInfo = String(currentCastInfo?.spellIconKey ?? "").trim();
+    const castIconKey = castIconKeyFromInfo || (castDisplayName === "축도" ? "benediction" : castSpell?.key ?? "");
+    const castIconUrl =
+      (castIconKey ? practiceSpellIconsByKey[castIconKey] : null) ||
+      (castSpell?.key ? practiceSpellIconsByKey[castSpell.key] : null) ||
+      DEFAULT_SPELL_ICON_URL;
     const castRemainingMs = Math.max(0, Number(currentCastInfo?.remainingMs ?? 0));
     const castTimeMs = Math.max(1, Number(currentCastInfo?.castTimeMs ?? 1));
-    const castProgress = castSpell && castTimeMs > 0
+    const castProgress = currentCastInfo && castTimeMs > 0
       ? Math.max(0, Math.min(1, 1 - castRemainingMs / castTimeMs))
       : 0;
     const normalizedGroupKey = groupKey === "reserve" ? "reserve" : "manager";
@@ -5495,6 +5946,9 @@ export function HealerPracticeSimulator() {
                   ? `${Math.ceil(cooldownMs / 1000)}s`
                   : "";
             const chargeLabel = spellKey === "holyShock" ? `${holyShockCharges}` : "";
+            const bottomRightChargeLabel = spellKey === "serenity" && serenityCharges > 0
+              ? `${serenityCharges}`
+              : "";
 
             const iconNode = (
               <div
@@ -5513,7 +5967,7 @@ export function HealerPracticeSimulator() {
                     }
                     event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
                   }}
-                  src={meta.iconUrl || practiceSpellIconsByKey[spellKey] || DEFAULT_SPELL_ICON_URL}
+                  src={practiceSpellIconsByKey[spellKey] || meta.iconUrl || DEFAULT_SPELL_ICON_URL}
                 />
                 {buffActive ? <div className="absolute inset-0 bg-amber-300/10" /> : null}
                 {overlayLabel ? (
@@ -5538,6 +5992,11 @@ export function HealerPracticeSimulator() {
                     }}
                   >
                     {bindingLabelsForDisplay[spellKey] ?? "-"}
+                  </div>
+                ) : null}
+                {bottomRightChargeLabel ? (
+                  <div className="absolute bottom-0.5 right-0.5 z-20 rounded bg-black/75 px-1 text-[10px] font-semibold leading-none text-cyan-100">
+                    {bottomRightChargeLabel}
                   </div>
                 ) : null}
               </div>
@@ -5623,13 +6082,13 @@ export function HealerPracticeSimulator() {
             className="mx-auto mt-1.5 overflow-hidden rounded-[2px] border border-slate-700 bg-slate-900/95"
             style={{ width: `${holyPowerBarWidthPx}px` }}
           >
-            {castSpell && currentCastInfo ? (
+            {currentCastInfo ? (
               <div className="relative h-5">
                 <div className="absolute inset-y-0 left-0 bg-violet-500/60 transition-[width] duration-100 ease-linear" style={{ width: `${castProgress * 100}%` }} />
                 <div className="absolute inset-0 flex items-center justify-between gap-2 px-1.5 text-[10px] leading-none">
                   <div className="flex min-w-0 items-center gap-1 text-slate-100">
                     <img
-                      alt={castSpell.name}
+                      alt={castDisplayName}
                       className="h-3.5 w-3.5 rounded-[2px] border border-black/40 object-cover"
                       onError={(event) => {
                         if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
@@ -5637,9 +6096,9 @@ export function HealerPracticeSimulator() {
                         }
                         event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
                       }}
-                      src={practiceSpellIconsByKey[castSpell.key] || DEFAULT_SPELL_ICON_URL}
+                      src={castIconUrl}
                     />
-                    <span className="truncate font-semibold">{castSpell.name}</span>
+                    <span className="truncate font-semibold">{castDisplayName}</span>
                   </div>
                   <span className="shrink-0 font-semibold text-slate-100">{formatSeconds(castRemainingMs)}s</span>
                 </div>
@@ -5897,6 +6356,18 @@ export function HealerPracticeSimulator() {
                       type="checkbox"
                     />
                     클릭캐스팅 사용
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-200">
+                    <input
+                      checked={showHolyPriestEchoOnRaidFrames}
+                      disabled={running}
+                      onChange={(event) => {
+                        markSetupDirty();
+                        setShowHolyPriestEchoOnRaidFrames(event.target.checked);
+                      }}
+                      type="checkbox"
+                    />
+                    빛의 반향 레이드 프레임 표시
                   </label>
                 </div>
 
@@ -6361,6 +6832,7 @@ export function HealerPracticeSimulator() {
                       const isSelected = selectedTargetId === player.id;
                       const isHovered = hoveredTargetId === player.id;
                       const isHolyPaladinCombat = activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG;
+                      const isHolyPriestCombat = activeCombatHealerSlug === HOLY_PRIEST_HEALER_SLUG;
                       const isRestorationDruidCombat = activeCombatHealerSlug === RESTORATION_DRUID_HEALER_SLUG;
                       const isBeaconLight = currentSnapshot.beacons.light === player.id;
                       const isBeaconFaith = currentSnapshot.beacons.faith === player.id;
@@ -6372,6 +6844,9 @@ export function HealerPracticeSimulator() {
                       const wildGrowthHotRemainingMs = Math.max(0, Number(player.wildGrowthHotRemainingMs ?? 0));
                       const lifebloomRemainingMs = Math.max(0, Number(player.lifebloomRemainingMs ?? 0));
                       const lifebloomStack = Math.max(0, Math.floor(Number(player.lifebloomStack ?? 0)));
+                      const prayerOfMendingRemainingMs = Math.max(0, Number(player.prayerOfMendingRemainingMs ?? 0));
+                      const renewRemainingMs = Math.max(0, Number(player.renewRemainingMs ?? 0));
+                      const echoOfLightRemainingMs = Math.max(0, Number(player.echoOfLightRemainingMs ?? 0));
                       const fillPercent = player.alive ? raidFrameFillPercent(player) : 0;
                       const classColor = raidFrameClassColor(player);
                       const roleIconUrl = String(player.roleIconUrl ?? "").trim();
@@ -6433,6 +6908,42 @@ export function HealerPracticeSimulator() {
                             stackText: `${Math.ceil(germinationRemainingMs / 1000)}`
                           });
                         }
+                      }
+
+                      if (isHolyPriestCombat && prayerOfMendingRemainingMs > 0) {
+                        topLeftFrameAuraIcons.push({
+                          key: "prayerOfMending",
+                          iconUrl:
+                            activeCombatSpellIconsByKey.prayerOfMending ||
+                            HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.prayerOfMending ||
+                            DEFAULT_SPELL_ICON_URL,
+                          label: "회복의 기원",
+                          stackText: `${Math.ceil(prayerOfMendingRemainingMs / 1000)}`
+                        });
+                      }
+
+                      if (isHolyPriestCombat && renewRemainingMs > 0) {
+                        topLeftFrameAuraIcons.push({
+                          key: "renew",
+                          iconUrl:
+                            activeCombatSpellIconsByKey.renew ||
+                            HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.renew ||
+                            DEFAULT_SPELL_ICON_URL,
+                          label: "소생",
+                          stackText: `${Math.ceil(renewRemainingMs / 1000)}`
+                        });
+                      }
+
+                      if (isHolyPriestCombat && activeShowHolyPriestEchoOnRaidFrames && echoOfLightRemainingMs > 0) {
+                        topLeftFrameAuraIcons.push({
+                          key: "echoOfLight",
+                          iconUrl:
+                            activeCombatSpellIconsByKey.echoOfLight ||
+                            HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.echoOfLight ||
+                            DEFAULT_SPELL_ICON_URL,
+                          label: "빛의 반향",
+                          stackText: `${Math.ceil(echoOfLightRemainingMs / 1000)}`
+                        });
                       }
 
                       const topRightFrameAura =

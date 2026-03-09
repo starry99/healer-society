@@ -1,19 +1,11 @@
 export const disciplinePriestTalentLayout = {
-  "refWidth": 1200,
-  "refHeight": 560,
+  "refWidth": 1160,
+  "refHeight": 540,
   "leftHeader": {
     "titleColor": "rgb(255, 255, 255)",
     "title": "쐐기 추천 특성",
-    "spent": "Spent: 31",
-    "level": "Requires level 70"
   },
-  "rightHeader": {
-    "titleColor": "",
-    "title": "Discipline Tree",
-    "spent": "Spent: 30",
-    "level": "Requires level 69"
-  },
-  "heroName": "예언자",
+  "heroName": "공허술사",
   "exportText": "Export",
   "nodes": [
     {
@@ -838,7 +830,7 @@ export const disciplinePriestTalentLayout = {
       "multiple": true,
       "isHeroNode": false,
       "points": "",
-      "selected": false,
+      "selected": true,
       "name": "거룩한 깃털 / 위기 모면"
     },
     {
@@ -922,11 +914,11 @@ export const disciplinePriestTalentLayout = {
       "id": "94690",
       "x": 512,
       "y": 302,
-      "shape": "choice",
-      "multiple": true,
+      "shape": "circle",
+      "multiple": false,
       "isHeroNode": false,
       "points": "",
-      "selected": false,
+      "selected": true,
       "name": "예언자의 의지 / 궁여지책"
     },
     {
@@ -941,22 +933,22 @@ export const disciplinePriestTalentLayout = {
       "name": "보장된 안전"
     },
     {
-      "id": "440662",
+      "id": "451204",
       "x": 512,
       "y": 217,
-      "shape": "circle",
-      "multiple": false,
+      "shape": "choice",
+      "multiple": true,
       "isHeroNode": false,
-      "points": "1",
+      "points": "",
       "selected": true,
-      "name": "예방의 기술"
+      "name": "탈출 불가 / 암흑 마력"
     },
     {
       "id": "1246802",
       "x": 597,
       "y": 302,
-      "shape": "circle",
-      "multiple": false,
+      "shape": "choice",
+      "multiple": true,
       "isHeroNode": false,
       "points": "1",
       "selected": true,
