@@ -13,7 +13,10 @@ const HERO_EMBLEM_ICON_OVERRIDES = {
     mythic: "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-voidweaver.webp"
   },
   "holy-paladin": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-paladin-heraldofthesun.webp",
-  "restoration-druid": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-druid-keeperofthegrove.webp",
+  "restoration-druid": {
+    raid: "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-druid-keeperofthegrove.webp",
+    mythic: "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-druid-wildstalker.webp"
+  },
   "holy-priest": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-archon.webp",
 };
 const MOBILE_GROUP_TEMPLATES = [

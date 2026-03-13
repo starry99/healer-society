@@ -9,7 +9,8 @@ export const guideSectionLayout = [
   { id: "basic-operation", title: "주요 스킬", type: "text", hasModeTabs: true },
   { id: "advanced-usage", title: "추가 활용법", type: "text", hasModeTabs: true },
   { id: "stats", title: "스탯", type: "stats", hasModeTabs: false },
-  { id: "recommended-sites", title: "추천사이트", type: "links", hasModeTabs: false }
+  { id: "recommended-sites", title: "추천사이트", type: "links", hasModeTabs: false },
+  { id: "changelog", title: "업데이트 내역", type: "changelog", hasModeTabs: false }
 ];
 
 function normalizeModeText(value) {
@@ -261,7 +262,8 @@ export function buildGuideSections(contentById = {}) {
         hasModeTabs: resolvedHasModeTabs,
         modeAvailability,
         contentByMode: normalizeModeText(source.contentByMode),
-        extraByMode: normalizeModeText(source.extraByMode)
+        extraByMode: normalizeModeText(source.extraByMode),
+        copyTalentStringByMode: normalizeModeText(source.copyTalentStringByMode)
       };
     }
 
@@ -272,6 +274,15 @@ export function buildGuideSections(contentById = {}) {
         modeAvailability,
         contentByMode: normalizeModeText(source.contentByMode),
         rotationByMode: normalizeRotationByMode(source.rotationByMode)
+      };
+    }
+
+    if (section.type === "changelog") {
+      return {
+        ...section,
+        hasModeTabs: resolvedHasModeTabs,
+        modeAvailability,
+        entries: Array.isArray(source.entries) ? source.entries : []
       };
     }
 

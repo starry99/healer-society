@@ -77,7 +77,6 @@ function normalizePriorityItems(items = []) {
           tier: index + 1
         };
       }
-
       const tier = Number.isFinite(item?.tier) ? Math.max(1, Math.floor(item.tier)) : index + 1;
       return {
         label: item?.label || item?.name || `Priority ${index + 1}`,
@@ -134,11 +133,9 @@ async function copyTextToClipboard(value) {
     await navigator.clipboard.writeText(value);
     return;
   }
-
   if (typeof document === "undefined") {
     throw new Error("Clipboard API unavailable");
   }
-
   const textarea = document.createElement("textarea");
   textarea.value = value;
   textarea.setAttribute("readonly", "true");
@@ -149,15 +146,14 @@ async function copyTextToClipboard(value) {
   textarea.select();
   const copied = document.execCommand("copy");
   document.body.removeChild(textarea);
-
   if (!copied) {
     throw new Error("Legacy clipboard copy failed");
   }
 }
 
-export function GuidePage({ healerMap }) {
+export function RaidGuidePage({ raidMemberMap }) {
   const { slug } = useParams();
-  const healer = healerMap[slug];
+  const member = raidMemberMap[slug];
   const [activeSectionId, setActiveSectionId] = useState("");
   const [sectionModeById, setSectionModeById] = useState({});
   const [activeRotationByModeKey, setActiveRotationByModeKey] = useState({});
@@ -177,14 +173,14 @@ export function GuidePage({ healerMap }) {
     appCheckEnabled
   } = useAuthSession();
 
-  const defaultSectionId = healer?.sections?.[0]?.id ?? "";
+  const defaultSectionId = member?.sections?.[0]?.id ?? "";
   const resolvedSectionId = activeSectionId || defaultSectionId;
   const activeSection = useMemo(() => {
-    if (!healer) {
+    if (!member) {
       return null;
     }
-    return healer.sections.find((section) => section.id === resolvedSectionId) ?? healer.sections[0];
-  }, [healer, resolvedSectionId]);
+    return member.sections.find((section) => section.id === resolvedSectionId) ?? member.sections[0];
+  }, [member, resolvedSectionId]);
 
   const {
     comments,
@@ -194,7 +190,7 @@ export function GuidePage({ healerMap }) {
     toggleVote,
     deleteComment
   } = useSectionDiscussion({
-    guideSlug: healer?.slug ?? "",
+    guideSlug: member?.slug ? `raid-${member.slug}` : "",
     sectionId: activeSection?.id ?? "",
     user,
     isAdmin,
@@ -209,13 +205,12 @@ export function GuidePage({ healerMap }) {
     GUIDE_MODES.find((mode) => isModeEnabledForSection(section, mode.id))?.id || GUIDE_MODES[0]?.id || "raid";
 
   useEffect(() => {
-    if (!healer) {
+    if (!member) {
       return;
     }
-    setActiveSectionId(healer.sections[0]?.id ?? "");
-
+    setActiveSectionId(member.sections[0]?.id ?? "");
     const nextModes = {};
-    healer.sections.forEach((section) => {
+    member.sections.forEach((section) => {
       if (section.hasModeTabs) {
         nextModes[section.id] = getDefaultModeForSection(section);
       }
@@ -224,13 +219,12 @@ export function GuidePage({ healerMap }) {
     setActiveRotationByModeKey({});
     setTalentsExtraOpenByKey({});
     setTalentCopyFeedbackByKey({});
-  }, [healer]);
+  }, [member]);
 
   useEffect(() => {
-    if (!healer) {
+    if (!member) {
       return;
     }
-
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -245,22 +239,20 @@ export function GuidePage({ healerMap }) {
         threshold: [0.2, 0.45, 0.7]
       }
     );
-
-    healer.sections.forEach((section) => {
+    member.sections.forEach((section) => {
       const element = document.getElementById(section.id);
       if (element) {
         observer.observe(element);
       }
     });
-
     return () => observer.disconnect();
-  }, [healer]);
+  }, [member]);
 
   useEffect(() => {
     setMobileCommentsOpen(false);
   }, [slug, resolvedSectionId]);
 
-  if (!healer || !healer.enabled) {
+  if (!member || !member.enabled) {
     return <Navigate replace to="/" />;
   }
 
@@ -313,7 +305,6 @@ export function GuidePage({ healerMap }) {
       }, 1800);
       return;
     }
-
     try {
       await copyTextToClipboard(copyString);
       setTalentCopyFeedbackByKey((prev) => ({
@@ -326,7 +317,6 @@ export function GuidePage({ healerMap }) {
         [feedbackKey]: "failed"
       }));
     }
-
     window.setTimeout(() => {
       setTalentCopyFeedbackByKey((prev) => {
         const next = { ...prev };
@@ -364,7 +354,7 @@ export function GuidePage({ healerMap }) {
           <aside className="pointer-events-auto hidden lg:sticky lg:top-20 lg:block lg:h-fit lg:rounded-2xl lg:border lg:border-slate-700/80 lg:bg-slate-900/70 lg:p-4 lg:shadow-panel">
             <h2 className="site-accent-text text-sm font-semibold uppercase">목차</h2>
             <nav className="mt-4 space-y-2">
-              {healer.sections.map((section, index) => (
+              {member.sections.map((section, index) => (
                 <button
                   className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${activeSection?.id === section.id
                     ? "site-accent-border site-accent-bg-subtle site-accent-text"
@@ -386,17 +376,18 @@ export function GuidePage({ healerMap }) {
           <article className="pointer-events-auto rounded-2xl border border-slate-700/80 bg-slate-900/75 p-6 shadow-panel md:p-8">
             <header className="overflow-hidden rounded-2xl border border-slate-700/80 bg-gray-950/45 p-5 md:p-6">
               <div className="flex items-center gap-4">
-                {healer.classIcon ? (
-                  <img alt={`${healer.shortName} class icon`} className="h-14 w-14 rounded-xl border border-slate-700 object-cover" src={healer.classIcon} />
+                {member.icon ? (
+                  <img alt={`${member.name} icon`} className="h-14 w-14 rounded-xl border border-slate-700 object-cover" src={member.icon} />
                 ) : null}
                 <div>
-                  <h1 className="mt-1 text-3xl font-bold tracking-tight" style={{ color: healer.color }}>
-                    {healer.shortName} 가이드
+                  <p className="text-xs uppercase text-slate-400">한밤 1시즌 레이드 공략</p>
+                  <h1 className="mt-1 text-3xl font-bold tracking-tight" style={{ color: member.color }}>
+                    {member.fullName}
                   </h1>
                 </div>
               </div>
               {(() => {
-                const changelogSection = healer.sections.find((s) => s.type === "changelog");
+                const changelogSection = member.sections.find((s) => s.type === "changelog");
                 if (!changelogSection?.entries?.length) return null;
                 const dates = changelogSection.entries.map((e) => parseKSTDateString(e.date).getTime()).filter((t) => !isNaN(t));
                 if (!dates.length) return null;
@@ -420,23 +411,22 @@ export function GuidePage({ healerMap }) {
             </header>
 
             <div className="mt-8 space-y-10">
-              {healer.sections.map((section) => {
+              {member.sections.map((section) => {
                 const currentMode = sectionMode(section);
                 const rotationData = section.id === "basic-operation" ? section.rotationByMode?.[currentMode] : null;
                 const rotationItems = rotationData?.items || [];
                 const rotationStateKey = `${section.id}:${currentMode}`;
                 const activeRotationId = activeRotationByModeKey[rotationStateKey] || "";
                 const activeRotation = rotationItems.find((item) => item.id === activeRotationId) || null;
-                const rotationAccent = resolveStatAccent(healer.color, siteAccentFallback);
-                const talentsExtraStateKey = `${healer.slug}:${section.id}:${currentMode}`;
+                const rotationAccent = resolveStatAccent(member.color, siteAccentFallback);
+                const talentsExtraStateKey = `${member.slug}:${section.id}:${currentMode}`;
                 const talentCopyStateKey = `${talentsExtraStateKey}:copy`;
-                const talentsExtraDefaultOpen = healer.slug === "restoration-druid" && section.type === "talents";
                 const talentsExtraOpen = Object.prototype.hasOwnProperty.call(
                   talentsExtraOpenByKey,
                   talentsExtraStateKey
                 )
                   ? Boolean(talentsExtraOpenByKey[talentsExtraStateKey])
-                  : talentsExtraDefaultOpen;
+                  : false;
                 const talentCopyString = (section.copyTalentStringByMode?.[currentMode] || "").trim();
                 const talentCopyFeedback = talentCopyFeedbackByKey[talentCopyStateKey] || "";
 
@@ -455,7 +445,7 @@ export function GuidePage({ healerMap }) {
                         <div
                           className="inline-flex rounded-full bg-gray-950/78 p-1 backdrop-blur-sm"
                           style={{
-                            boxShadow: `0 0 0 1px ${toRgba(resolveStatAccent(healer.color, siteAccentFallback), 0.33)} inset, 0 10px 22px rgba(2, 6, 23, 0.45)`
+                            boxShadow: `0 0 0 1px ${toRgba(resolveStatAccent(member.color, siteAccentFallback), 0.33)} inset, 0 10px 22px rgba(2, 6, 23, 0.45)`
                           }}
                         >
                           {GUIDE_MODES.map((mode) => {
@@ -486,9 +476,9 @@ export function GuidePage({ healerMap }) {
                                 style={
                                   isActive
                                     ? {
-                                      backgroundColor: toRgba(resolveStatAccent(healer.color, siteAccentFallback), 0.4),
-                                      boxShadow: `0 0 0 1px ${toRgba(resolveStatAccent(healer.color, siteAccentFallback), 0.72)} inset, 0 6px 16px ${toRgba(
-                                        resolveStatAccent(healer.color, siteAccentFallback),
+                                      backgroundColor: toRgba(resolveStatAccent(member.color, siteAccentFallback), 0.4),
+                                      boxShadow: `0 0 0 1px ${toRgba(resolveStatAccent(member.color, siteAccentFallback), 0.72)} inset, 0 6px 16px ${toRgba(
+                                        resolveStatAccent(member.color, siteAccentFallback),
                                         0.25
                                       )}`
                                     }
@@ -504,7 +494,7 @@ export function GuidePage({ healerMap }) {
                       </div>
                     ) : null}
 
-                    <h2 className="mb-4 text-xl font-semibold tracking-tight" style={{ color: healer.color }}>
+                    <h2 className="mb-4 text-xl font-semibold tracking-tight" style={{ color: member.color }}>
                       {section.title}
                     </h2>
 
@@ -532,7 +522,6 @@ export function GuidePage({ healerMap }) {
                                       {card?.title || "Stat Priority"}
                                     </h3>
                                   </div>
-
                                   {flow.length ? (
                                     <div className="w-full">
                                       <div
@@ -584,7 +573,7 @@ export function GuidePage({ healerMap }) {
                           </div>
                         ) : (
                           <p className="rounded-lg border border-dashed border-slate-600 bg-slate-900/55 px-3 py-2 text-xs text-slate-400">
-                            각 힐러 guide 파일의 `stats.[raid|mythic].cards`에 카드(1개 또는 2개)를 작성하면 됩니다.
+                            각 가이드 파일의 stats 카드를 작성하면 됩니다.
                           </p>
                         )}
                         <details className="rounded-lg border border-slate-700/80 bg-gray-950/40">
@@ -593,7 +582,7 @@ export function GuidePage({ healerMap }) {
                             {section.statsByMode?.[currentMode]?.extra ? (
                               <GuideRichText content={section.statsByMode?.[currentMode]?.extra || ""} />
                             ) : (
-                              <p className="text-xs text-slate-400">스탯 추가 설명이 없습니다. 각 힐러 guide 파일에서 작성할 수 있습니다.</p>
+                              <p className="text-xs text-slate-400">스탯 추가 설명이 없습니다.</p>
                             )}
                           </div>
                         </details>
@@ -621,7 +610,7 @@ export function GuidePage({ healerMap }) {
                           </div>
                         ) : (
                           <p className="rounded-lg border border-dashed border-slate-600 bg-slate-900/55 px-3 py-2 text-xs text-slate-400">
-                            추천사이트 링크는 각 힐러 guide 파일의 `recommended-sites.items`에 추가하면 됩니다.
+                            추천사이트 링크를 추가하면 됩니다.
                           </p>
                         )}
                       </div>
@@ -630,6 +619,22 @@ export function GuidePage({ healerMap }) {
                     {section.type === "text" ? (
                       <>
                         <GuideRichText content={section.contentByMode?.[currentMode] || ""} />
+
+                        {/* 개요 섹션: 레이드플랜 링크 */}
+                        {section.id === "overview" && section.raidPlanUrl ? (
+                          <div className="mt-4">
+                            <a
+                              className="site-accent-hover-border inline-flex items-center gap-2 rounded-lg border border-slate-700/80 bg-slate-900/70 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-900"
+                              href={section.raidPlanUrl}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              <span className="site-accent-text">레이드플랜</span>
+                              <span className="text-xs text-slate-400">↗</span>
+                            </a>
+                          </div>
+                        ) : null}
+
                         {section.id === "basic-operation" ? (
                           <div className="mt-4 space-y-3">
                             {rotationData?.intro ? <GuideRichText compact content={rotationData.intro} /> : null}
@@ -689,14 +694,15 @@ export function GuidePage({ healerMap }) {
                     {section.type === "talents" ? (
                       <>
                         <GuideRichText content={section.contentByMode?.[currentMode] || ""} />
-                        <TalentTreePanel healer={healer} mode={currentMode} />
+                        {member.talentLayout && member.talentTrees ? (
+                          <TalentTreePanel healer={member} mode={currentMode} />
+                        ) : null}
                         <div className="mt-4 flex flex-col items-center gap-1">
                           <button
-                            className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
-                              talentCopyString
-                                ? "site-accent-border site-accent-bg-subtle site-accent-text hover:brightness-110"
-                                : "cursor-not-allowed border-slate-700 bg-slate-900/70 text-slate-500"
-                            }`}
+                            className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${talentCopyString
+                              ? "site-accent-border site-accent-bg-subtle site-accent-text hover:brightness-110"
+                              : "cursor-not-allowed border-slate-700 bg-slate-900/70 text-slate-500"
+                              }`}
                             onClick={(event) => handleTalentCopyClick(event, talentCopyStateKey, talentCopyString)}
                             type="button"
                           >

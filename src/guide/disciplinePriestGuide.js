@@ -10,6 +10,10 @@ export const disciplinePriestGuideContent = {
     }
   },
   talents: {
+    copyTalentStringByMode: {
+      raid: "CAQAAAAAAAAAAAAAAAAAAAAAAADsAzGjZYmZMbzsNzMzMMDAAAAAAAAAgZYZGMzMDzwMwMNTzMAzsghwYWGgxgFAAYMmZMYGgZmhZYA",
+      mythic: "CAQAAAAAAAAAAAAAAAAAAAAAAADsYMzGjxYmZMbsNzMzMzAAAAAAAAAAgZYZGMzMzwYmBbmmJgZGAAgZbWWAjNDAAjZmZMYGMzgRzwA"
+    },
     // disabledModes: ["mythic"],
     contentByMode: {
       raid:
@@ -193,6 +197,11 @@ export const disciplinePriestGuideContent = {
         url: "https://questionablyepic.com/live/",
         description: "힐러에게 아주 유용한 템 시뮬레이션 사이트입니다."
       },
+    ]
+  },
+  changelog: {
+    entries: [
+      { date: "26년3월9일5시31분AM", text: "초안 작성" }
     ]
   }
 };

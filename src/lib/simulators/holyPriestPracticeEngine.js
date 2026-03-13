@@ -5,6 +5,7 @@ import {
 } from "../../components/simulators/healerPracticeGlobalSettings";
 import {
   HOLY_PRIEST_ADDED_TALENT_TOGGLES,
+  HOLY_PRIEST_AUTO_MANA_REGEN_MULTIPLIER,
   HOLY_PRIEST_CRIT_CONFIG,
   HOLY_PRIEST_PRACTICE_TUNING
 } from "../../components/simulators/holyPriestPracticeSettings";
@@ -23,6 +24,10 @@ const DEFAULT_HASTE_PCT = 0;
 const DEFAULT_INTELLECT = 10000;
 const DEFAULT_CRIT_HEAL_MULTIPLIER = 2;
 const DEFAULT_LEECH_HEALING_RATIO = 0.06;
+const DEFAULT_AUTO_MANA_REGEN_MULTIPLIER = Math.max(
+  0,
+  Number(HOLY_PRIEST_AUTO_MANA_REGEN_MULTIPLIER ?? 1)
+);
 const DEFAULT_SPELL_QUEUE_WINDOW_MS = 400;
 const DEFAULT_TRIAGE_HEALTH_THRESHOLD_PCT = 30;
 const DEFAULT_TRIAGE_MIN_EFFECTIVE_HEAL_PCT = 10;
@@ -36,13 +41,17 @@ const DEFAULT_CAST_TIME_HASTE_AFFECTED_BY_SPELL = Object.freeze({
   divineHymn: true
 });
 const HALO_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.halo !== false;
+const PRAYERS_OF_THE_VIRTUOUS_TALENT_ENABLED =
+  HOLY_PRIEST_ADDED_TALENT_TOGGLES.prayersOfTheVirtuous !== false;
 const LIGHTWEAVER_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.lightweaver !== false;
 const ULTIMATE_SERENITY_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.ultimateSerenity !== false;
 const DIVINE_IMAGE_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.divineImage !== false;
+const SEASON_ONE_TIER_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.seasonOneTier !== false;
 const UPLIFTING_WORDS_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.upliftingWords !== false;
 const CRISIS_MANAGEMENT_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.crisisManagement !== false;
 const TRAIL_OF_LIGHT_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.trailOfLight !== false;
 const LIGHTS_RESURGENCE_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.lightsResurgence !== false;
+const RESONANT_ENERGY_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.resonantEnergy !== false;
 const UPLIFTING_WORDS_SERENITY_CRIT_CHANCE_BONUS = clamp(
   Number(HOLY_PRIEST_CRIT_CONFIG?.upliftingWordsSerenityCritChanceBonus ?? 0.1),
   0,
@@ -86,6 +95,10 @@ const PRAYER_OF_MENDING_DURATION_MS = Math.max(
 const PRAYER_OF_MENDING_MAX_JUMPS = Math.max(
   0,
   Math.floor(Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.prayerOfMendingMaxJumps ?? 4))
+);
+const PRAYERS_OF_THE_VIRTUOUS_BONUS_JUMPS = Math.max(
+  0,
+  Math.floor(Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.prayersOfTheVirtuousBonusJumps ?? 2))
 );
 const DIVINE_IMAGE_STACK_DURATION_MS = Math.max(
   0,
@@ -138,6 +151,35 @@ const BENEDICTION_FLASH_HEAL_HEAL_BONUS_RATIO = Math.max(
   0,
   Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.benedictionFlashHealHealBonusPct ?? 0.3)
 );
+const SEASON_ONE_TIER_BENEDICTION_DIVINE_IMAGE_PROC_CHANCE = clamp(
+  Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.seasonOneTierBenedictionDivineImageProcChance ?? 0.6),
+  0,
+  1
+);
+const SEASON_ONE_TIER_DIVINE_IMAGE_HEALING_BONUS_RATIO = Math.max(
+  0,
+  Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.seasonOneTierDivineImageHealingBonusPct ?? 0.3)
+);
+const SEASON_ONE_TIER_DIVINE_IMAGE_DURATION_BONUS_MS = Math.max(
+  0,
+  Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.seasonOneTierDivineImageDurationBonusMs ?? 3000)
+);
+const UNWAVERING_WILL_HEALTH_THRESHOLD_RATIO = clamp(
+  Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.unwaveringWillHealthThresholdRatio ?? 0.75),
+  0,
+  1
+);
+const UNWAVERING_WILL_CAST_TIME_REDUCTION_RATIO = clamp(
+  Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.unwaveringWillCastTimeReductionPct ?? 0.1),
+  0,
+  0.95
+);
+const DIVINE_IMAGE_HEALING_SPELL_KEY_SET = new Set([
+  "divineImageHealingLight",
+  "divineImageDazzlingLights",
+  "divineImageBlessedLight"
+]);
+const UNWAVERING_WILL_AFFECTED_SPELL_KEY_SET = new Set(["flashHeal", "prayerOfHealing"]);
 const DEFAULT_SURGE_OF_LIGHT_PROC_SPELL_KEYS = Object.freeze([
   "flashHeal",
   "prayerOfHealing",
@@ -275,6 +317,19 @@ const RENEW_DURATION_MS = Math.max(
 const RENEW_TICK_MS = Math.max(
   100,
   Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.renewTickMs ?? 3000)
+);
+const RESONANT_ENERGY_HEALING_TAKEN_PER_STACK_RATIO = clamp(
+  Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.resonantEnergyHealingTakenPctPerStack ?? 0.02),
+  0,
+  1
+);
+const RESONANT_ENERGY_DURATION_MS = Math.max(
+  0,
+  Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.resonantEnergyDurationMs ?? 8000)
+);
+const RESONANT_ENERGY_MAX_STACKS = Math.max(
+  1,
+  Math.floor(Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.resonantEnergyMaxStacks ?? 5))
 );
 const PROTECTIVE_LIGHT_DURATION_MS = Math.max(
   0,
@@ -466,8 +521,7 @@ function getManaCost(spellKey) {
         : 0;
   const baseCost = Math.max(0, resolvedCost);
   const scale = Math.max(0, Number(GLOBAL_HEALER_SCALING.manaCostScale ?? 1) || 1);
-  const tuningScale = Math.max(0, Number(GLOBAL_HEALER_SCALING.globalManaTuningScale ?? 1) || 1);
-  return baseCost * scale * tuningScale;
+  return baseCost * scale;
 }
 
 function getCastTimeMs(spellKey, fallbackMs = 0) {
@@ -616,14 +670,14 @@ export const HOLY_PRIEST_CLICK_CASTABLE_KEYS = Object.freeze(
 
 export const HOLY_PRIEST_DEFAULT_KEYBINDS = Object.freeze({
   flashHeal: "R",
-  prayerOfHealing: "T",
+  prayerOfHealing: "2",
   serenity: "3",
   prayerOfMending: "1",
   halo: "4",
   apotheosis: "V",
   fade: "Z",
   desperatePrayer: "CAPSLOCK",
-  divineHymn: "2"
+  divineHymn: "C"
 });
 
 const HEALING_METRIC_SPELL_KEYS = Object.freeze([
@@ -674,8 +728,16 @@ export class HolyPriestPracticeEngine {
     );
     this.baseCritChance = clamp(Number(config.baseCritChance ?? DEFAULT_BASE_CRIT_CHANCE), 0, 1);
     this.defaultCritHealMultiplier = Math.max(1, Number(config.defaultCritHealMultiplier ?? DEFAULT_CRIT_HEAL_MULTIPLIER));
+    this.autoManaRegenMultiplier = Math.max(
+      0,
+      Number(config.autoManaRegenMultiplier ?? DEFAULT_AUTO_MANA_REGEN_MULTIPLIER)
+    );
     this.autoManaRegenTickMs = GLOBAL_AUTO_MANA_REGEN_TICK_MS;
-    this.autoManaRegenPctOfMaxPerTick = GLOBAL_AUTO_MANA_REGEN_PCT_OF_MAX_PER_TICK;
+    this.autoManaRegenPctOfMaxPerTick = GLOBAL_AUTO_MANA_REGEN_PCT_OF_MAX_PER_TICK * this.autoManaRegenMultiplier;
+    this.manaTuningScale = Math.max(
+      0,
+      Number(config.manaTuningScale ?? GLOBAL_HEALER_SCALING.globalManaTuningScale ?? 1) || 1
+    );
     this.leechHealingRatio = Math.max(0, Number(config.leechHealingRatio ?? DEFAULT_LEECH_HEALING_RATIO));
     this.spellQueueWindowMs = clamp(Number(config.queueWindowMs ?? DEFAULT_SPELL_QUEUE_WINDOW_MS), 0, 2000);
     this.hastePct = Math.max(0, Number(config.hastePct ?? DEFAULT_HASTE_PCT));
@@ -684,6 +746,9 @@ export class HolyPriestPracticeEngine {
     this.haloTalentEnabled =
       config.haloTalentEnabled !== false &&
       Boolean(config.haloTalentEnabled ?? HALO_TALENT_ENABLED);
+    this.prayersOfTheVirtuousTalentEnabled =
+      config.prayersOfTheVirtuousTalentEnabled !== false &&
+      Boolean(config.prayersOfTheVirtuousTalentEnabled ?? PRAYERS_OF_THE_VIRTUOUS_TALENT_ENABLED);
     this.lightweaverTalentEnabled =
       config.lightweaverTalentEnabled !== false &&
       Boolean(config.lightweaverTalentEnabled ?? LIGHTWEAVER_TALENT_ENABLED);
@@ -693,6 +758,9 @@ export class HolyPriestPracticeEngine {
     this.divineImageTalentEnabled =
       config.divineImageTalentEnabled !== false &&
       Boolean(config.divineImageTalentEnabled ?? DIVINE_IMAGE_TALENT_ENABLED);
+    this.seasonOneTierTalentEnabled =
+      config.seasonOneTierTalentEnabled !== false &&
+      Boolean(config.seasonOneTierTalentEnabled ?? SEASON_ONE_TIER_TALENT_ENABLED);
     this.upliftingWordsTalentEnabled =
       config.upliftingWordsTalentEnabled !== false &&
       Boolean(config.upliftingWordsTalentEnabled ?? UPLIFTING_WORDS_TALENT_ENABLED);
@@ -705,6 +773,9 @@ export class HolyPriestPracticeEngine {
     this.lightsResurgenceTalentEnabled =
       config.lightsResurgenceTalentEnabled !== false &&
       Boolean(config.lightsResurgenceTalentEnabled ?? LIGHTS_RESURGENCE_TALENT_ENABLED);
+    this.resonantEnergyTalentEnabled =
+      config.resonantEnergyTalentEnabled !== false &&
+      Boolean(config.resonantEnergyTalentEnabled ?? RESONANT_ENERGY_TALENT_ENABLED);
     this.upliftingWordsSerenityCritChanceBonus = clamp(
       Number(config.upliftingWordsSerenityCritChanceBonus ?? UPLIFTING_WORDS_SERENITY_CRIT_CHANCE_BONUS),
       0,
@@ -720,7 +791,7 @@ export class HolyPriestPracticeEngine {
     this.crisisManagementPrayerOfHealingCritChanceBonus = clamp(
       Number(
         config.crisisManagementPrayerOfHealingCritChanceBonus ??
-          CRISIS_MANAGEMENT_PRAYER_OF_HEALING_CRIT_CHANCE_BONUS
+        CRISIS_MANAGEMENT_PRAYER_OF_HEALING_CRIT_CHANCE_BONUS
       ),
       0,
       1
@@ -759,13 +830,59 @@ export class HolyPriestPracticeEngine {
       1000,
       Number(config.prayerOfMendingDurationMs ?? PRAYER_OF_MENDING_DURATION_MS)
     );
-    this.prayerOfMendingMaxJumps = Math.max(
+    const basePrayerOfMendingMaxJumps = Math.max(
       0,
       Math.floor(Number(config.prayerOfMendingMaxJumps ?? PRAYER_OF_MENDING_MAX_JUMPS))
     );
-    this.divineImageStackDurationMs = Math.max(
+    const prayersOfTheVirtuousBonusJumps = Math.max(
+      0,
+      Math.floor(
+        Number(config.prayersOfTheVirtuousBonusJumps ?? PRAYERS_OF_THE_VIRTUOUS_BONUS_JUMPS)
+      )
+    );
+    this.prayerOfMendingMaxJumps = Math.max(
+      0,
+      basePrayerOfMendingMaxJumps +
+      (this.prayersOfTheVirtuousTalentEnabled ? prayersOfTheVirtuousBonusJumps : 0)
+    );
+    this.seasonOneTierBenedictionDivineImageProcChance = clamp(
+      Number(
+        config.seasonOneTierBenedictionDivineImageProcChance ??
+        SEASON_ONE_TIER_BENEDICTION_DIVINE_IMAGE_PROC_CHANCE
+      ),
+      0,
+      1
+    );
+    this.seasonOneTierDivineImageHealingBonusRatio = Math.max(
+      0,
+      Number(
+        config.seasonOneTierDivineImageHealingBonusRatio ??
+        SEASON_ONE_TIER_DIVINE_IMAGE_HEALING_BONUS_RATIO
+      )
+    );
+    this.seasonOneTierDivineImageDurationBonusMs = Math.max(
+      0,
+      Number(
+        config.seasonOneTierDivineImageDurationBonusMs ??
+        SEASON_ONE_TIER_DIVINE_IMAGE_DURATION_BONUS_MS
+      )
+    );
+    this.unwaveringWillHealthThresholdRatio = clamp(
+      Number(config.unwaveringWillHealthThresholdRatio ?? UNWAVERING_WILL_HEALTH_THRESHOLD_RATIO),
+      0,
+      1
+    );
+    this.unwaveringWillCastTimeReductionRatio = clamp(
+      Number(config.unwaveringWillCastTimeReductionRatio ?? UNWAVERING_WILL_CAST_TIME_REDUCTION_RATIO),
+      0,
+      0.95
+    );
+    const divineImageStackDurationBaseMs = Math.max(
       0,
       Number(config.divineImageStackDurationMs ?? DIVINE_IMAGE_STACK_DURATION_MS)
+    );
+    this.divineImageStackDurationMs = divineImageStackDurationBaseMs + (
+      this.seasonOneTierTalentEnabled ? this.seasonOneTierDivineImageDurationBonusMs : 0
     );
     this.divineImageDazzlingLightsTargetCount = Math.max(
       1,
@@ -940,6 +1057,21 @@ export class HolyPriestPracticeEngine {
       100,
       Number(config.renewTickMs ?? RENEW_TICK_MS)
     );
+    this.resonantEnergyHealingTakenPerStackRatio = clamp(
+      Number(
+        config.resonantEnergyHealingTakenPerStackRatio ?? RESONANT_ENERGY_HEALING_TAKEN_PER_STACK_RATIO
+      ),
+      0,
+      1
+    );
+    this.resonantEnergyDurationMs = Math.max(
+      0,
+      Number(config.resonantEnergyDurationMs ?? RESONANT_ENERGY_DURATION_MS)
+    );
+    this.resonantEnergyMaxStacks = Math.max(
+      1,
+      Math.floor(Number(config.resonantEnergyMaxStacks ?? RESONANT_ENERGY_MAX_STACKS))
+    );
     this.lightweaverDurationMs = Math.max(
       0,
       Number(config.lightweaverDurationMs ?? LIGHTWEAVER_DURATION_MS)
@@ -1005,6 +1137,8 @@ export class HolyPriestPracticeEngine {
         prayerOfMendingJumpsRemaining: 0,
         renewRemainingMs: 0,
         renewTickTimerMs: 0,
+        resonantEnergyRemainingMs: 0,
+        resonantEnergyStacks: 0,
         echoOfLightRemainingMs: 0,
         echoOfLightTickTimerMs: 0,
         echoOfLightPoolRemaining: 0,
@@ -1055,6 +1189,7 @@ export class HolyPriestPracticeEngine {
     this.actionQueue = [];
     this.offGcdActionQueue = [];
     this.haloScheduledPulseEvents = [];
+    this.resonantEnergyScheduledEvents = [];
     this.divineHymnChannelMs = 0;
     this.divineHymnTickTimerMs = 0;
     this.divineHymnTickIntervalMs = 0;
@@ -1071,6 +1206,12 @@ export class HolyPriestPracticeEngine {
       manaSpent: 0,
       deaths: 0,
       triageHealing: 0,
+      rawPrayerOfHealingCasts: 0,
+      wastedLightweaverStacks: 0,
+      wastedSurgeOfLightStacks: 0,
+      surgeOfLightConsumedTotal: 0,
+      surgeOfLightConsumedFlashHealCasts: 0,
+      surgeOfLightConsumedPrayerOfHealingCasts: 0,
       effectiveSerenityCooldownReductionMs: 0,
       wastedHolyPower: 0,
       casts: HOLY_PRIEST_ACTIVE_SPELL_KEYS.reduce((acc, spellKey) => {
@@ -1341,6 +1482,62 @@ export class HolyPriestPracticeEngine {
     );
   }
 
+  applySerenityCooldownReductionToRechargeTimers(progressMs = 0) {
+    let remainingProgressMs = Math.max(0, Number(progressMs) || 0);
+    if (remainingProgressMs <= 0 || !this.serenityRechargeTimersMs.length) {
+      return 0;
+    }
+
+    let appliedReductionMs = 0;
+    let completedCount = 0;
+
+    while (remainingProgressMs > 0 && this.serenityRechargeTimersMs.length) {
+      let smallestTimerIndex = 0;
+      let smallestTimerValue = Math.max(
+        0,
+        Number(this.serenityRechargeTimersMs[0] ?? Number.POSITIVE_INFINITY) || 0
+      );
+      for (let index = 1; index < this.serenityRechargeTimersMs.length; index += 1) {
+        const timerValue = Math.max(
+          0,
+          Number(this.serenityRechargeTimersMs[index] ?? Number.POSITIVE_INFINITY) || 0
+        );
+        if (timerValue < smallestTimerValue) {
+          smallestTimerValue = timerValue;
+          smallestTimerIndex = index;
+        }
+      }
+
+      if (!Number.isFinite(smallestTimerValue) || smallestTimerValue <= 0) {
+        this.serenityRechargeTimersMs.splice(smallestTimerIndex, 1);
+        completedCount += 1;
+        continue;
+      }
+
+      const reductionAppliedToTimerMs = Math.min(smallestTimerValue, remainingProgressMs);
+      const nextRemainingMs = Math.max(0, smallestTimerValue - reductionAppliedToTimerMs);
+
+      appliedReductionMs += reductionAppliedToTimerMs;
+      remainingProgressMs -= reductionAppliedToTimerMs;
+
+      if (nextRemainingMs <= 0) {
+        this.serenityRechargeTimersMs.splice(smallestTimerIndex, 1);
+        completedCount += 1;
+      } else {
+        this.serenityRechargeTimersMs[smallestTimerIndex] = nextRemainingMs;
+      }
+    }
+
+    if (completedCount > 0) {
+      for (let index = 0; index < completedCount; index += 1) {
+        this.triggerCosmicRipple();
+      }
+    }
+
+    this.updateSerenityCooldownSnapshot();
+    return appliedReductionMs;
+  }
+
   applySerenityCooldownReductionFromSpell(spellKey, options = {}) {
     const reductionMs = this.getSerenityCooldownReductionMsFromSpell(spellKey, options);
     if (reductionMs <= 0) {
@@ -1348,7 +1545,7 @@ export class HolyPriestPracticeEngine {
     }
 
     const beforeReductionTotalMs = this.getSerenityTotalRechargeRemainingMs();
-    this.advanceSerenityRechargeTimersBy(reductionMs);
+    this.applySerenityCooldownReductionToRechargeTimers(reductionMs);
     const afterReductionTotalMs = this.getSerenityTotalRechargeRemainingMs();
     const effectiveReductionMs = Math.max(0, beforeReductionTotalMs - afterReductionTotalMs);
     if (effectiveReductionMs > 0) {
@@ -1584,6 +1781,16 @@ export class HolyPriestPracticeEngine {
     return this.grantBenedictionBuff("회복의 기원");
   }
 
+  tryProcDivineImageFromSeasonOneTierBenediction() {
+    if (!this.seasonOneTierTalentEnabled || this.seasonOneTierBenedictionDivineImageProcChance <= 0) {
+      return false;
+    }
+    if (this.rng() > this.seasonOneTierBenedictionDivineImageProcChance) {
+      return false;
+    }
+    return this.gainDivineImageStack("시즌1 티어 (축도)") > 0;
+  }
+
   consumeBenedictionBuff() {
     if (!this.hasBenedictionBuff()) {
       return false;
@@ -1610,6 +1817,12 @@ export class HolyPriestPracticeEngine {
     }
 
     const previousStacks = Math.max(0, Math.floor(Number(this.buffs.lightweaverStacks ?? 0)));
+    if (previousStacks >= this.lightweaverMaxStacks) {
+      this.metrics.wastedLightweaverStacks = Math.max(
+        0,
+        Math.round(Number(this.metrics.wastedLightweaverStacks ?? 0)) + 1
+      );
+    }
     this.buffs.lightweaverStacks = Math.min(this.lightweaverMaxStacks, previousStacks + 1);
     this.buffs.lightweaverMs = this.lightweaverDurationMs;
 
@@ -1705,6 +1918,12 @@ export class HolyPriestPracticeEngine {
     }
 
     const previousStacks = Math.max(0, Math.floor(Number(this.buffs.surgeOfLightStacks ?? 0)));
+    if (previousStacks >= this.surgeOfLightMaxStacks) {
+      this.metrics.wastedSurgeOfLightStacks = Math.max(
+        0,
+        Math.round(Number(this.metrics.wastedSurgeOfLightStacks ?? 0)) + 1
+      );
+    }
     this.buffs.surgeOfLightStacks = Math.min(this.surgeOfLightMaxStacks, previousStacks + 1);
     this.buffs.surgeOfLightMs = this.surgeOfLightDurationMs;
 
@@ -1766,6 +1985,14 @@ export class HolyPriestPracticeEngine {
     }
     target.renewRemainingMs = 0;
     target.renewTickTimerMs = 0;
+  }
+
+  clearResonantEnergyFromTarget(target) {
+    if (!target) {
+      return;
+    }
+    target.resonantEnergyRemainingMs = 0;
+    target.resonantEnergyStacks = 0;
   }
 
   clearEchoOfLightFromTarget(target) {
@@ -1918,6 +2145,113 @@ export class HolyPriestPracticeEngine {
     }
   }
 
+  applyResonantEnergyStackToTarget(target) {
+    if (!target?.alive || !this.resonantEnergyTalentEnabled) {
+      return false;
+    }
+    if (
+      this.resonantEnergyHealingTakenPerStackRatio <= 0 ||
+      this.resonantEnergyDurationMs <= 0 ||
+      this.resonantEnergyMaxStacks <= 0
+    ) {
+      return false;
+    }
+
+    const previousStacks = Math.max(0, Math.floor(Number(target.resonantEnergyStacks ?? 0)));
+    target.resonantEnergyStacks = Math.min(this.resonantEnergyMaxStacks, previousStacks + 1);
+    target.resonantEnergyRemainingMs = this.resonantEnergyDurationMs;
+    return true;
+  }
+
+  applyResonantEnergyStacksToTargets(targets = []) {
+    if (!Array.isArray(targets) || !targets.length) {
+      return 0;
+    }
+
+    let appliedCount = 0;
+    for (const target of targets) {
+      if (this.applyResonantEnergyStackToTarget(target)) {
+        appliedCount += 1;
+      }
+    }
+    return appliedCount;
+  }
+
+  scheduleResonantEnergyReturnEvent(targets = [], triggerAtMs = 0) {
+    if (!this.resonantEnergyTalentEnabled || !Array.isArray(targets) || !targets.length) {
+      return;
+    }
+
+    const uniqueTargetIds = Array.from(
+      new Set(
+        targets
+          .map((target) => String(target?.id ?? "").trim())
+          .filter(Boolean)
+      )
+    );
+    if (!uniqueTargetIds.length) {
+      return;
+    }
+
+    this.resonantEnergyScheduledEvents.push({
+      triggerAtMs: Math.max(this.nowMs, Number(triggerAtMs) || 0),
+      targetIds: uniqueTargetIds
+    });
+    this.resonantEnergyScheduledEvents.sort(
+      (left, right) => Math.max(0, Number(left?.triggerAtMs) || 0) - Math.max(0, Number(right?.triggerAtMs) || 0)
+    );
+  }
+
+  processResonantEnergyScheduledEvents() {
+    if (!this.resonantEnergyTalentEnabled || !this.resonantEnergyScheduledEvents.length) {
+      return;
+    }
+
+    let processedCount = 0;
+    while (this.resonantEnergyScheduledEvents.length && processedCount < 40) {
+      const nextEvent = this.resonantEnergyScheduledEvents[0];
+      const triggerAtMs = Math.max(0, Number(nextEvent?.triggerAtMs) || 0);
+      if (this.nowMs + 1e-6 < triggerAtMs) {
+        break;
+      }
+      this.resonantEnergyScheduledEvents.shift();
+
+      const targetIds = Array.isArray(nextEvent?.targetIds) ? nextEvent.targetIds : [];
+      for (const targetId of targetIds) {
+        const target = this.findPlayer(targetId);
+        if (!target?.alive) {
+          continue;
+        }
+        this.applyResonantEnergyStackToTarget(target);
+      }
+      processedCount += 1;
+    }
+  }
+
+  tickResonantEnergyBuffs(dt) {
+    if (!this.resonantEnergyTalentEnabled) {
+      this.resonantEnergyScheduledEvents = [];
+      for (const player of this.players) {
+        this.clearResonantEnergyFromTarget(player);
+      }
+      return;
+    }
+
+    for (const player of this.players) {
+      const remainingMs = Math.max(0, Number(player?.resonantEnergyRemainingMs ?? 0));
+      const stacks = Math.max(0, Math.floor(Number(player?.resonantEnergyStacks ?? 0)));
+      if (remainingMs <= 0 || stacks <= 0) {
+        this.clearResonantEnergyFromTarget(player);
+        continue;
+      }
+
+      player.resonantEnergyRemainingMs = Math.max(0, remainingMs - dt);
+      if (player.resonantEnergyRemainingMs <= 0) {
+        this.clearResonantEnergyFromTarget(player);
+      }
+    }
+  }
+
   getHaloTargetScalingMultiplier(targetIndex) {
     const index = Math.max(0, Math.floor(Number(targetIndex) || 0));
     const fullEffectTargetCount = Math.max(1, this.haloFullEffectTargetCount);
@@ -1959,6 +2293,9 @@ export class HolyPriestPracticeEngine {
         }
       }
     }
+
+    this.applyResonantEnergyStacksToTargets(orderedTargets);
+    this.scheduleResonantEnergyReturnEvent(orderedTargets, this.nowMs + this.haloRepeatIntervalMs);
 
     this.pushLog(
       `${pulseLabel} ${orderedTargets.length}명 ${fmtSigned(total)}${criticalCount > 0 ? ` (치명 ${criticalCount})` : ""}`,
@@ -2012,23 +2349,46 @@ export class HolyPriestPracticeEngine {
     if (!target?.alive) {
       return 1;
     }
-    const stacks = Math.max(0, Math.floor(Number(this.buffs.divineHymnHealingTakenStacks ?? 0)));
-    const remainingMs = Math.max(0, Number(this.buffs.divineHymnHealingTakenMs ?? 0));
-    if (stacks <= 0 || remainingMs <= 0) {
+    const divineHymnStacks = Math.max(0, Math.floor(Number(this.buffs.divineHymnHealingTakenStacks ?? 0)));
+    const divineHymnRemainingMs = Math.max(0, Number(this.buffs.divineHymnHealingTakenMs ?? 0));
+    const divineHymnBonusRatio =
+      divineHymnStacks > 0 && divineHymnRemainingMs > 0
+        ? divineHymnStacks * this.divineHymnHealingTakenStackRatio
+        : 0;
+
+    const resonantEnergyStacks = Math.max(0, Math.floor(Number(target.resonantEnergyStacks ?? 0)));
+    const resonantEnergyRemainingMs = Math.max(0, Number(target.resonantEnergyRemainingMs ?? 0));
+    const resonantEnergyBonusRatio =
+      this.resonantEnergyTalentEnabled &&
+        resonantEnergyStacks > 0 &&
+        resonantEnergyRemainingMs > 0 &&
+        this.resonantEnergyHealingTakenPerStackRatio > 0
+        ? resonantEnergyStacks * this.resonantEnergyHealingTakenPerStackRatio
+        : 0;
+
+    if (divineHymnBonusRatio <= 0 && resonantEnergyBonusRatio <= 0) {
       return 1;
     }
-    return 1 + stacks * this.divineHymnHealingTakenStackRatio;
+    return 1 + divineHymnBonusRatio + resonantEnergyBonusRatio;
   }
 
   getHealingDoneMultiplierForSpell(spellKey = "") {
     const normalizedSpellKey = String(spellKey ?? "").trim();
-    if (!this.hasApotheosisBuff()) {
-      return 1;
+    let multiplier = 1;
+
+    if (this.hasApotheosisBuff() && normalizedSpellKey !== "echoOfLight") {
+      multiplier *= 1 + this.apotheosisHealingDoneBonusRatio;
     }
-    if (normalizedSpellKey === "echoOfLight") {
-      return 1;
+
+    if (
+      this.seasonOneTierTalentEnabled &&
+      this.seasonOneTierDivineImageHealingBonusRatio > 0 &&
+      DIVINE_IMAGE_HEALING_SPELL_KEY_SET.has(normalizedSpellKey)
+    ) {
+      multiplier *= 1 + this.seasonOneTierDivineImageHealingBonusRatio;
     }
-    return 1 + this.apotheosisHealingDoneBonusRatio;
+
+    return multiplier;
   }
 
   getSpellCritChance(spellKey = "") {
@@ -2450,16 +2810,28 @@ export class HolyPriestPracticeEngine {
     return Math.max(Math.max(1, Number(minMs) || 1), adjusted);
   }
 
+  isUnwaveringWillCastTimeReductionActive() {
+    if (this.unwaveringWillCastTimeReductionRatio <= 0) {
+      return false;
+    }
+    const selfPlayer = this.findPlayer(this.selfPlayerId);
+    if (!selfPlayer?.alive || selfPlayer.maxHp <= 0) {
+      return false;
+    }
+    const hpRatio = clamp(selfPlayer.hp / selfPlayer.maxHp, 0, 1);
+    return hpRatio > this.unwaveringWillHealthThresholdRatio;
+  }
+
   getResolvedSpellManaCost(spell) {
     const baseCost = Math.max(0, Number(spell?.manaCost) || 0);
     const serenityCostAdjusted = spell?.key === "serenity" && this.hasApotheosisBuff()
       ? baseCost * this.apotheosisSerenityManaCostMultiplier
       : baseCost;
-    const resolvedBaseCost = Math.max(0, serenityCostAdjusted);
+    const resolvedBaseCost = Math.max(0, serenityCostAdjusted) * this.manaTuningScale;
     if (this.isSurgeOfLightEmpoweredCast(spell?.key)) {
       return round(resolvedBaseCost * this.surgeOfLightManaCostMultiplier, 2);
     }
-    return resolvedBaseCost;
+    return round(resolvedBaseCost, 2);
   }
 
   resolveCastValidation(spell, targetId) {
@@ -2529,11 +2901,13 @@ export class HolyPriestPracticeEngine {
     this.tickDesperatePrayerSelfMaxHpBonus(dt);
     this.tickDivineHymnHealingTakenBuff(dt);
     this.tickSurgeOfLightBuff(dt);
+    this.tickResonantEnergyBuffs(dt);
 
     this.tickAutoManaRegen(dt);
     this.tickEchoOfLight(dt);
     this.tickPrayerOfMendingAuras(dt);
     this.tickRenewAuras(dt);
+    this.processResonantEnergyScheduledEvents();
     this.tickHaloScheduledPulses();
     this.processDamageEvents();
 
@@ -2727,6 +3101,13 @@ export class HolyPriestPracticeEngine {
     if (castTimeMs > 0 && spell.castTimeAffectedByHaste) {
       castTimeMs = this.getHasteAdjustedDurationMs(castTimeMs, 250);
     }
+    if (
+      castTimeMs > 0 &&
+      UNWAVERING_WILL_AFFECTED_SPELL_KEY_SET.has(spell.key) &&
+      this.isUnwaveringWillCastTimeReductionActive()
+    ) {
+      castTimeMs = Math.max(1, castTimeMs * (1 - this.unwaveringWillCastTimeReductionRatio));
+    }
 
     if (surgeOfLightConsumed) {
       this.pushLog(
@@ -2792,11 +3173,12 @@ export class HolyPriestPracticeEngine {
       this.updateSerenityCooldownSnapshot();
     } else if (this.currentCast.spellKey === "divineHymn") {
       this.stopDivineHymnChannel();
-      this.cooldowns[this.currentCast.spellKey] = 0;
     } else if (spell?.cooldownMs > 0) {
       this.cooldowns[this.currentCast.spellKey] = 0;
     }
 
+    // Casting was canceled, so reset the GCD lockout immediately.
+    this.gcdRemainingMs = 0;
     this.currentCast = null;
     this.pushLog(`${spellName} 시전 취소: 이동`, "warn");
     return true;
@@ -2814,7 +3196,23 @@ export class HolyPriestPracticeEngine {
     const benedictionEmpoweredFlashHeal = options.benedictionEmpoweredFlashHeal === true;
     const benedictionBuffedFlashHeal = options.benedictionBuffedFlashHeal === true;
 
-    this.metrics.casts[spellKey] += 1;
+    const castMetricKey =
+      spellKey === "flashHeal" && benedictionEmpoweredFlashHeal
+        ? "benediction"
+        : spellKey;
+    this.metrics.casts[castMetricKey] =
+      Math.max(0, Number(this.metrics.casts[castMetricKey] ?? 0)) + 1;
+    if (surgeOfLightConsumed && SURGE_OF_LIGHT_EMPOWERED_SPELL_KEY_SET.has(spellKey)) {
+      this.metrics.surgeOfLightConsumedTotal =
+        Math.max(0, Number(this.metrics.surgeOfLightConsumedTotal ?? 0)) + 1;
+      if (spellKey === "flashHeal") {
+        this.metrics.surgeOfLightConsumedFlashHealCasts =
+          Math.max(0, Number(this.metrics.surgeOfLightConsumedFlashHealCasts ?? 0)) + 1;
+      } else if (spellKey === "prayerOfHealing") {
+        this.metrics.surgeOfLightConsumedPrayerOfHealingCasts =
+          Math.max(0, Number(this.metrics.surgeOfLightConsumedPrayerOfHealingCasts ?? 0)) + 1;
+      }
+    }
     this.tryProcSurgeOfLight(spellKey);
 
     switch (spellKey) {
@@ -2823,6 +3221,9 @@ export class HolyPriestPracticeEngine {
         if (!target || !target.alive) {
           this.pushLog(`${spell.name} 실패: 대상 사망`, "warn");
           return;
+        }
+        if (benedictionEmpoweredFlashHeal) {
+          this.tryProcDivineImageFromSeasonOneTierBenediction();
         }
         const flashHealMultiplier = benedictionEmpoweredFlashHeal
           ? 1 + this.benedictionFlashHealHealBonusRatio
@@ -2887,6 +3288,12 @@ export class HolyPriestPracticeEngine {
         if (!targets.length) {
           this.pushLog(`${spell.name} 사용 (유효 대상 없음)`, "info");
           return;
+        }
+        if (!surgeOfLightConsumed && !lightweaverEmpoweredPrayerOfHealing) {
+          this.metrics.rawPrayerOfHealingCasts = Math.max(
+            0,
+            Math.round(Number(this.metrics.rawPrayerOfHealingCasts ?? 0)) + 1
+          );
         }
         let total = 0;
         let criticalCount = 0;
@@ -2980,29 +3387,24 @@ export class HolyPriestPracticeEngine {
         return;
       }
       case "desperatePrayer": {
-        const alivePlayers = this.getAlivePlayers();
-        if (!alivePlayers.length) {
-          this.pushLog(`${spell.name} 사용 (유효 대상 없음)`, "info");
+        const selfPlayer = this.findPlayer(this.selfPlayerId);
+        if (!selfPlayer || !selfPlayer.alive) {
+          this.pushLog(`${spell.name} 실패: 본인 상태 확인 필요`, "warn");
           return;
         }
 
-        let total = 0;
-        for (const target of alivePlayers) {
-          const healAmount = Math.max(0, target.maxHp * this.desperatePrayerInstantHealRatioOfMaxHp);
-          if (healAmount <= 0) {
-            continue;
-          }
-          const result = this.applyHeal(target.id, healAmount, false, {
-            spellKey: "desperatePrayer",
-            isDirectHeal: true,
-            canCrit: false,
-            rawAmount: true
-          });
-          total += Math.max(0, Number(result?.effective ?? 0));
-        }
+        const healAmount = Math.max(0, selfPlayer.maxHp * this.desperatePrayerInstantHealRatioOfMaxHp);
+        const result = this.applyHeal(selfPlayer.id, healAmount, false, {
+          spellKey: "desperatePrayer",
+          isDirectHeal: true,
+          canCrit: false,
+          rawAmount: true,
+          ignoreHealingDoneModifiers: true,
+          ignoreHealingTakenModifiers: true
+        });
         this.activateDesperatePrayerSelfMaxHpBonus();
         this.pushLog(
-          `${spell.name} 전원 ${Math.round(this.desperatePrayerInstantHealRatioOfMaxHp * 100)}% 치유 ${fmtSigned(total)}, 본인 최대체력 +${Math.round(this.desperatePrayerSelfMaxHpBonusRatio * 100)}%`,
+          `${spell.name} ${selfPlayer.name} ${Math.round(this.desperatePrayerInstantHealRatioOfMaxHp * 100)}% 치유 ${fmtSigned(result.effective)}, 본인 최대체력 +${Math.round(this.desperatePrayerSelfMaxHpBonusRatio * 100)}%`,
           "heal"
         );
         this.triggerDivineImageHealingLight(spell.name);
@@ -3436,6 +3838,7 @@ export class HolyPriestPracticeEngine {
       this.metrics.deaths += 1;
       this.clearPrayerOfMendingFromTarget(target);
       this.clearRenewFromTarget(target);
+      this.clearResonantEnergyFromTarget(target);
       this.clearEchoOfLightFromTarget(target);
       this.pushLog(`${target.name} 사망`, "error");
     }
@@ -3610,6 +4013,21 @@ export class HolyPriestPracticeEngine {
         manaSpent: round(this.metrics.manaSpent, 1),
         deaths: this.metrics.deaths,
         triageHealing: round(this.metrics.triageHealing, 1),
+        rawPrayerOfHealingCasts: Math.max(0, Math.round(Number(this.metrics.rawPrayerOfHealingCasts ?? 0))),
+        wastedLightweaverStacks: Math.max(0, Math.round(Number(this.metrics.wastedLightweaverStacks ?? 0))),
+        wastedSurgeOfLightStacks: Math.max(0, Math.round(Number(this.metrics.wastedSurgeOfLightStacks ?? 0))),
+        surgeOfLightConsumedTotal: Math.max(
+          0,
+          Math.round(Number(this.metrics.surgeOfLightConsumedTotal ?? 0))
+        ),
+        surgeOfLightConsumedFlashHealCasts: Math.max(
+          0,
+          Math.round(Number(this.metrics.surgeOfLightConsumedFlashHealCasts ?? 0))
+        ),
+        surgeOfLightConsumedPrayerOfHealingCasts: Math.max(
+          0,
+          Math.round(Number(this.metrics.surgeOfLightConsumedPrayerOfHealingCasts ?? 0))
+        ),
         effectiveSerenityCooldownReductionMs: round(
           Math.max(0, Number(this.metrics.effectiveSerenityCooldownReductionMs ?? 0)),
           1

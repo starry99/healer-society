@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import { useCallback, useState, type ComponentType } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { simulatorMap } from "./simulators.js";
 import { NavBar } from "./NavBar";
@@ -12,6 +12,11 @@ const simulatorViews: Record<string, ComponentType> = {
   "hpal-healer-practice": HealerPracticeSimulator
 };
 const HEALER_PRACTICE_OPEN_RANKING_EVENT = "healer-practice-open-ranking";
+type HealerPracticeSimulatorProps = {
+  onCombatRunningChange?: (nextRunning: boolean) => void;
+};
+const TypedHealerPracticeSimulator =
+  HealerPracticeSimulator as unknown as ComponentType<HealerPracticeSimulatorProps>;
 
 export function SimulationPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -26,6 +31,10 @@ export function SimulationPage() {
   }
 
   const isHealerPracticePage = slug === "hpal-healer-practice";
+  const [isHealerPracticeCombatRunning, setIsHealerPracticeCombatRunning] = useState(false);
+  const handleHealerPracticeCombatRunningChange = useCallback((nextRunning: boolean) => {
+    setIsHealerPracticeCombatRunning(Boolean(nextRunning));
+  }, []);
   const handleOpenHealerPracticeRanking = () => {
     if (typeof window === "undefined") {
       return;
@@ -38,16 +47,16 @@ export function SimulationPage() {
       <div className="fixed inset-0 z-0">
         <Dither
           waveColor={[0.25, 0.15, 0.8]}
-          disableAnimation={false}
+          disableAnimation={isHealerPracticePage && isHealerPracticeCombatRunning}
           enableMouseInteraction={false}
           mouseRadius={0.35}
           colorNum={4}
-          pixelSize={2}
+          pixelSize={isHealerPracticePage ? 3 : 2}
           waveAmplitude={0.3}
           waveFrequency={3}
           waveSpeed={0.025}
-          targetFps={24}
-          dpr={0.75}
+          targetFps={isHealerPracticePage ? 12 : 24}
+          dpr={isHealerPracticePage ? 0.6 : 0.75}
           antialias={false}
           preserveDrawingBuffer={false}
           powerPreference="low-power"
@@ -72,7 +81,11 @@ export function SimulationPage() {
           <p className="mt-2 text-slate-300">{simulator.description}</p>
 
           {simulator.enabled && SimulatorView ? (
-            <SimulatorView />
+            isHealerPracticePage ? (
+              <TypedHealerPracticeSimulator onCombatRunningChange={handleHealerPracticeCombatRunningChange} />
+            ) : (
+              <SimulatorView />
+            )
           ) : (
             <p className="mt-6 rounded-xl border border-slate-700 bg-gray-950/45 p-3 text-sm text-slate-400">
               {simulator.enabled

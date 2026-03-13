@@ -12,6 +12,10 @@ export const restorationShamanGuideContent = {
     }
   },
   talents: {
+    copyTalentStringByMode: {
+      raid: "",
+      mythic: ""
+    },
     contentByMode: {
       raid:
         "레이드 빌드는 [[연쇄 치유#1064]]와 [[치유의 비#73920]] 기반 광역 회복 효율을 최우선으로 둡니다. 피해 간격이 긴 네임드는 마나 효율 노드를 늘리고, 연속 광역 피해 네임드는 짧은 쿨다운 회복 노드 비중을 높이는 방식으로 조정합니다.",
@@ -185,6 +189,11 @@ export const restorationShamanGuideContent = {
         url: "https://www.warcraftlogs.com/",
         description: "토템/쿨기 사용 분석"
       }
+    ]
+  },
+  changelog: {
+    entries: [
+      { date: "2026-03-14T00:00:00+09:00", text: "초안" }
     ]
   }
 };

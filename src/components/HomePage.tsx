@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState, useCallback, Fragment } from "react";
 import { Link } from "react-router-dom";
 import { SiteFooter } from "./SiteFooter";
 import { AuthActionButton } from "./AuthActionButton";
 import Dither from "./Dither";
-import FuzzyText from './FuzzyText';
 import { AuroraText } from "./AuroraText"
+import type { RaidMember } from "./raids";
 
 type HealerSummary = {
   slug: string;
@@ -24,6 +24,7 @@ type SimulatorSummary = {
 type HomePageProps = {
   healers: HealerSummary[];
   simulators: SimulatorSummary[];
+  raidMembers: RaidMember[];
 };
 
 function GuideChip({ healer }: { healer: HealerSummary }) {
@@ -36,7 +37,7 @@ function GuideChip({ healer }: { healer: HealerSummary }) {
       <div className={`group w-[118px] shrink-0 rounded-2xl border p-3 text-center transition ${classes}`}>
         <img
           alt={`${healer.shortName} class icon`}
-          className="mx-auto h-12 w-12 rounded-xl border border-slate-700 object-cover"
+          className="mx-auto h-10 w-10 rounded-xl border border-slate-700 object-cover"
           src={healer.classIcon}
         />
         <p className="mt-2 text-sm font-semibold text-slate-200">{healer.shortName}</p>
@@ -49,11 +50,43 @@ function GuideChip({ healer }: { healer: HealerSummary }) {
     <Link className={`group w-[118px] shrink-0 rounded-2xl border p-3 text-center transition ${classes}`} to={`/guide/${healer.slug}`}>
       <img
         alt={`${healer.shortName} class icon`}
-        className="mx-auto h-12 w-12 rounded-xl border border-slate-700 object-cover shadow-lg shadow-black/40"
+        className="mx-auto h-10 w-10 rounded-xl border border-slate-700 object-cover shadow-lg shadow-black/40"
         src={healer.classIcon}
       />
       <p className="mt-2 text-sm font-semibold text-slate-200">{healer.shortName}</p>
       <p className="truncate text-[11px] text-slate-300">{healer.name}</p>
+    </Link>
+  );
+}
+
+function RaidChip({ member }: { member: RaidMember }) {
+  const classes = member.enabled
+    ? "border-slate-700/80 bg-slate-900/65 hover:border-violet-300/70 hover:bg-slate-900/90"
+    : "pointer-events-none border-slate-800 bg-slate-900/30 opacity-50 grayscale";
+
+  if (!member.enabled) {
+    return (
+      <div className={`group w-[90px] shrink-0 rounded-2xl border p-2 text-center transition ${classes}`}>
+        <img
+          alt={`${member.name} icon`}
+          className="mx-auto h-10 w-10 rounded-xl border border-slate-700 object-cover"
+          src={member.icon}
+        />
+        <p className="mt-1 text-sm font-semibold text-slate-200">{member.name}</p>
+        <p className="truncate text-[11px] text-slate-400">{member.loc}</p>
+      </div>
+    );
+  }
+
+  return (
+    <Link className={`group w-[90px] shrink-0 rounded-2xl border p-2 text-center transition ${classes}`} to={`/raid/${member.slug}`}>
+      <img
+        alt={`${member.name} icon`}
+        className="mx-auto h-10 w-10 rounded-xl border border-slate-700 object-cover shadow-lg shadow-black/40"
+        src={member.icon}
+      />
+      <p className="mt-1 text-sm font-semibold text-slate-200">{member.name}</p>
+      <p className="truncate text-[11px] text-slate-300">{member.loc}</p>
     </Link>
   );
 }
@@ -65,23 +98,42 @@ function SimulatorCard({ simulator }: { simulator: SimulatorSummary }) {
   const content = (
     <>
       <h3 className="text-base font-semibold text-slate-200">{simulator.name}</h3>
-      <p className="mt-2 text-sm text-slate-300">{simulator.description}</p>
-      {!simulator.enabled ? <p className="mt-4 text-xs uppercase tracking-wider text-slate-500">준비 중</p> : null}
+      <p className="mt-1 text-sm text-slate-300">{simulator.description}</p>
+      {!simulator.enabled ? <p className="mt-2 text-xs uppercase tracking-wider text-slate-500">준비 중</p> : null}
     </>
   );
 
   if (simulator.enabled) {
     return (
-      <Link className={`rounded-2xl border p-5 transition ${classes}`} to={`/sim/${simulator.slug}`}>
+      <Link className={`rounded-2xl border p-4 transition ${classes}`} to={`/sim/${simulator.slug}`}>
         {content}
       </Link>
     );
   }
 
-  return <div className={`rounded-2xl border p-5 transition ${classes}`}>{content}</div>;
+  return <div className={`rounded-2xl border p-4 transition ${classes}`}>{content}</div>;
 }
 
-export function HomePage({ healers, simulators }: HomePageProps) {
+export function HomePage({ healers, simulators, raidMembers }: HomePageProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  const recalcScale = useCallback(() => {
+    const wrapper = wrapperRef.current;
+    const content = contentRef.current;
+    if (!wrapper || !content) return;
+
+    // scale을 1로 리셋하여 자연 높이 측정
+    content.style.transform = "scale(1)";
+    const natural = content.scrollHeight;
+    const available = wrapper.clientHeight;
+
+    const newScale = natural > available ? available / natural : 1;
+    setScale(newScale);
+    content.style.transform = `scale(${newScale})`;
+  }, []);
+
   useEffect(() => {
     const previousOverflowY = document.body.style.overflowY;
     document.body.style.overflowY = "hidden";
@@ -89,6 +141,20 @@ export function HomePage({ healers, simulators }: HomePageProps) {
       document.body.style.overflowY = previousOverflowY;
     };
   }, []);
+
+  useEffect(() => {
+    recalcScale();
+
+    const images = contentRef.current?.querySelectorAll("img") ?? [];
+    const onLoad = () => recalcScale();
+    images.forEach((img) => img.addEventListener("load", onLoad));
+
+    window.addEventListener("resize", recalcScale);
+    return () => {
+      window.removeEventListener("resize", recalcScale);
+      images.forEach((img) => img.removeEventListener("load", onLoad));
+    };
+  }, [recalcScale]);
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden text-slate-100">
@@ -108,50 +174,67 @@ export function HomePage({ healers, simulators }: HomePageProps) {
       <div className="absolute right-4 top-4 z-20 pointer-events-auto">
         <AuthActionButton showUserLabel={false} />
       </div>
-      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-grow flex-col overflow-hidden px-4 py-4 md:px-6 md:py-5 pointer-events-none">
-        <section className="px-2 py-2 text-center md:py-1 pointer-events-auto mb-12 mt-12">
-          <p className="text-xs uppercase tracking-[0.36em] text-slate-400">The Healer Society</p>
-          {/* <FuzzyText
-            baseIntensity={0.05}
-            hoverIntensity={0.2}
-            enableHover
-            fps={30}
-            glitchMode
-            glitchInterval={5000}
-            className="mx-auto mt-3 mb-3 block tracking-[0.08em]"
-            fontSize={108}
-          >
-            힐러애호가협회
-          </FuzzyText> */}
-          <AuroraText className="site-accent-text block text-7xl font-bold" speed={2} colors={["#fe2ec3ff", "#9050ffff", "#536affff", "#e9baffff"]}>힐러애호가협회</AuroraText>
-          {/* <p className="mx-auto mt-5 max-w-3xl text-sm leading-7 text-slate-300 md:text-base">
-            Midnight 시즌 힐러 레퍼런스를 빠르게 확인할 수 있는 가이드 허브입니다.
-          </p> */}
-        </section>
-        <section className="mt-2 rounded-3xl border border-slate-700/80 bg-slate-900/55 p-4 shadow-panel md:p-6 pointer-events-auto">
-          <div className="mb-4 flex items-end justify-between">
-            <p className="text-lg font-bold md:text-xl text-slate-200">시뮬레이션 연구실</p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {simulators.map((simulator) => <SimulatorCard key={simulator.slug} simulator={simulator} />)}
-          </div>
-        </section>
-        <section className="mt-2 rounded-3xl border border-slate-700/80 bg-slate-900/55 p-4 shadow-panel md:p-6 pointer-events-auto">
-          <div className="flex items-center justify-between">
-            <p className="text-lg font-bold md:text-xl text-slate-200">한밤 힐러 가이드</p>
-            <span className="text-xs text-slate-400">12.0.1</span>
-          </div>
-          <div className="mt-4 overflow-x-auto pb-2">
-            <div className="flex min-w-max items-start gap-3">
-              {healers.map((healer) => (
-                <GuideChip healer={healer} key={healer.slug} />
-              ))}
-            </div>
-          </div>
-        </section>
-      </main>
 
-      <div className="relative z-10">
+      <div ref={wrapperRef} className="relative z-10 flex-1 min-h-0 overflow-hidden">
+        <div
+          ref={contentRef}
+          className="mx-auto flex w-full max-w-5xl flex-col px-4 md:px-6 pointer-events-none"
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: "top center",
+          }}
+        >
+          {/* 타이틀 */}
+          <section className="px-2 pt-[calc(3vh+16px)] pb-[52px] text-center pointer-events-auto">
+            <p className="text-xs uppercase tracking-[0.36em] text-slate-400">The Healer Society</p>
+            <AuroraText className="site-accent-text block text-7xl font-bold" speed={2} colors={["#fe2ec3ff", "#9050ffff", "#536affff", "#e9baffff"]}>힐러애호가협회</AuroraText>
+          </section>
+
+          <div className="flex flex-col gap-[6px]">
+            <section className="hidden lg:block rounded-3xl border border-slate-700/80 bg-slate-900/55 p-4 shadow-panel pointer-events-auto">
+              <div className="mb-2 flex items-end justify-between">
+                <p className="text-lg font-bold md:text-xl text-slate-200">시뮬레이션 연구실</p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {simulators.map((simulator) => <SimulatorCard key={simulator.slug} simulator={simulator} />)}
+              </div>
+            </section>
+            <section className="rounded-3xl border border-slate-700/80 bg-slate-900/55 p-4 shadow-panel pointer-events-auto">
+              <div className="flex items-center justify-between">
+                <p className="text-lg font-bold md:text-xl text-slate-200">한밤 힐러 가이드</p>
+                <span className="text-xs text-slate-400">12.0.1</span>
+              </div>
+              <div className="mt-2 overflow-x-auto">
+                <div className="flex min-w-max items-start gap-3">
+                  {healers.map((healer) => (
+                    <GuideChip healer={healer} key={healer.slug} />
+                  ))}
+                </div>
+              </div>
+            </section>
+            <section className="rounded-3xl border border-slate-700/80 bg-slate-900/55 p-4 shadow-panel pointer-events-auto">
+              <div className="flex items-center justify-between">
+                <p className="text-lg font-bold md:text-xl text-slate-200">한밤 1시즌 레이드 공략</p>
+                {/* <span className="text-xs text-slate-400">Season 1</span> */}
+              </div>
+              <div className="mt-2 overflow-x-auto">
+                <div className="flex min-w-max items-start gap-3">
+                  {raidMembers.map((member, idx) => (
+                    <Fragment key={member.slug}>
+                      {(idx === 6 || idx === 7) && (
+                        <div className="self-stretch w-[3px] bg-violet-500/40" />
+                      )}
+                      <RaidChip member={member} />
+                    </Fragment>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 flex-none">
         <SiteFooter />
       </div>
     </div>

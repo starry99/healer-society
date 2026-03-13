@@ -13,6 +13,10 @@ export const holyPaladinGuideContent = {
     }
   },
   talents: {
+    copyTalentStringByMode: {
+      raid: "CEEAAAAAAAAAAAAAAAAAAAAAAAAAAYBAMAAglxMzYGzMzGjxYWGbzMLmpJGzYmZYY2yAwAG2AbsMjZWmtZmZrBAAAYBA2MMmxMAAgZGmxY0A",
+      mythic: "CEEAAAAAAAAAAAAAAAAAAAAAAAAAAYBAMDAwglxMzMzYmZWgxwyYbmZxMNxwYmZYY2yAwAwGYjlZmZWmtZmZrBAAAYhNMDbGYGzAAAmZYGjRD"
+    },
     contentByMode: {
       raid:
         "현시즌 레이드는 태양의 사자로 [[신성 충격#20473]]과 [[여명의 빛#85222]] 기반의 운영으로 예상됩니다.",
@@ -149,6 +153,11 @@ export const holyPaladinGuideContent = {
         url: "https://questionablyepic.com/live/",
         description: "힐러에게 아주 유용한 템 시뮬레이션 사이트입니다."
       },
+    ]
+  },
+  changelog: {
+    entries: [
+      { date: "26년3월9일5시31분AM", text: "초안 작성" }
     ]
   }
 };

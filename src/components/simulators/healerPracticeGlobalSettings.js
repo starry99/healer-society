@@ -38,7 +38,7 @@ export const GLOBAL_GAMEOVER_ON_SELF_DEATH = true;
 export const GLOBAL_SUCCESS_ON_TIMEOUT_WITHOUT_GAMEOVER = true;
 export const GLOBAL_SUCCESS_MESSAGE_TEXT = "연습 성공!! 축하합니다!!";
 // 쿨다운 매니저 상단 버프/프록 아이콘 공통 크기/위치 (모든 힐러 공통)
-export const SPECIAL_PROC_OVERLAY_ICON_SIZE_PX = 22;
+export const SPECIAL_PROC_OVERLAY_ICON_SIZE_PX = 24;
 export const SPECIAL_PROC_OVERLAY_TOP_OFFSET_PX = -18;
 export const HEALER_PRACTICE_DESKTOP_ONLY_CONFIG = Object.freeze({
   enabled: true,
@@ -46,6 +46,19 @@ export const HEALER_PRACTICE_DESKTOP_ONLY_CONFIG = Object.freeze({
   requireFinePointer: true,
   unsupportedMessage: "데스크탑 환경만 지원됩니다 ㅠㅠ"
 });
+
+// 신성 성기사 커스텀 반영 Talent 목록입니다.
+// 이 텍스트 배열을 수정하면 안내문에 그대로 반영됩니다.
+export const HOLY_PALADIN_ADDED_TALENT_SUMMARY_LINES = Object.freeze([
+  "필수 스킬 및 특성 외에도 [[성스러운 계시#387808]], [[찬연한 빛#392902]], [[꺼지지 않는 빛#1271221]], [[해방#461278]], [[새벽빛#431377]], [[불사르는 태양#431413]], [[길들이기#415388]], [[영광스러운 여명#461246]], [[관대한 치유사#469434]], [[두 번째 일출#431474]], [[신앙의 손#1242008]] 등의 특성이 구현되어 있으며, 시즌 1 티어셋 효과 또한 반영되어있습니다.",
+  "[[순교자의 빛#447985]]의 치유흡수 부분은 구현되지 않았습니다 (레이드프레임에 치흡을 표시하는 방법이 개인별로 차이가 크기 때문에)",
+]);
+
+// 신성 사제 커스텀 반영 Talent 목록입니다.
+// 이 텍스트 배열을 수정하면 안내문에 그대로 반영됩니다.
+export const HOLY_PRIEST_ADDED_TALENT_SUMMARY_LINES = Object.freeze([
+  "필수 스킬 및 특성 외에도 [[공명하는 마력#453845]], [[위기 관리#390954]], [[고결한 자의 기도#390977]], [[빛의 흔적#200128]], [[빛의 회생#193157]], [[흔들림없는 의지#373456]], [[결속의 치유#368276]], [[보호의 빛#193063]] 등의 특성이 구현되어 있으며, 시즌 1 티어셋 효과 또한 반영되어있습니다.",
+]);
 
 // 힐러 아이콘 선택 시 안내문을 리스트 형태로 표시합니다.
 // 필요 시 힐러별 키(예: "holy-paladin")를 추가해 별도 문구를 넣을 수 있습니다.
@@ -55,19 +68,23 @@ export const HEALER_PRACTICE_DISCLAIMER_BY_HEALER = Object.freeze({
     "새벽빛 빨대 등 몇몇 사항은 구현되지 않았습니다."
   ]),
   "holy-paladin": Object.freeze([
-    "기준치 - 지능:2000, 가속:30%, 특화:40%, 치명타:30%, 유연: 0%, 마나: 275,000",
+    "기준치 - 지능:2000, 가속:30%, 특화:40%, 치명타:30%, 유연: 0%, 마나: 275,000, 생흡: 6%",
     "실제 게임 튜닝 수치와 다를 수 있습니다. 특히 특화는 모두 최대 효율로 계산됩니다.",
+    "전투시간이 짧으므로 마나 소모가 원래보다 조금 더 많게 변경됩니다.",
     "가이드의 레이드 특성을 기반으로 하며 신성한 목적, 빛의 교부, 새벽빛 연결힐 등 몇몇 특성은 구현되지 않았습니다.",
-    "전투시간이 짧으므로 마나 소모가 원래보다 조금 더 많게 변경됩니다."
+    ...HOLY_PALADIN_ADDED_TALENT_SUMMARY_LINES
   ]),
   "restoration-druid": Object.freeze([
     "실제 게임 튜닝 수치와 다를 수 있습니다.",
     "새벽빛 빨대 등 몇몇 사항은 구현되지 않았습니다."
   ]),
   "holy-priest": Object.freeze([
-    "기준치 - 지능:2000, 가속:15%, 특화:30%, 치명타:30%, 유연: 0%, 마나: 275,000",
+    "기준치 - 지능:2000, 가속:15%, 특화:30%, 치명타:30%, 유연: 2%, 마나: 275,000, 생흡: 6%",
     "실제 게임 튜닝 수치와 다를 수 있습니다.",
-    "전투시간이 짧으므로 마나 소모가 원래보다 조금 더 많게 변경됩니다."
+    "전투시간이 짧으므로 마나 소모가 원래보다 조금 더 많게 변경됩니다.",
+    "[[구원의 영혼#20711]], [[마력 주입#10060]], [[수호 영혼#97983]], [[천사의 보루#108945]] 등은 힐 허수아비에 부적합하다 여겨져서 구현되지 않았습니다. [[응징#88625]] 또한 구현되지 않은 점 참고바랍니다.",
+    "가이드의 레이드 특성을 기반으로 하며, 절정 선택 노드에는 [[신앙#1215241]]을, 후광 선택 노드에는 [[마력 압축#449874]]을 넣었습니다 (전투시간이 짧으므로).",
+    ...HOLY_PRIEST_ADDED_TALENT_SUMMARY_LINES
   ])
 });
 
@@ -80,7 +97,7 @@ export const HEALER_PRACTICE_PATCH_META_BY_HEALER = Object.freeze({
     patchVersion: ""
   }),
   "holy-paladin": Object.freeze({
-    lastUpdatedAt: "2026-03-02",
+    lastUpdatedAt: "2026-03-11",
     patchVersion: "12.0.1"
   }),
   "restoration-druid": Object.freeze({
@@ -88,7 +105,7 @@ export const HEALER_PRACTICE_PATCH_META_BY_HEALER = Object.freeze({
     patchVersion: ""
   }),
   "holy-priest": Object.freeze({
-    lastUpdatedAt: "2026-03-08",
+    lastUpdatedAt: "2026-03-12",
     patchVersion: "12.0.1"
   })
 });
@@ -214,7 +231,11 @@ export const CANDIDATE_NAME_POOL = [
   "브페",
   "팀버",
   "트로사르",
-  "디마리아"
+  "디마리아",
+  "고든",
+  "기마랑이스",
+  "네베스",
+  "무시알라"
 ];
 
 export const FIXED_TANK_ANCHORS = Object.freeze([
@@ -346,75 +367,9 @@ export const MOVEMENT_RESTRICTED_KEY_LIST_BY_PRESET = Object.freeze({
   CUSTOM: Object.freeze([])
 });
 
-// 난이도별 피해 배율은 여기 숫자만 수정하면 됩니다.
-// scheduledRaidBursts:
-// - startAtSec: 시작 시점(초)
-// - tickIntervalSec: 틱 간격(초)
-// - tickCount: 틱 횟수
-// - damagePerTick: 각 틱마다 모든 공대원에게 들어갈 기본 피해량(절대값)
-// 여러 개를 배열에 넣으면 패턴이 누적 적용됩니다.
-export const PRACTICE_DIFFICULTY_TUNING = Object.freeze({
-  normal: Object.freeze({
-    label: "일반",
-    fixedCombatDurationMinutes: 2,
-    incomingDamageMultiplier: 0.48,
-    damageBreakEveryMs: 30000,
-    damageBreakDurationMs: 5000,
-    scheduledRaidBursts: Object.freeze([
-      { id: "raid-pulse-1", startAtSec: 25, tickIntervalSec: 1, tickCount: 5, damagePerTick: 6200 },
-      { id: "raid-pulse-2", startAtSec: 85, tickIntervalSec: 1, tickCount: 5, damagePerTick: 6200 },
-    ])
-  }),
-  heroic: Object.freeze({
-    label: "영웅",
-    fixedCombatDurationMinutes: 2,
-    incomingDamageMultiplier: 0.54,
-    damageBreakEveryMs: 30000,
-    damageBreakDurationMs: 5000,
-    scheduledRaidBursts: Object.freeze([
-      { id: "raid-pulse-3", startAtSec: 20, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6500 },
-      { id: "raid-pulse-4", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6500 },
-    ])
-  }),
-  mythic: Object.freeze({
-    label: "신화",
-    fixedCombatDurationMinutes: 2.5,
-    incomingDamageMultiplier: 0.6,
-    damageBreakEveryMs: 30000,
-    damageBreakDurationMs: 4000,
-    scheduledRaidBursts: Object.freeze([
-      { id: "raid-pulse-5", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6800 },
-      { id: "raid-pulse-6", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6800 },
-      { id: "raid-pulse-7", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6800 },
-    ])
-  }),
-  worldFirstKill: Object.freeze({
-    label: "월퍼킬",
-    fixedCombatDurationMinutes: 2.5,
-    incomingDamageMultiplier: 0.7,
-    damageBreakEveryMs: 30000,
-    damageBreakDurationMs: 3000,
-    scheduledRaidBursts: Object.freeze([
-      { id: "raid-pulse-8", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
-      { id: "raid-pulse-9", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
-      { id: "raid-pulse-10", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
-    ])
-  })
-});
-
-export const DIFFICULTY_OPTIONS = Object.freeze([
-  { value: "normal", label: "일반 (2분)" },
-  { value: "heroic", label: "영웅 (2분)" },
-  { value: "mythic", label: "신화 (2.5분)" },
-  { value: "worldFirstKill", label: "월퍼킬 (2.5분)" }
-]);
-
 // 전투 종료 스코어(100점 만점) 기준 설정
-// - 공통 40점: 사망자(20) + 오버힐(15) + 자힐 비중(5)
-// - 힐러+난이도 30점: 평균 공대 체력(20) + 남은 마나(10)
-// - 힐러 공통 10점: CPM(힐러별 커스텀)
-// - 힐러 전용 20점: 힐러별 별도 규칙
-// threshold는 코드에서 직접 조절하세요.
+// - 기본값: 공통 40점(사망자/오버힐/자힐) + 힐러+난이도 30점(평균 공대 체력/남은 마나)
+//   + 힐러 공통 10점(CPM) + 힐러 전용 20점
 const DEFAULT_SCORE_AVERAGE_RAID_HEALTH_CONFIG = Object.freeze({
   maxPoints: 20,
   fullScoreAtOrAbovePct: 75,
@@ -438,6 +393,43 @@ const DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG = Object.freeze({
   maxPoints: 20,
   type: "fixed"
 });
+
+const DEFAULT_SCORE_HOLY_PRIEST_SELF_HEAL_CONFIG = Object.freeze({
+  maxPoints: 10,
+  fullScoreAtOrBelowPct: 6,
+  pctPerPointLost: 3,
+  pointsLostPerStep: 1
+});
+
+// 신성 사제: 평온 유효 쿨감 만점 기준(초)
+// 난이도별로 숫자만 바꾸면 점수 기준이 즉시 반영됩니다.
+export const HOLY_PRIEST_SERENITY_CDR_FULL_SCORE_SEC_BY_DIFFICULTY = Object.freeze({
+  normal: 600,
+  heroic: 650,
+  mythic: 900,
+  worldFirstKill: 900
+});
+
+function buildHolyPriestSpecificScoreConfig(serenityCooldownFullScoreAtOrAboveSec = 350) {
+  return Object.freeze({
+    maxPoints: 25,
+    type: "holyPriestCustom",
+    wastedProcStacks: Object.freeze({
+      maxPoints: 10,
+      pointsLostPerUnit: 1
+    }),
+    rawPrayerOfHealingCasts: Object.freeze({
+      maxPoints: 5,
+      pointsLostPerCast: 1
+    }),
+    serenityCooldownReduction: Object.freeze({
+      maxPoints: 10,
+      fullScoreAtOrAboveSec: serenityCooldownFullScoreAtOrAboveSec,
+      secPerStep: 10,
+      pointsLostPerStep: 0.5
+    })
+  });
+}
 
 const DEFAULT_SCORE_CPM_CONFIG = Object.freeze({
   maxPoints: 10,
@@ -535,37 +527,63 @@ export const HEALER_PRACTICE_SCORE_HEALER_CONFIG_BY_SLUG = Object.freeze({
   "holy-priest": Object.freeze({
     normal: Object.freeze({
       averageRaidHealth: DEFAULT_SCORE_AVERAGE_RAID_HEALTH_CONFIG,
-      remainingMana: DEFAULT_SCORE_REMAINING_MANA_CONFIG,
-      healerSpecific: DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG
+      remainingMana: Object.freeze({
+        ...DEFAULT_SCORE_REMAINING_MANA_CONFIG,
+        enabled: false
+      }),
+      selfHealRatio: DEFAULT_SCORE_HOLY_PRIEST_SELF_HEAL_CONFIG,
+      healerSpecific: buildHolyPriestSpecificScoreConfig(
+        Number(HOLY_PRIEST_SERENITY_CDR_FULL_SCORE_SEC_BY_DIFFICULTY.normal ?? 350)
+      )
     }),
     heroic: Object.freeze({
       averageRaidHealth: DEFAULT_SCORE_AVERAGE_RAID_HEALTH_CONFIG,
-      remainingMana: DEFAULT_SCORE_REMAINING_MANA_CONFIG,
-      healerSpecific: DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG
+      remainingMana: Object.freeze({
+        ...DEFAULT_SCORE_REMAINING_MANA_CONFIG,
+        enabled: false
+      }),
+      selfHealRatio: DEFAULT_SCORE_HOLY_PRIEST_SELF_HEAL_CONFIG,
+      healerSpecific: buildHolyPriestSpecificScoreConfig(
+        Number(HOLY_PRIEST_SERENITY_CDR_FULL_SCORE_SEC_BY_DIFFICULTY.heroic ?? 350)
+      )
     }),
     mythic: Object.freeze({
       averageRaidHealth: DEFAULT_SCORE_AVERAGE_RAID_HEALTH_CONFIG,
-      remainingMana: DEFAULT_SCORE_REMAINING_MANA_CONFIG,
-      healerSpecific: DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG
+      remainingMana: Object.freeze({
+        ...DEFAULT_SCORE_REMAINING_MANA_CONFIG,
+        enabled: false
+      }),
+      selfHealRatio: DEFAULT_SCORE_HOLY_PRIEST_SELF_HEAL_CONFIG,
+      healerSpecific: buildHolyPriestSpecificScoreConfig(
+        Number(HOLY_PRIEST_SERENITY_CDR_FULL_SCORE_SEC_BY_DIFFICULTY.mythic ?? 350)
+      )
     }),
     worldFirstKill: Object.freeze({
       averageRaidHealth: DEFAULT_SCORE_AVERAGE_RAID_HEALTH_CONFIG,
-      remainingMana: DEFAULT_SCORE_REMAINING_MANA_CONFIG,
-      healerSpecific: DEFAULT_SCORE_FIXED_HEALER_SPECIFIC_CONFIG
+      remainingMana: Object.freeze({
+        ...DEFAULT_SCORE_REMAINING_MANA_CONFIG,
+        enabled: false
+      }),
+      selfHealRatio: DEFAULT_SCORE_HOLY_PRIEST_SELF_HEAL_CONFIG,
+      healerSpecific: buildHolyPriestSpecificScoreConfig(
+        Number(HOLY_PRIEST_SERENITY_CDR_FULL_SCORE_SEC_BY_DIFFICULTY.worldFirstKill ?? 350)
+      )
     })
   })
 });
 
-// CPM은 난이도와 무관하게 힐러별 기준만 사용합니다.
 export const HEALER_PRACTICE_SCORE_CPM_CONFIG_BY_SLUG = Object.freeze({
   "holy-paladin": DEFAULT_SCORE_CPM_CONFIG,
   "restoration-druid": DEFAULT_SCORE_CPM_CONFIG,
-  "holy-priest": DEFAULT_SCORE_CPM_CONFIG
+  "holy-priest": Object.freeze({
+    maxPoints: 10,
+    fullScoreAtOrAboveCpm: 39,
+    zeroScoreAtOrBelowCpm: 30
+  })
 });
 
 export const PLAYER_MOVE_SPEED_PER_SEC = 220;
 
-// Phaser 개인 생존 미니게임 공통 튜닝은 이 상수만 수정하면 됩니다.
 export const PHASER_ARENA_VISUAL_CONFIG = Object.freeze({
   playerSpeedPerSec: PLAYER_MOVE_SPEED_PER_SEC,
   playerSizePx: 20,
@@ -589,21 +607,20 @@ export const PHASER_ARENA_VISUAL_CONFIG = Object.freeze({
   missileCollisionRadiusPx: 10
 });
 
-// 난이도별 체력/바닥/미사일 빈도/피해량을 코드에서 직접 조절합니다.
 export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
   normal: Object.freeze({
     showPlayerHealthBar: true,
     playerMaxHealth: 100,
     hazardEnabled: true,
-    hazardSpawnIntervalMinMs: 5300,
-    hazardSpawnIntervalMaxMs: 6400,
+    hazardSpawnIntervalMinMs: 7300,
+    hazardSpawnIntervalMaxMs: 8400,
     hazardBarWidthPx: 20,
     hazardBarLengthPx: 520,
     hazardDamage: 20,
     missileEnabled: true,
-    missileSpawnIntervalMinMs: 3800,
-    missileSpawnIntervalMaxMs: 4500,
-    missileSpeedPerSec: 210,
+    missileSpawnIntervalMinMs: 5800,
+    missileSpawnIntervalMaxMs: 7500,
+    missileSpeedPerSec: 200,
     missileDamage: 15,
     greenGridZonePatternEnabled: true,
     greenGridZonePatternSpawnIntervalMinMs: 20000,
@@ -626,7 +643,7 @@ export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
     missileEnabled: true,
     missileSpawnIntervalMinMs: 3000,
     missileSpawnIntervalMaxMs: 4500,
-    missileSpeedPerSec: 230,
+    missileSpeedPerSec: 220,
     missileDamage: 25,
     greenGridZonePatternEnabled: true,
     greenGridZonePatternSpawnIntervalMinMs: 20000,
@@ -649,7 +666,7 @@ export const PHASER_DIFFICULTY_MECHANIC_TUNING = Object.freeze({
     missileEnabled: true,
     missileSpawnIntervalMinMs: 3000,
     missileSpawnIntervalMaxMs: 4000,
-    missileSpeedPerSec: 240,
+    missileSpeedPerSec: 230,
     missileDamage: 40,
     greenGridZonePatternEnabled: true,
     greenGridZonePatternSpawnIntervalMinMs: 20000,

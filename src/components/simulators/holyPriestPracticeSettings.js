@@ -1,20 +1,20 @@
 export const HOLY_PRIEST_HEALER_SLUG = "holy-priest";
 
-// 커스텀으로 추가한 특성 효과 토글.
-// true: 활성화, false: 비활성화
 export const HOLY_PRIEST_ADDED_TALENT_TOGGLES = Object.freeze({
   halo: true,
+  prayersOfTheVirtuous: true,
   lightweaver: true,
   ultimateSerenity: true,
   divineImage: true,
+  seasonOneTier: true,
   upliftingWords: true,
   crisisManagement: true,
   trailOfLight: true,
-  lightsResurgence: true
+  lightsResurgence: true,
+  resonantEnergy: true
 });
 
 // Per-healer default stats.
-// hastePct/critPct/masteryPct are percentage values (e.g. 30 means 30%).
 export const HOLY_PRIEST_DEFAULT_STATS = Object.freeze({
   intellect: 2000,
   hastePct: 15,
@@ -22,34 +22,95 @@ export const HOLY_PRIEST_DEFAULT_STATS = Object.freeze({
   masteryPct: 30
 });
 
+// 힐러별 마나 튜닝 배율 (최종 마나 소모에 곱해짐)
+export const HOLY_PRIEST_MANA_TUNING_SCALE = 1.05;
+
+// 신성 사제 기본 마나 재생 배율 (글로벌 기본 재생량에 곱해짐)
+export const HOLY_PRIEST_AUTO_MANA_REGEN_MULTIPLIER = 1.1;
+
+// 난이도별 피해 배율/전투 시간/레이드 버스트 패턴 (신성 사제 전용)
+// scheduledRaidBursts:
+// - startAtSec: 시작 시점(초)
+// - tickIntervalSec: 틱 간격(초)
+// - tickCount: 틱 횟수
+// - damagePerTick: 각 틱마다 모든 공대원에게 들어갈 기본 피해량(절대값)
+export const HOLY_PRIEST_PRACTICE_DIFFICULTY_TUNING = Object.freeze({
+  normal: Object.freeze({
+    label: "일반",
+    fixedCombatDurationMinutes: 2,
+    incomingDamageMultiplier: 0.5,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 5000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-1", startAtSec: 25, tickIntervalSec: 1, tickCount: 5, damagePerTick: 6200 },
+      { id: "raid-pulse-2", startAtSec: 85, tickIntervalSec: 1, tickCount: 5, damagePerTick: 6200 }
+    ])
+  }),
+  heroic: Object.freeze({
+    label: "영웅",
+    fixedCombatDurationMinutes: 2,
+    incomingDamageMultiplier: 0.58,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 5000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-3", startAtSec: 20, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
+      { id: "raid-pulse-4", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 }
+    ])
+  }),
+  mythic: Object.freeze({
+    label: "신화",
+    fixedCombatDurationMinutes: 2.5,
+    incomingDamageMultiplier: 0.66,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 4000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-5", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7500 },
+      { id: "raid-pulse-6", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7500 },
+      { id: "raid-pulse-7", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7500 }
+    ])
+  }),
+  worldFirstKill: Object.freeze({
+    label: "월퍼킬",
+    fixedCombatDurationMinutes: 2.5,
+    incomingDamageMultiplier: 0.7,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 3000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-8", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 8000 },
+      { id: "raid-pulse-9", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 8000 },
+      { id: "raid-pulse-10", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 8000 }
+    ])
+  })
+});
+
 export const HOLY_PRIEST_PRACTICE_TUNING = Object.freeze({
   baseMana: 275000,
   dummyBaseHealth: 375000,
   // Final heal = intellect * healAmountCoefficients[spellKey]
   healAmountCoefficients: Object.freeze({
-    flashHeal: 5.6,
-    prayerOfHealing: 2.35,
-    serenity: 13.5,
-    prayerOfMending: 0.61,
-    renew: 0.61,
-    halo: 0.9,
-    cosmicRipple: 0.9,
-    divineHymn: 0.9,
-    divineImageHealingLight: 5.2,
-    divineImageDazzlingLights: 2.1,
-    divineImageBlessedLight: 2.1
+    flashHeal: 15.75,
+    prayerOfHealing: 7.75,
+    serenity: 33,
+    prayerOfMending: 0.97,
+    renew: 1.34,
+    halo: 3.35,
+    cosmicRipple: 2.16,
+    divineHymn: 7.5,
+    divineImageHealingLight: 2,
+    divineImageDazzlingLights: 0.25,
+    divineImageBlessedLight: 1.65
   }),
   // Default mana model: baseMana * ratio
   manaCostBaseManaRatios: Object.freeze({
-    flashHeal: 0.027,
-    prayerOfHealing: 0.07,
-    serenity: 0,
-    prayerOfMending: 0.022,
+    flashHeal: 0.025,
+    prayerOfHealing: 0.038,
+    serenity: 0.027,
+    prayerOfMending: 0.018,
     halo: 0.025,
     fade: 0,
     apotheosis: 0,
-    desperatePrayer: 0.08,
-    divineHymn: 0.08
+    desperatePrayer: 0,
+    divineHymn: 0.042
   }),
   // Optional fixed mana cost override per spell. If set, this value is used directly.
   manaCostFixedOverrides: Object.freeze({
@@ -69,8 +130,8 @@ export const HOLY_PRIEST_PRACTICE_TUNING = Object.freeze({
   // true: duration = base / (1 + haste%)
   // false: fixed duration regardless of haste
   castTimeHasteAffectedBySpell: Object.freeze({
-    flashHeal: false,
-    prayerOfHealing: false,
+    flashHeal: true,
+    prayerOfHealing: true,
     divineHymn: true
   }),
   durations: Object.freeze({
@@ -80,8 +141,10 @@ export const HOLY_PRIEST_PRACTICE_TUNING = Object.freeze({
     prayerOfHealingPrimaryTargetHealMultiplier: 1.25,
     prayerOfMendingCooldownMs: 12000,
     prayerOfMendingDurationMs: 30000,
-    // 회복의 기원이 피해를 받을 때 전달되는 최대 횟수 (코드로 조절 가능)
+    // 회복의 기원 기본 전달 횟수 (Prayers of the Virtuous 비활성 기준)
     prayerOfMendingMaxJumps: 4,
+    // Prayers of the Virtuous 활성 시 추가 전달 횟수 (기본 2 -> 총 6회 전달)
+    prayersOfTheVirtuousBonusJumps: 2,
     divineImageStackDurationMs: 9000,
     divineImageDazzlingLightsTargetCount: 5,
     divineImageBlessedLightTargetCount: 5,
@@ -94,9 +157,14 @@ export const HOLY_PRIEST_PRACTICE_TUNING = Object.freeze({
     haloFullEffectTargetCount: 6,
     cosmicRippleTargetCount: 5,
     cosmicRippleFromDivineHymnTickHealMultiplier: 0.75,
-    benedictionProcChance: 0.3,
+    benedictionProcChance: 0.2,
     benedictionDurationMs: 30000,
     benedictionFlashHealHealBonusPct: 0.3,
+    seasonOneTierBenedictionDivineImageProcChance: 0.5,
+    seasonOneTierDivineImageHealingBonusPct: 0.3,
+    seasonOneTierDivineImageDurationBonusMs: 3000,
+    unwaveringWillHealthThresholdRatio: 0.75,
+    unwaveringWillCastTimeReductionPct: 0.1,
     surgeOfLightBaseProcChanceAtFullMana: 0.08,
     surgeOfLightProcChanceAtZeroMana: 0.5,
     surgeOfLightDurationMs: 20000,
@@ -137,6 +205,9 @@ export const HOLY_PRIEST_PRACTICE_TUNING = Object.freeze({
     lightsResurgenceRenewProcChance: 0.12,
     renewDurationMs: 15000,
     renewTickMs: 3000,
+    resonantEnergyHealingTakenPctPerStack: 0.02,
+    resonantEnergyDurationMs: 8000,
+    resonantEnergyMaxStacks: 5,
     lightweaverDurationMs: 20000,
     lightweaverMaxStacks: 4,
     lightweaverPrayerOfHealingCastTimeReductionPct: 0.3,

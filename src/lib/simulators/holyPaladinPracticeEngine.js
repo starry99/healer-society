@@ -4,6 +4,7 @@ import {
   GLOBAL_HEALER_SCALING
 } from "../../components/simulators/healerPracticeGlobalSettings";
 import {
+  HOLY_PALADIN_ADDED_TALENT_TOGGLES,
   HOLY_PALADIN_PRACTICE_TUNING as SHARED_HOLY_PALADIN_PRACTICE_TUNING
 } from "../../components/simulators/holyPaladinPracticeSettings";
 
@@ -77,6 +78,15 @@ const DEFAULT_BENEVOLENT_HEALER_TALENT_ENABLED = true;
 const DEFAULT_BENEVOLENT_HEALER_SELF_HEAL_RATIO = 0.1;
 const DEFAULT_SECOND_SUNRISE_TALENT_ENABLED = true;
 const DEFAULT_SECOND_SUNRISE_EFFECTIVENESS_RATIO = 0.15;
+const DEFAULT_SEASON_ONE_TIER_TALENT_ENABLED = HOLY_PALADIN_ADDED_TALENT_TOGGLES.seasonOneTier !== false;
+const DEFAULT_SEASON_ONE_TIER_HOLY_SHOCK_HEALING_BONUS_RATIO = Math.max(
+  0,
+  Number(SHARED_HOLY_PALADIN_PRACTICE_TUNING.seasonOneTier?.holyShockHealingBonusPct ?? 0.15)
+);
+const DEFAULT_SEASON_ONE_TIER_HOLY_SHOCK_BEACON_OF_LIGHT_ADDITIONAL_TRANSFER_RATIO = Math.max(
+  0,
+  Number(SHARED_HOLY_PALADIN_PRACTICE_TUNING.seasonOneTier?.holyShockAdditionalBeaconOfLightTransferPct ?? 0.2)
+);
 const DEFAULT_TRIAGE_HEALTH_THRESHOLD_PCT = 30;
 const DEFAULT_TRIAGE_MIN_EFFECTIVE_HEAL_PCT = 10;
 const DEFAULT_BASE_CRIT_CHANCE = 0.3;
@@ -125,8 +135,7 @@ function getManaCost(spellKey) {
         : 0;
   const baseCost = Math.max(0, resolvedCost);
   const scale = Math.max(0, Number(GLOBAL_HEALER_SCALING.manaCostScale ?? 1) || 1);
-  const tuningScale = Math.max(0, Number(GLOBAL_HEALER_SCALING.globalManaTuningScale ?? 1) || 1);
-  return baseCost * scale * tuningScale;
+  return baseCost * scale;
 }
 
 function getCastTimeMs(spellKey, fallbackMs = 0) {
@@ -747,11 +756,32 @@ export class HolyPaladinPracticeEngine {
       0,
       Number(config.secondSunriseEffectivenessRatio ?? DEFAULT_SECOND_SUNRISE_EFFECTIVENESS_RATIO)
     );
+    this.seasonOneTierTalentEnabled =
+      config.seasonOneTierTalentEnabled !== false &&
+      Boolean(config.seasonOneTierTalentEnabled ?? DEFAULT_SEASON_ONE_TIER_TALENT_ENABLED);
+    this.seasonOneTierHolyShockHealingBonusRatio = Math.max(
+      0,
+      Number(
+        config.seasonOneTierHolyShockHealingBonusRatio ??
+          DEFAULT_SEASON_ONE_TIER_HOLY_SHOCK_HEALING_BONUS_RATIO
+      )
+    );
+    this.seasonOneTierHolyShockBeaconOfLightAdditionalTransferRatio = Math.max(
+      0,
+      Number(
+        config.seasonOneTierHolyShockBeaconOfLightAdditionalTransferRatio ??
+          DEFAULT_SEASON_ONE_TIER_HOLY_SHOCK_BEACON_OF_LIGHT_ADDITIONAL_TRANSFER_RATIO
+      )
+    );
     this.sunSearDurationMs = Math.max(0, Number(config.sunSearDurationMs ?? DEFAULT_SUN_SEAR_DURATION_MS));
     this.sunSearTickMs = Math.max(100, Number(config.sunSearTickMs ?? DEFAULT_SUN_SEAR_TICK_MS));
     this.sunSearTickCount = Math.max(1, Math.round(this.sunSearDurationMs / this.sunSearTickMs));
     this.autoManaRegenTickMs = GLOBAL_AUTO_MANA_REGEN_TICK_MS;
     this.autoManaRegenPctOfMaxPerTick = GLOBAL_AUTO_MANA_REGEN_PCT_OF_MAX_PER_TICK;
+    this.manaTuningScale = Math.max(
+      0,
+      Number(config.manaTuningScale ?? GLOBAL_HEALER_SCALING.globalManaTuningScale ?? 1) || 1
+    );
     this.leechHealingRatio = Math.max(0, Number(config.leechHealingRatio ?? DEFAULT_LEECH_HEALING_RATIO));
     this.spellQueueWindowMs = clamp(Number(config.queueWindowMs ?? DEFAULT_SPELL_QUEUE_WINDOW_MS), 0, 2000);
     this.hastePct = Math.max(0, Number(config.hastePct ?? DEFAULT_HASTE_PCT));
@@ -1326,6 +1356,10 @@ export class HolyPaladinPracticeEngine {
     const lightOfMartyrActive = lightOfMartyrMultiplier > 1;
     const gloriousDawnProc = this.gloriousDawnTalentEnabled && this.rng() < GLORIOUS_DAWN_PROC_CHANCE;
     const gloriousDawnMultiplier = gloriousDawnProc ? GLORIOUS_DAWN_HEAL_MULTIPLIER : 1;
+    const seasonOneTierHolyShockMultiplier =
+      this.seasonOneTierTalentEnabled && this.seasonOneTierHolyShockHealingBonusRatio > 0
+        ? 1 + this.seasonOneTierHolyShockHealingBonusRatio
+        : 1;
     if (gloriousDawnProc) {
       this.addHolyShockCharge(1);
     }
@@ -1335,7 +1369,8 @@ export class HolyPaladinPracticeEngine {
       efficiency *
       missingHealthBonusMultiplier *
       gloriousDawnMultiplier *
-      lightOfMartyrMultiplier;
+      lightOfMartyrMultiplier *
+      seasonOneTierHolyShockMultiplier;
 
     const result = this.applyHeal(
       target.id,
@@ -1536,10 +1571,11 @@ export class HolyPaladinPracticeEngine {
       return 0;
     }
     const baseCost = Math.max(0, Number(spell.manaCost) || 0);
+    const tunedBaseCost = baseCost * this.manaTuningScale;
     if (spell.key === "holyLight" && this.hasHandOfFaithHolyLightBuff()) {
-      return round(baseCost * HAND_OF_FAITH_HOLY_LIGHT_MANA_COST_MULTIPLIER, 2);
+      return round(tunedBaseCost * HAND_OF_FAITH_HOLY_LIGHT_MANA_COST_MULTIPLIER, 2);
     }
-    return baseCost;
+    return round(tunedBaseCost, 2);
   }
 
   grantDawnlightEmpowermentFromDivineToll() {
@@ -2172,7 +2208,7 @@ export class HolyPaladinPracticeEngine {
       case "holyShock": {
         const holyShockResult = this.castHolyShockLike(targetId, {
           spellName: spell.name,
-          reclamationManaCost: spell.manaCost
+          reclamationManaCost: this.resolveSpellManaCost(spell)
         });
         if (!holyShockResult.success) {
           this.pushLog(`${spell.name} 실패: 대상 사망`, "warn");
@@ -2399,7 +2435,7 @@ export class HolyPaladinPracticeEngine {
             efficiency: 0.6,
             suppressMainLog: true,
             grantHolyPower: false,
-            reclamationManaCost: Number(HOLY_PALADIN_PRACTICE_SPELLS.holyShock?.manaCost ?? 0)
+            reclamationManaCost: this.resolveSpellManaCost(HOLY_PALADIN_PRACTICE_SPELLS.holyShock)
           });
           totalEffective += divineTollHolyShockResult.totalEffective;
         }
@@ -2495,7 +2531,7 @@ export class HolyPaladinPracticeEngine {
 
     const suppressBeaconTransfer = Boolean(options.suppressBeaconTransfer);
     if (allowBeaconTransfer && !suppressBeaconTransfer && effective > 0) {
-      this.transferBeaconHeal(targetId, effective);
+      this.transferBeaconHeal(targetId, effective, { sourceSpellKey: spellKey });
     }
 
     const shouldTransferToBeaconOfSavior =
@@ -2537,12 +2573,13 @@ export class HolyPaladinPracticeEngine {
     };
   }
 
-  transferBeaconHeal(primaryTargetId, effectiveAmount) {
+  transferBeaconHeal(primaryTargetId, effectiveAmount, options = {}) {
     const amount = Math.max(0, Number(effectiveAmount) || 0);
     if (amount <= 0) {
       return;
     }
 
+    const sourceSpellKey = String(options.sourceSpellKey ?? "").trim();
     const beaconLightId = this.beacons.light;
     const beaconFaithId = this.beacons.faith;
     const hasBeaconOfFaith = Boolean(beaconFaithId);
@@ -2562,6 +2599,26 @@ export class HolyPaladinPracticeEngine {
         continue;
       }
       this.applyHeal(beaconId, amount * ratio, false, {
+        spellKey: "beaconTransfer",
+        canCrit: false,
+        suppressBeaconTransfer: true,
+        suppressBeaconOfSaviorTransfer: true,
+        amountIsFinal: true
+      });
+    }
+
+    const seasonOneTierAdditionalBeaconLightRatio =
+      this.seasonOneTierTalentEnabled &&
+      sourceSpellKey === "holyShock" &&
+      this.seasonOneTierHolyShockBeaconOfLightAdditionalTransferRatio > 0
+        ? this.seasonOneTierHolyShockBeaconOfLightAdditionalTransferRatio
+        : 0;
+    if (
+      beaconLightId &&
+      beaconLightId !== primaryTargetId &&
+      seasonOneTierAdditionalBeaconLightRatio > 0
+    ) {
+      this.applyHeal(beaconLightId, amount * seasonOneTierAdditionalBeaconLightRatio, false, {
         spellKey: "beaconTransfer",
         canCrit: false,
         suppressBeaconTransfer: true,

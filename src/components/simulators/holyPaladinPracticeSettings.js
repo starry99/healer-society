@@ -9,6 +9,65 @@ export const HOLY_PALADIN_DEFAULT_STATS = Object.freeze({
   masteryPct: 40
 });
 
+// 힐러별 마나 튜닝 배율 (최종 마나 소모에 곱해짐)
+// 기존 globalManaTuningScale 기본값(1.2)과 동일하게 시작.
+export const HOLY_PALADIN_MANA_TUNING_SCALE = 1.2;
+
+// 난이도별 피해 배율/전투 시간/레이드 버스트 패턴 (신성 성기사 전용)
+// scheduledRaidBursts:
+// - startAtSec: 시작 시점(초)
+// - tickIntervalSec: 틱 간격(초)
+// - tickCount: 틱 횟수
+// - damagePerTick: 각 틱마다 모든 공대원에게 들어갈 기본 피해량(절대값)
+export const HOLY_PALADIN_PRACTICE_DIFFICULTY_TUNING = Object.freeze({
+  normal: Object.freeze({
+    label: "일반",
+    fixedCombatDurationMinutes: 2,
+    incomingDamageMultiplier: 0.45,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 5000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-1", startAtSec: 25, tickIntervalSec: 1, tickCount: 5, damagePerTick: 6200 },
+      { id: "raid-pulse-2", startAtSec: 85, tickIntervalSec: 1, tickCount: 5, damagePerTick: 6200 }
+    ])
+  }),
+  heroic: Object.freeze({
+    label: "영웅",
+    fixedCombatDurationMinutes: 2,
+    incomingDamageMultiplier: 0.55,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 5000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-3", startAtSec: 20, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6500 },
+      { id: "raid-pulse-4", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6500 }
+    ])
+  }),
+  mythic: Object.freeze({
+    label: "신화",
+    fixedCombatDurationMinutes: 2.5,
+    incomingDamageMultiplier: 0.6,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 4000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-5", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6800 },
+      { id: "raid-pulse-6", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6800 },
+      { id: "raid-pulse-7", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6800 }
+    ])
+  }),
+  worldFirstKill: Object.freeze({
+    label: "월퍼킬",
+    fixedCombatDurationMinutes: 2.5,
+    incomingDamageMultiplier: 0.7,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 3000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-8", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
+      { id: "raid-pulse-9", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
+      { id: "raid-pulse-10", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 }
+    ])
+  })
+});
+
 // 커스텀으로 추가한 특성성 효과 토글.
 // true: 활성화, false: 비활성화
 export const HOLY_PALADIN_ADDED_TALENT_TOGGLES = Object.freeze({
@@ -26,7 +85,8 @@ export const HOLY_PALADIN_ADDED_TALENT_TOGGLES = Object.freeze({
   beaconOfSavior: true,
   lightOfMartyr: true,
   benevolentHealer: true,
-  secondSunrise: true
+  secondSunrise: true,
+  seasonOneTier: true
 });
 
 export const HOLY_PALADIN_PRACTICE_TUNING = Object.freeze({
@@ -34,13 +94,13 @@ export const HOLY_PALADIN_PRACTICE_TUNING = Object.freeze({
   dummyBaseHealth: 375000,
   // Final heal = intellect * healAmountCoefficients[spellKey]
   healAmountCoefficients: Object.freeze({
-    holyShock: 7.27,
-    flashOfLight: 5.5,
-    holyLight: 40, // 44.9
-    lightOfDawn: 3.67,
-    eternalFlame: 12.86,
-    eternalFlameTick: 0.26,
-    sunSear: 1.17
+    holyShock: 8,
+    flashOfLight: 4.9,
+    holyLight: 43.67, // 44.9
+    lightOfDawn: 3.58,
+    eternalFlame: 13.68,
+    eternalFlameTick: 0.38,
+    sunSear: 0.76
   }),
   // Default mana model: baseMana * ratio
   manaCostBaseManaRatios: Object.freeze({
@@ -70,6 +130,10 @@ export const HOLY_PALADIN_PRACTICE_TUNING = Object.freeze({
     // Periodic defensive shield amount coefficient.
     // Final shield amount = intellect * shieldAmountCoefficient
     shieldAmountCoefficient: 3
+  }),
+  seasonOneTier: Object.freeze({
+    holyShockHealingBonusPct: 0.15,
+    holyShockAdditionalBeaconOfLightTransferPct: 0.2
   }),
   // Incoming damage pattern used by encounter simulator:
   // - singleHit*: baseline single-target hit range (ratio of dummyBaseHealth)

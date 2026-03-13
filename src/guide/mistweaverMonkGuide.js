@@ -10,6 +10,10 @@ export const mistweaverMonkGuideContent = {
     }
   },
   talents: {
+    copyTalentStringByMode: {
+      raid: "",
+      mythic: ""
+    },
     disabledModes: ["mythic"],
     contentByMode: {
       raid:
@@ -146,6 +150,11 @@ export const mistweaverMonkGuideContent = {
         url: "https://www.warcraftlogs.com/",
         description: "재활 타이밍, 과치유, 쿨기 효율 분석"
       }
+    ]
+  },
+  changelog: {
+    entries: [
+      { date: "2026-03-14T00:00:00+09:00", text: "초안" }
     ]
   }
 };

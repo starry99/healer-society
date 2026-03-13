@@ -296,8 +296,7 @@ function getManaCost(spellKey) {
         : 0;
   const baseCost = Math.max(0, resolvedCost);
   const scale = Math.max(0, Number(GLOBAL_HEALER_SCALING.manaCostScale ?? 1) || 1);
-  const tuningScale = Math.max(0, Number(GLOBAL_HEALER_SCALING.globalManaTuningScale ?? 1) || 1);
-  return baseCost * scale * tuningScale;
+  return baseCost * scale;
 }
 
 function getCastTimeMs(spellKey, fallbackMs = 0) {
@@ -542,6 +541,10 @@ export class RestorationDruidPracticeEngine {
     this.defaultCritHealMultiplier = Math.max(1, Number(config.defaultCritHealMultiplier ?? DEFAULT_CRIT_HEAL_MULTIPLIER));
     this.autoManaRegenTickMs = GLOBAL_AUTO_MANA_REGEN_TICK_MS;
     this.autoManaRegenPctOfMaxPerTick = GLOBAL_AUTO_MANA_REGEN_PCT_OF_MAX_PER_TICK;
+    this.manaTuningScale = Math.max(
+      0,
+      Number(config.manaTuningScale ?? GLOBAL_HEALER_SCALING.globalManaTuningScale ?? 1) || 1
+    );
     this.leechHealingRatio = Math.max(0, Number(config.leechHealingRatio ?? DEFAULT_LEECH_HEALING_RATIO));
     this.spellQueueWindowMs = clamp(Number(config.queueWindowMs ?? DEFAULT_SPELL_QUEUE_WINDOW_MS), 0, 2000);
     this.hastePct = Math.max(0, Number(config.hastePct ?? DEFAULT_HASTE_PCT));
@@ -1142,12 +1145,12 @@ export class RestorationDruidPracticeEngine {
   }
 
   getResolvedSpellManaCost(spell) {
-    const baseManaCost = Math.max(0, Number(spell?.manaCost) || 0);
+    const baseManaCost = Math.max(0, Number(spell?.manaCost) || 0) * this.manaTuningScale;
     if (!spell || !this.abundanceEnabled || spell.key !== "regrowth") {
-      return baseManaCost;
+      return round(baseManaCost, 2);
     }
     const reductionRatio = this.getAbundanceBonusRatio();
-    return baseManaCost * Math.max(0, 1 - reductionRatio);
+    return round(baseManaCost * Math.max(0, 1 - reductionRatio), 2);
   }
 
   getAdditionalCritChanceForSpell(spellKey, options = {}) {

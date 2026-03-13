@@ -163,6 +163,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           "healerSlug",
           "useClickCasting",
+          "showHolyPriestEchoOnRaidFrames",
           "movementKeyPreset",
           "movementCustomKeys",
           "keyboardBindings",
@@ -179,6 +180,10 @@ service cloud.firestore {
         && request.resource.data.healerSlug is string
         && request.resource.data.healerSlug == healerSlug
         && request.resource.data.useClickCasting is bool
+        && (
+          !request.resource.data.keys().hasAny(["showHolyPriestEchoOnRaidFrames"])
+          || request.resource.data.showHolyPriestEchoOnRaidFrames is bool
+        )
         && (
           !request.resource.data.keys().hasAny(["movementKeyPreset"])
           || (

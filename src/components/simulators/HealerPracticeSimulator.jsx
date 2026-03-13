@@ -47,7 +47,6 @@ import {
   HEALER_PRACTICE_PATCH_META_BY_HEALER,
   HEALER_PRACTICE_RANKING_PATCH_CONFIG,
   HEALER_PRACTICE_MAP_OPTIONS,
-  DIFFICULTY_OPTIONS,
   ENGINE_STEP_MS,
   FIXED_TANK_ANCHORS,
   HANGUL_TO_QWERTY_KEY_ALIAS,
@@ -59,7 +58,6 @@ import {
   MOVEMENT_RESTRICTED_KEY_LIST_BY_PRESET,
   PHASER_ARENA_VISUAL_CONFIG,
   PHASER_DIFFICULTY_MECHANIC_TUNING,
-  PRACTICE_DIFFICULTY_TUNING,
   RAID_CLASS_POOL,
   RAID_FRAME_VISUAL_CONFIG,
   RAID_LAYOUT_OPTIONS,
@@ -79,6 +77,8 @@ import {
   HOLY_PALADIN_CRIT_CONFIG,
   HOLY_PALADIN_DAWNLIGHT_CONFIG,
   HOLY_PALADIN_DEFAULT_STATS,
+  HOLY_PALADIN_MANA_TUNING_SCALE,
+  HOLY_PALADIN_PRACTICE_DIFFICULTY_TUNING,
   HOLY_PALADIN_SUN_SEAR_CONFIG,
   DEFAULT_CLICK_CAST_PREFERRED,
   HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG,
@@ -94,6 +94,8 @@ import {
   HOLY_PRIEST_DEFAULT_CLICK_CAST_PREFERRED,
   HOLY_PRIEST_DEFAULT_STATS,
   HOLY_PRIEST_HEALER_SLUG,
+  HOLY_PRIEST_MANA_TUNING_SCALE,
+  HOLY_PRIEST_PRACTICE_DIFFICULTY_TUNING,
   HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG,
   HOLY_PRIEST_SPELL_ICON_URL_BY_KEY
 } from "./holyPriestPracticeSettings";
@@ -105,6 +107,8 @@ import {
   RESTORATION_DRUID_DEFAULT_CLICK_CAST_PREFERRED,
   RESTORATION_DRUID_DEFAULT_STATS,
   RESTORATION_DRUID_HEALER_SLUG,
+  RESTORATION_DRUID_MANA_TUNING_SCALE,
+  RESTORATION_DRUID_PRACTICE_DIFFICULTY_TUNING,
   RESTORATION_DRUID_SPECIAL_PROC_DISPLAY_CONFIG,
   RESTORATION_DRUID_TREEANT_CONFIG,
   RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY
@@ -113,13 +117,14 @@ import {
 const FIXED_TANK_NAME_SET = new Set(FIXED_TANK_ANCHORS.map((anchor) => anchor.name));
 const MY_PLAYER_NAME = "나";
 const HOLY_PALADIN_HEALER_SLUG = "holy-paladin";
+const HOLY_PRIEST_NAARU_TEXTURE_KEY = "holy-priest-naaru-avatar";
 const HOLY_PALADIN_FEEDBACK_CPM_MIN = 40;
 const HOLY_PALADIN_FEEDBACK_SKILL_HIT_DAMAGE_MAX = 100;
 const HOLY_PALADIN_FEEDBACK_SELF_HEAL_RATIO_MAX_PCT = 10;
 const HOLY_PALADIN_FEEDBACK_WASTED_HOLY_POWER_MAX = 5;
 const HOLY_PALADIN_FEEDBACK_OVERHEAL_MAX_PCT = 20;
 const DEFAULT_IMPLEMENTED_HEALER_SLUG = HOLY_PALADIN_HEALER_SLUG;
-const IMPLEMENTED_HEALER_SLUGS = new Set([HOLY_PALADIN_HEALER_SLUG]); // 여기서 추가하면 카드 열림
+const IMPLEMENTED_HEALER_SLUGS = new Set([HOLY_PALADIN_HEALER_SLUG, HOLY_PRIEST_HEALER_SLUG]); // 여기서 추가하면 카드 열림
 const MY_RAID_FRAME_POSITION_OPTIONS = Object.freeze([
   Object.freeze({ value: "random", label: "랜덤 위치 (기본)" }),
   Object.freeze({ value: "firstSlotFixed", label: "첫자리 고정 (1,1)" })
@@ -275,6 +280,11 @@ const HEAL_METER_SPELL_META_BY_HEALER = Object.freeze({
       iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.cosmicRipple || DEFAULT_SPELL_ICON_URL,
       spellId: 238136
     }),
+    divineImage: Object.freeze({
+      name: "신성한 환영",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.divineImage || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.serenity,
+      spellId: 392990
+    }),
     divineImageHealingLight: Object.freeze({
       name: "신성한 환영 - 치유의 빛",
       iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.divineImage || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.serenity,
@@ -395,6 +405,44 @@ const HEAL_METER_SPELL_META_BY_HEALER = Object.freeze({
   })
 });
 
+const HEAL_METER_GROUPS_BY_HEALER = Object.freeze({
+  [HOLY_PRIEST_HEALER_SLUG]: Object.freeze([
+    Object.freeze({
+      parentSpellKey: "divineImage",
+      childSpellKeys: Object.freeze([
+        "divineImageHealingLight",
+        "divineImageDazzlingLights",
+        "divineImageBlessedLight"
+      ])
+    })
+  ])
+});
+
+function buildHealMeterGrouping(groupDefinitions = []) {
+  const childToParentSpellKey = {};
+  const childSpellKeysByParent = {};
+  for (const definition of groupDefinitions) {
+    const parentSpellKey = String(definition?.parentSpellKey ?? "").trim();
+    if (!parentSpellKey) {
+      continue;
+    }
+    const childSpellKeys = Array.isArray(definition?.childSpellKeys)
+      ? definition.childSpellKeys.map((value) => String(value ?? "").trim()).filter(Boolean)
+      : [];
+    if (!childSpellKeys.length) {
+      continue;
+    }
+    childSpellKeysByParent[parentSpellKey] = childSpellKeys;
+    for (const childSpellKey of childSpellKeys) {
+      childToParentSpellKey[childSpellKey] = parentSpellKey;
+    }
+  }
+  return {
+    childToParentSpellKey: Object.freeze(childToParentSpellKey),
+    childSpellKeysByParent: Object.freeze(childSpellKeysByParent)
+  };
+}
+
 const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
   [HOLY_PALADIN_HEALER_SLUG]: Object.freeze({
     engineClass: HolyPaladinPracticeEngine,
@@ -409,6 +457,7 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
     practiceSpells: HOLY_PALADIN_PRACTICE_SPELLS,
     specialProcDisplayConfig: HOLY_PALADIN_SPECIAL_PROC_DISPLAY_CONFIG,
     healMeterSpellMeta: HEAL_METER_SPELL_META_BY_HEALER[HOLY_PALADIN_HEALER_SLUG],
+    difficultyTuning: HOLY_PALADIN_PRACTICE_DIFFICULTY_TUNING,
     buildEngineConfig: () => ({
       infusionOfLightProcChance: HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG.procChance,
       infusionOfLightDurationMs: HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG.durationMs,
@@ -428,6 +477,8 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
       lightOfMartyrTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.lightOfMartyr,
       benevolentHealerTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.benevolentHealer,
       secondSunriseTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.secondSunrise,
+      seasonOneTierTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.seasonOneTier,
+      manaTuningScale: HOLY_PALADIN_MANA_TUNING_SCALE,
       intellect: HOLY_PALADIN_DEFAULT_STATS.intellect,
       hastePct: HOLY_PALADIN_DEFAULT_STATS.hastePct,
       masteryPct: HOLY_PALADIN_DEFAULT_STATS.masteryPct,
@@ -461,15 +512,20 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
     practiceSpells: HOLY_PRIEST_PRACTICE_SPELLS,
     specialProcDisplayConfig: HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG,
     healMeterSpellMeta: HEAL_METER_SPELL_META_BY_HEALER[HOLY_PRIEST_HEALER_SLUG],
+    difficultyTuning: HOLY_PRIEST_PRACTICE_DIFFICULTY_TUNING,
     buildEngineConfig: () => ({
       haloTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.halo,
+      prayersOfTheVirtuousTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.prayersOfTheVirtuous,
       lightweaverTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.lightweaver,
       ultimateSerenityTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.ultimateSerenity,
       divineImageTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.divineImage,
+      seasonOneTierTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.seasonOneTier,
       upliftingWordsTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.upliftingWords,
       crisisManagementTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.crisisManagement,
       trailOfLightTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.trailOfLight,
       lightsResurgenceTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.lightsResurgence,
+      resonantEnergyTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.resonantEnergy,
+      manaTuningScale: HOLY_PRIEST_MANA_TUNING_SCALE,
       intellect: HOLY_PRIEST_DEFAULT_STATS.intellect,
       hastePct: HOLY_PRIEST_DEFAULT_STATS.hastePct,
       masteryPct: HOLY_PRIEST_DEFAULT_STATS.masteryPct,
@@ -494,7 +550,9 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
     practiceSpells: RESTORATION_DRUID_PRACTICE_SPELLS,
     specialProcDisplayConfig: RESTORATION_DRUID_SPECIAL_PROC_DISPLAY_CONFIG,
     healMeterSpellMeta: HEAL_METER_SPELL_META_BY_HEALER[RESTORATION_DRUID_HEALER_SLUG],
+    difficultyTuning: RESTORATION_DRUID_PRACTICE_DIFFICULTY_TUNING,
     buildEngineConfig: () => ({
+      manaTuningScale: RESTORATION_DRUID_MANA_TUNING_SCALE,
       intellect: RESTORATION_DRUID_DEFAULT_STATS.intellect,
       hastePct: RESTORATION_DRUID_DEFAULT_STATS.hastePct,
       baseCritChance: pctToChance(RESTORATION_DRUID_DEFAULT_STATS.critPct),
@@ -966,6 +1024,56 @@ function refreshWowheadTooltips() {
   if (window?.$WowheadPower?.refreshLinks) {
     window.$WowheadPower.refreshLinks();
   }
+}
+
+function renderWowheadInlineTokenText(text, keyPrefix = "wowhead-inline") {
+  const value = String(text ?? "");
+  const tokenPattern = /\[\[([^[\]]+)\]\]/g;
+  const chunks = [];
+  let lastIndex = 0;
+  let matchIndex = 0;
+  let match = tokenPattern.exec(value);
+
+  while (match) {
+    const [rawTokenText, rawTokenBody] = match;
+    const tokenStart = match.index ?? 0;
+    if (tokenStart > lastIndex) {
+      chunks.push(value.slice(lastIndex, tokenStart));
+    }
+
+    const tokenBody = String(rawTokenBody ?? "").trim();
+    const tokenMatched = tokenBody.match(/^(.*)#(\d+)$/);
+    const tokenLabel = String(tokenMatched?.[1] ?? tokenBody).trim();
+    const spellId = String(tokenMatched?.[2] ?? "").trim();
+
+    if (spellId) {
+      chunks.push(
+        <a
+          className="rounded px-0.5 text-violet-200 underline decoration-violet-300/70 underline-offset-2 transition hover:text-violet-100"
+          data-wh-icon-size="small"
+          data-wh-rename-link="false"
+          href={`https://www.wowhead.com/ko/spell=${spellId}`}
+          key={`${keyPrefix}-${spellId}-${tokenStart}-${matchIndex}`}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {tokenLabel}
+        </a>
+      );
+    } else {
+      chunks.push(tokenLabel);
+    }
+
+    lastIndex = tokenStart + rawTokenText.length;
+    matchIndex += 1;
+    match = tokenPattern.exec(value);
+  }
+
+  if (lastIndex < value.length) {
+    chunks.push(value.slice(lastIndex));
+  }
+
+  return chunks.length ? chunks : value;
 }
 
 function getSelfBuffRemainingMs(snapshot, spellKey) {
@@ -1451,15 +1559,70 @@ function mouseEventToBindingToken(event) {
   return modifiers.length ? `${modifiers[0]}+${base}` : base;
 }
 
-function resolveCombatDurationMinutesByDifficulty(difficultyKey) {
+const DIFFICULTY_KEY_DISPLAY_ORDER = Object.freeze(["normal", "heroic", "mythic", "worldFirstKill"]);
+const FALLBACK_PRACTICE_DIFFICULTY_CONFIG = Object.freeze({
+  label: "일반",
+  fixedCombatDurationMinutes: 2,
+  incomingDamageMultiplier: 1,
+  damageBreakEveryMs: 0,
+  damageBreakDurationMs: 0,
+  scheduledRaidBursts: Object.freeze([])
+});
+const DEFAULT_PRACTICE_DIFFICULTY_TUNING = Object.freeze({
+  normal: FALLBACK_PRACTICE_DIFFICULTY_CONFIG
+});
+
+function normalizePracticeDifficultyTuning(difficultyTuning) {
+  if (!difficultyTuning || typeof difficultyTuning !== "object") {
+    return DEFAULT_PRACTICE_DIFFICULTY_TUNING;
+  }
+  const keys = Object.keys(difficultyTuning);
+  if (!keys.length) {
+    return DEFAULT_PRACTICE_DIFFICULTY_TUNING;
+  }
+  return difficultyTuning;
+}
+
+function resolveDifficultyConfigByKey(difficultyTuning, difficultyKey) {
+  const tuning = normalizePracticeDifficultyTuning(difficultyTuning);
   const requestedKey = String(difficultyKey ?? "").trim();
-  const requested = PRACTICE_DIFFICULTY_TUNING[requestedKey];
-  const fallback = PRACTICE_DIFFICULTY_TUNING.normal;
-  const configuredMinutes = Number(requested?.fixedCombatDurationMinutes ?? fallback?.fixedCombatDurationMinutes ?? 2);
+  const requested = tuning[requestedKey];
+  const fallback = tuning.normal ?? tuning[Object.keys(tuning)[0]] ?? FALLBACK_PRACTICE_DIFFICULTY_CONFIG;
+  return requested ?? fallback;
+}
+
+function resolveCombatDurationMinutesByDifficulty(difficultyKey, difficultyTuning) {
+  const difficultyConfig = resolveDifficultyConfigByKey(difficultyTuning, difficultyKey);
+  const configuredMinutes = Number(difficultyConfig?.fixedCombatDurationMinutes ?? 2);
   if (!Number.isFinite(configuredMinutes)) {
     return 2;
   }
   return Math.max(0.5, configuredMinutes);
+}
+
+function buildDifficultyOptionsFromTuning(difficultyTuning) {
+  const tuning = normalizePracticeDifficultyTuning(difficultyTuning);
+  const keySet = new Set(Object.keys(tuning));
+  const orderedKeys = [];
+  for (const key of DIFFICULTY_KEY_DISPLAY_ORDER) {
+    if (keySet.has(key)) {
+      orderedKeys.push(key);
+      keySet.delete(key);
+    }
+  }
+  for (const key of keySet) {
+    orderedKeys.push(key);
+  }
+  return orderedKeys.map((key) => {
+    const config = resolveDifficultyConfigByKey(tuning, key);
+    const rawLabel = String(config?.label ?? key).trim();
+    const label = rawLabel || key;
+    const durationMinutes = resolveCombatDurationMinutesByDifficulty(key, tuning);
+    return {
+      value: key,
+      label: `${label} (${durationMinutes}분)`
+    };
+  });
 }
 
 function toPercentNumber(value, fallback = 0) {
@@ -1789,7 +1952,7 @@ const DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS = buildCooldownManagerSpellOrderBucke
   DEFAULT_PRACTICE_RUNTIME.cooldownManagerNonDisplaySpellKeys
 );
 
-export function HealerPracticeSimulator() {
+export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   const { user, userLabel, internalUserId, isLoggedIn, firebaseEnabled: authFirebaseEnabled } = useAuthSession();
   const [selectedHealerSlug, setSelectedHealerSlug] = useState(DEFAULT_IMPLEMENTED_HEALER_SLUG);
   const [hasExplicitHealerSelection, setHasExplicitHealerSelection] = useState(false);
@@ -1799,7 +1962,7 @@ export function HealerPracticeSimulator() {
   const [customMovementKeys, setCustomMovementKeys] = useState(() => buildDefaultCustomMovementKeys());
   const [useMouseover, setUseMouseover] = useState(true);
   const [useClickCasting, setUseClickCasting] = useState(false);
-  const [showHolyPriestEchoOnRaidFrames, setShowHolyPriestEchoOnRaidFrames] = useState(true);
+  const [showHolyPriestEchoOnRaidFrames, setShowHolyPriestEchoOnRaidFrames] = useState(false);
   const [raidFrameLayout, setRaidFrameLayout] = useState("4x5");
   const [myRaidFramePositionMode, setMyRaidFramePositionMode] = useState("random");
   const [keyboardBindings, setKeyboardBindings] = useState(() =>
@@ -1844,8 +2007,19 @@ export function HealerPracticeSimulator() {
   const [isDesktopEnvironment, setIsDesktopEnvironment] = useState(() => isDesktopEnvironmentSupported());
   const [canvasRawDamageTaken, setCanvasRawDamageTaken] = useState(0);
   const [canvasHitCounts, setCanvasHitCounts] = useState(() => createInitialCanvasHitCounts());
+  const [expandedHealMeterSpellKeys, setExpandedHealMeterSpellKeys] = useState(() => new Set());
 
   const [sessionConfig, setSessionConfig] = useState(null);
+
+  useEffect(() => {
+    if (typeof onCombatRunningChange !== "function") {
+      return undefined;
+    }
+    onCombatRunningChange(Boolean(running));
+    return () => {
+      onCombatRunningChange(false);
+    };
+  }, [onCombatRunningChange, running]);
 
   const engineRef = useRef(null);
   const rafRef = useRef(0);
@@ -1885,6 +2059,20 @@ export function HealerPracticeSimulator() {
     () => resolveHealerPracticeRuntime(selectedHealerSlug),
     [selectedHealerSlug]
   );
+  const selectedDifficultyTuning = selectedPracticeRuntime.difficultyTuning ?? DEFAULT_PRACTICE_DIFFICULTY_TUNING;
+  const selectedDifficultyOptions = useMemo(
+    () => buildDifficultyOptionsFromTuning(selectedDifficultyTuning),
+    [selectedDifficultyTuning]
+  );
+  useEffect(() => {
+    if (!selectedDifficultyOptions.length) {
+      return;
+    }
+    if (selectedDifficultyOptions.some((option) => option.value === difficultyKey)) {
+      return;
+    }
+    setDifficultyKey(selectedDifficultyOptions[0].value);
+  }, [difficultyKey, selectedDifficultyOptions]);
   const activeSpellKeys = selectedPracticeRuntime.activeSpellKeys;
   const clickCastableKeys = selectedPracticeRuntime.clickCastableKeys;
   const clickCastableSet = useMemo(() => new Set(clickCastableKeys), [clickCastableKeys]);
@@ -2152,7 +2340,14 @@ export function HealerPracticeSimulator() {
       return;
     }
     refreshWowheadTooltips();
-  }, [inCombatView, useClickCasting, showPreCombatSetupSections, selectedHealerSlug, activeSpells.length]);
+  }, [
+    inCombatView,
+    useClickCasting,
+    showPreCombatSetupSections,
+    selectedHealerSlug,
+    selectedHealerDisclaimers.length,
+    activeSpells.length
+  ]);
 
   useEffect(
     () => () => {
@@ -2593,7 +2788,7 @@ export function HealerPracticeSimulator() {
     } catch (error) {
       if (!silent) {
         if (error?.code === "permission-denied") {
-          setStatusText("권한 오류로 개인 키바인드 불러오기에 실패했습니다. Firestore rules 배포 상태를 확인해 주세요.");
+          setStatusText("권한 오류로 개인 키바인드 불러오기에 실패했습니다.");
         } else {
           setStatusText("개인 키바인드 불러오기에 실패했습니다.");
         }
@@ -2619,23 +2814,42 @@ export function HealerPracticeSimulator() {
 
     setKeybindProfileSyncBusy(true);
     try {
-      const payload = {
+      const basePayload = {
         healerSlug: selectedHealerSlug,
         useClickCasting: Boolean(useClickCasting),
-        showHolyPriestEchoOnRaidFrames: Boolean(showHolyPriestEchoOnRaidFrames),
         movementKeyPreset: normalizeMovementPreset(movementKeyPreset),
         movementCustomKeys: normalizeMovementCustomKeys(customMovementKeys),
         keyboardBindings: buildPersistableKeyboardBindings(keyboardBindings, activeSpellKeys),
         clickCastBindings: buildPersistableClickCastBindings(clickCastBindings, clickCastableKeys),
         updatedAt: serverTimestamp()
       };
-      await docRef.set(payload, { merge: true });
+      const payload =
+        selectedHealerSlug === HOLY_PRIEST_HEALER_SLUG
+          ? {
+            ...basePayload,
+            showHolyPriestEchoOnRaidFrames: Boolean(showHolyPriestEchoOnRaidFrames)
+          }
+          : basePayload;
+      try {
+        await docRef.set(payload, { merge: true });
+      } catch (error) {
+        const shouldRetryWithoutEchoFlag =
+          selectedHealerSlug === HOLY_PRIEST_HEALER_SLUG &&
+          error?.code === "permission-denied" &&
+          Object.prototype.hasOwnProperty.call(payload, "showHolyPriestEchoOnRaidFrames");
+        if (!shouldRetryWithoutEchoFlag) {
+          throw error;
+        }
+        await docRef.set(basePayload, { merge: true });
+      }
       setStatusText("개인 키바인드를 저장했습니다.");
     } catch (error) {
+      console.error("Failed to save healer keybind profile", error);
       if (error?.code === "permission-denied") {
-        setStatusText("권한 오류로 개인 키바인드 저장에 실패했습니다. Firestore rules를 다시 배포해 주세요.");
+        setStatusText("권한 오류로 개인 키바인드 저장에 실패했습니다. Firestore rules 배포 상태를 확인해 주세요.");
       } else {
-        setStatusText("개인 키바인드 저장에 실패했습니다.");
+        const errorCode = String(error?.code ?? "").trim();
+        setStatusText(errorCode ? `개인 키바인드 저장에 실패했습니다. (${errorCode})` : "개인 키바인드 저장에 실패했습니다.");
       }
     } finally {
       setKeybindProfileSyncBusy(false);
@@ -2666,13 +2880,13 @@ export function HealerPracticeSimulator() {
     stopLoopOnly();
     clearGameOverState();
 
-    const durationMinutes = resolveCombatDurationMinutesByDifficulty(difficultyKey);
+    const durationMinutes = resolveCombatDurationMinutesByDifficulty(difficultyKey, selectedDifficultyTuning);
     const durationMs = durationMinutes * 60 * 1000;
     const configuredSetupSeed = Number(setupSeed);
     const seed = Number.isFinite(configuredSetupSeed)
       ? Math.floor(configuredSetupSeed)
       : Math.floor(Math.random() * 2147483647);
-    const difficultyConfig = PRACTICE_DIFFICULTY_TUNING[difficultyKey] ?? PRACTICE_DIFFICULTY_TUNING.normal;
+    const difficultyConfig = resolveDifficultyConfigByKey(selectedDifficultyTuning, difficultyKey);
     const resolvedTankDamageTakenMultiplier = DEFAULT_TANK_DAMAGE_TAKEN_MULTIPLIER;
     const normalizedTriageHealthThresholdPct = toPercentNumber(
       FIXED_TRIAGE_HEALTH_THRESHOLD_PCT,
@@ -3091,7 +3305,25 @@ export function HealerPracticeSimulator() {
     () => resolveHealerPracticeRuntime(activeCombatHealerSlug),
     [activeCombatHealerSlug]
   );
+  const activeCombatDifficultyTuning =
+    activeCombatPracticeRuntime.difficultyTuning ?? selectedDifficultyTuning;
   const activeCombatSpellIconsByKey = activeCombatPracticeRuntime.spellIconUrlByKey ?? practiceSpellIconsByKey;
+  const healMeterGrouping = useMemo(
+    () => buildHealMeterGrouping(HEAL_METER_GROUPS_BY_HEALER[activeCombatHealerSlug] ?? []),
+    [activeCombatHealerSlug]
+  );
+  const rankingViewPracticeRuntime = useMemo(
+    () => resolveHealerPracticeRuntime(rankingViewHealerSlug),
+    [rankingViewHealerSlug]
+  );
+  const rankingViewDifficultyTuning =
+    rankingViewPracticeRuntime.difficultyTuning ?? DEFAULT_PRACTICE_DIFFICULTY_TUNING;
+  const rankingDifficultyTabKeys = useMemo(() => {
+    const filteredKeys = buildDifficultyOptionsFromTuning(rankingViewDifficultyTuning)
+      .map((option) => option.value)
+      .filter((difficultyKeyValue) => RANKING_ENABLED_DIFFICULTY_KEYS.has(difficultyKeyValue));
+    return filteredKeys.length ? filteredKeys : RANKING_DIFFICULTY_TAB_KEYS;
+  }, [rankingViewDifficultyTuning]);
   const rankingHealerTabOptions = useMemo(
     () =>
       healers.map((healer) => ({
@@ -3118,8 +3350,14 @@ export function HealerPracticeSimulator() {
     unique.add(rankingCurrentPatchVersion);
     return Array.from(unique);
   }, [rankingCurrentPatchVersion]);
+  useEffect(() => {
+    setExpandedHealMeterSpellKeys(new Set());
+  }, [activeCombatHealerSlug]);
   const activePhaserDifficultyConfig =
     PHASER_DIFFICULTY_MECHANIC_TUNING[activeDifficultyKey] ?? PHASER_DIFFICULTY_MECHANIC_TUNING.normal;
+  const activeDifficultyLabel =
+    String(resolveDifficultyConfigByKey(activeCombatDifficultyTuning, activeDifficultyKey)?.label ?? activeDifficultyKey)
+      .trim() || "일반";
   const hasCombatSnapshot = Boolean(currentSnapshot);
   const raidColumnCount = raidLayoutColumnCount(activeRaidFrameLayout);
   const raidRowCount = activeRaidFrameLayout === "4x5" ? 4 : 5;
@@ -3280,11 +3518,15 @@ export function HealerPracticeSimulator() {
       healerScoreConfig?.averageRaidHealth,
       { maxPoints: 20, fullScoreAtOrAbovePct: 75, pctPerPointLost: 1 }
     );
-    const remainingManaScore = computeLowerIsBetterStepScore(
-      manaPct,
-      healerScoreConfig?.remainingMana,
-      { maxPoints: 10, fullScoreAtOrBelowPct: 30, pctPerPointLost: 2, pointsLostPerStep: 0.5 }
-    );
+    const remainingManaConfig = healerScoreConfig?.remainingMana;
+    const includeRemainingManaScore = remainingManaConfig?.enabled !== false;
+    const remainingManaScore = includeRemainingManaScore
+      ? computeLowerIsBetterStepScore(
+        manaPct,
+        remainingManaConfig,
+        { maxPoints: 10, fullScoreAtOrBelowPct: 30, pctPerPointLost: 2, pointsLostPerStep: 0.5 }
+      )
+      : 0;
 
     const directCpm = Number(metrics.cpm);
     const cpm = Number.isFinite(directCpm)
@@ -3322,7 +3564,7 @@ export function HealerPracticeSimulator() {
         : 0;
     const selfHealRatioPctForScore =
       totalHealingDone > 0 ? Math.max(0, Math.min(100, (selfHealingDone / totalHealingDone) * 100)) : 0;
-    const selfHealConfig = HEALER_PRACTICE_SCORE_COMMON_CONFIG?.selfHealRatio ?? {};
+    const selfHealConfig = healerScoreConfig?.selfHealRatio ?? HEALER_PRACTICE_SCORE_COMMON_CONFIG?.selfHealRatio ?? {};
     const selfHealScore = roundToOneDecimal(
       computeLowerIsBetterStepScore(selfHealRatioPctForScore, selfHealConfig, {
         maxPoints: 5,
@@ -3341,8 +3583,51 @@ export function HealerPracticeSimulator() {
         maxPoints: healerSpecificMaxPoints,
         pointsLostPerUnit: Number(healerSpecificConfig.pointsLostPerWastedHolyPower ?? 1)
       });
+    } else if (healerSpecificType === "holyPriestCustom") {
+      const wastedLightweaverStacks = Math.max(0, Math.round(Number(metrics.wastedLightweaverStacks ?? 0)));
+      const wastedSurgeOfLightStacks = Math.max(0, Math.round(Number(metrics.wastedSurgeOfLightStacks ?? 0)));
+      const rawPrayerOfHealingCasts = Math.max(0, Math.round(Number(metrics.rawPrayerOfHealingCasts ?? 0)));
+      const effectiveSerenityReductionSec = Math.max(
+        0,
+        Number(metrics.effectiveSerenityCooldownReductionMs ?? 0) / 1000
+      );
+      const wastedProcConfig = healerSpecificConfig?.wastedProcStacks ?? {};
+      const rawPohConfig = healerSpecificConfig?.rawPrayerOfHealingCasts ?? {};
+      const serenityCdrConfig = healerSpecificConfig?.serenityCooldownReduction ?? {};
+      const wastedProcScore = computeCountPenaltyScore(
+        wastedLightweaverStacks + wastedSurgeOfLightStacks,
+        {
+          maxPoints: Number(wastedProcConfig.maxPoints ?? 10),
+          pointsLostPerUnit: Number(wastedProcConfig.pointsLostPerUnit ?? 1)
+        },
+        10
+      );
+      const rawPohScore = computeCountPenaltyScore(
+        rawPrayerOfHealingCasts,
+        {
+          maxPoints: Number(rawPohConfig.maxPoints ?? 5),
+          pointsLostPerUnit: Number(rawPohConfig.pointsLostPerCast ?? 1)
+        },
+        5
+      );
+      const serenityCdrScore = computeHigherIsBetterStepScore(
+        effectiveSerenityReductionSec,
+        {
+          maxPoints: Number(serenityCdrConfig.maxPoints ?? 10),
+          fullScoreAtOrAbovePct: Number(serenityCdrConfig.fullScoreAtOrAboveSec ?? 350),
+          pctPerStep: Number(serenityCdrConfig.secPerStep ?? 10),
+          pointsLostPerStep: Number(serenityCdrConfig.pointsLostPerStep ?? 0.5)
+        },
+        {
+          maxPoints: 10,
+          fullScoreAtOrAbovePct: 350,
+          pctPerStep: 10,
+          pointsLostPerStep: 0.5
+        }
+      );
+      healerSpecificScore = wastedProcScore + rawPohScore + serenityCdrScore;
     }
-    healerSpecificScore = roundToOneDecimal(healerSpecificScore);
+    healerSpecificScore = roundToOneDecimal(clampScore(healerSpecificScore, healerSpecificMaxPoints));
     const deathsScoreRounded = roundToOneDecimal(deathsScore);
     const overhealingScoreRounded = roundToOneDecimal(overhealingScore);
     const averageRaidHealthScoreRounded = roundToOneDecimal(averageRaidHealthScore);
@@ -3384,10 +3669,10 @@ export function HealerPracticeSimulator() {
       return null;
     }
 
-    const durationMinutes = resolveCombatDurationMinutesByDifficulty(difficultyKey);
+    const durationMinutes = resolveCombatDurationMinutesByDifficulty(difficultyKey, selectedDifficultyTuning);
     const durationMs = durationMinutes * 60 * 1000;
     const seed = Math.floor(configuredSeed);
-    const difficultyConfig = PRACTICE_DIFFICULTY_TUNING[difficultyKey] ?? PRACTICE_DIFFICULTY_TUNING.normal;
+    const difficultyConfig = resolveDifficultyConfigByKey(selectedDifficultyTuning, difficultyKey);
     const normalizedTriageHealthThresholdPct = toPercentNumber(
       FIXED_TRIAGE_HEALTH_THRESHOLD_PCT,
       FIXED_TRIAGE_HEALTH_THRESHOLD_PCT
@@ -3533,12 +3818,69 @@ export function HealerPracticeSimulator() {
         0,
         Number(currentSnapshot.metrics?.effectiveSerenityCooldownReductionMs ?? 0)
       );
+      const rawPrayerOfHealingCasts = Math.max(
+        0,
+        Math.round(Number(currentSnapshot.metrics?.rawPrayerOfHealingCasts ?? 0))
+      );
+      const wastedLightweaverStacks = Math.max(
+        0,
+        Math.round(Number(currentSnapshot.metrics?.wastedLightweaverStacks ?? 0))
+      );
+      const wastedSurgeOfLightStacks = Math.max(
+        0,
+        Math.round(Number(currentSnapshot.metrics?.wastedSurgeOfLightStacks ?? 0))
+      );
+      const surgeOfLightConsumedTotal = Math.max(
+        0,
+        Math.round(Number(currentSnapshot.metrics?.surgeOfLightConsumedTotal ?? 0))
+      );
+      const surgeOfLightConsumedFlashHealCasts = Math.max(
+        0,
+        Math.round(Number(currentSnapshot.metrics?.surgeOfLightConsumedFlashHealCasts ?? 0))
+      );
+      const surgeOfLightConsumedPrayerOfHealingCasts = Math.max(
+        0,
+        Math.round(Number(currentSnapshot.metrics?.surgeOfLightConsumedPrayerOfHealingCasts ?? 0))
+      );
+      const surgePrayerOfHealingUsagePct =
+        surgeOfLightConsumedTotal > 0
+          ? (surgeOfLightConsumedPrayerOfHealingCasts / surgeOfLightConsumedTotal) * 100
+          : 0;
+      const surgeFlashHealUsagePct =
+        surgeOfLightConsumedTotal > 0
+          ? (surgeOfLightConsumedFlashHealCasts / surgeOfLightConsumedTotal) * 100
+          : 0;
       return [
         {
           key: "effective-serenity-cdr",
           title: "평온 유효 쿨감",
           value: `${(effectiveSerenityReductionMs / 1000).toFixed(1)}초`,
           valueClassName: "text-cyan-200"
+        },
+        {
+          key: "raw-prayer-of-healing-casts",
+          title: "깡 치기 시전 수",
+          value: `${rawPrayerOfHealingCasts}`,
+          valueClassName: "text-violet-200"
+        },
+        {
+          key: "wasted-lightweaver-stacks",
+          title: "낭비된 빛술사 스택",
+          value: `${wastedLightweaverStacks}`,
+          valueClassName: "text-amber-200"
+        },
+        {
+          key: "wasted-surge-of-light-stacks",
+          title: "낭비된 빛의 쇄도",
+          value: `${wastedSurgeOfLightStacks}`,
+          valueClassName: "text-rose-200"
+        },
+        {
+          key: "surge-of-light-usage",
+          title: "빛의 쇄도 통계",
+          value: `치유의 기원: ${surgePrayerOfHealingUsagePct.toFixed(1)}%\n순간 치유: ${surgeFlashHealUsagePct.toFixed(1)}%`,
+          valueClassName: "text-purple-100",
+          valueTextClassName: "text-[11px]"
         }
       ];
     }
@@ -3555,6 +3897,10 @@ export function HealerPracticeSimulator() {
     }
     return [];
   }, [activeCombatHealerSlug, currentSnapshot]);
+  const combatRecordCards = useMemo(
+    () => [...combatRecordCommonCards, ...combatRecordHealerSpecificCards],
+    [combatRecordCommonCards, combatRecordHealerSpecificCards]
+  );
   const finalCpm = useMemo(() => {
     const direct = Number(currentSnapshot?.metrics?.cpm);
     if (Number.isFinite(direct)) {
@@ -3596,6 +3942,7 @@ export function HealerPracticeSimulator() {
     const mapKey = String(sessionConfig.mapKey ?? activeMapKey).trim();
     return `${healerSlug}|${difficulty}|${mapKey}|${rankingCurrentPatchVersion}|${safeSeed}|${finishedMs}`;
   }, [
+    activeCombatDifficultyTuning,
     activeCombatHealerSlug,
     activeDifficultyKey,
     activeMapKey,
@@ -3626,15 +3973,49 @@ export function HealerPracticeSimulator() {
       return [];
     }
 
+    const childToParentSpellKey = healMeterGrouping.childToParentSpellKey ?? {};
+    const childSpellKeysByParent = healMeterGrouping.childSpellKeysByParent ?? {};
+    const groupedChildAmountByParent = {};
     const mergedAmountBySpell = Object.entries(healingBySpell).reduce((acc, [spellKey, rawAmount]) => {
       const amount = Math.max(0, Number(rawAmount) || 0);
       if (amount <= 0) {
         return acc;
       }
-      const mergedSpellKey = spellKey === "eternalFlameTick" ? "eternalFlame" : spellKey;
+      const normalizedSpellKey = spellKey === "eternalFlameTick" ? "eternalFlame" : spellKey;
+      const parentSpellKey = childToParentSpellKey[normalizedSpellKey] ?? "";
+      const mergedSpellKey = parentSpellKey || normalizedSpellKey;
+      if (parentSpellKey) {
+        if (!groupedChildAmountByParent[parentSpellKey]) {
+          groupedChildAmountByParent[parentSpellKey] = {};
+        }
+        groupedChildAmountByParent[parentSpellKey][normalizedSpellKey] =
+          Math.max(0, Number(groupedChildAmountByParent[parentSpellKey][normalizedSpellKey] ?? 0)) + amount;
+      }
       acc[mergedSpellKey] = Math.max(0, Number(acc[mergedSpellKey] ?? 0)) + amount;
       return acc;
     }, {});
+    const groupedChildCastsByParent = {};
+    const mergedCastsBySpell = {};
+    const castMetrics = currentSnapshot?.metrics?.casts;
+    if (castMetrics && typeof castMetrics === "object") {
+      for (const [spellKey, rawCasts] of Object.entries(castMetrics)) {
+        const casts = Math.max(0, Number(rawCasts) || 0);
+        if (casts <= 0) {
+          continue;
+        }
+        const normalizedSpellKey = spellKey === "eternalFlameTick" ? "eternalFlame" : spellKey;
+        const parentSpellKey = childToParentSpellKey[normalizedSpellKey] ?? "";
+        const mergedSpellKey = parentSpellKey || normalizedSpellKey;
+        mergedCastsBySpell[mergedSpellKey] = Math.max(0, Number(mergedCastsBySpell[mergedSpellKey] ?? 0)) + casts;
+        if (parentSpellKey) {
+          if (!groupedChildCastsByParent[parentSpellKey]) {
+            groupedChildCastsByParent[parentSpellKey] = {};
+          }
+          groupedChildCastsByParent[parentSpellKey][normalizedSpellKey] =
+            Math.max(0, Number(groupedChildCastsByParent[parentSpellKey][normalizedSpellKey] ?? 0)) + casts;
+        }
+      }
+    }
 
     const entries = Object.entries(mergedAmountBySpell).map(([spellKey, amount]) => ({
       spellKey,
@@ -3655,7 +4036,29 @@ export function HealerPracticeSimulator() {
       .map((entry) => {
         const meta = healMeterSpellMetaByKey[entry.spellKey] ?? {};
         const fallbackName = practiceSpellsByKey[entry.spellKey]?.name ?? entry.spellKey;
-        const castsRaw = Number(currentSnapshot?.metrics?.casts?.[entry.spellKey]);
+        const castsRaw = Number(mergedCastsBySpell[entry.spellKey]);
+        const childSpellKeys = childSpellKeysByParent[entry.spellKey] ?? [];
+        const children = childSpellKeys
+          .map((childSpellKey) => {
+            const amount = Math.max(0, Number(groupedChildAmountByParent?.[entry.spellKey]?.[childSpellKey] ?? 0));
+            if (amount <= 0) {
+              return null;
+            }
+            const childMeta = healMeterSpellMetaByKey[childSpellKey] ?? {};
+            const childFallbackName = practiceSpellsByKey[childSpellKey]?.name ?? childSpellKey;
+            const childCastsRaw = Number(groupedChildCastsByParent?.[entry.spellKey]?.[childSpellKey]);
+            return {
+              spellKey: childSpellKey,
+              spellName: childMeta.name ?? childFallbackName,
+              iconUrl: childMeta.iconUrl ?? practiceSpellIconsByKey[childSpellKey] ?? DEFAULT_SPELL_ICON_URL,
+              spellId: Number.isFinite(childMeta.spellId) ? Number(childMeta.spellId) : null,
+              amount,
+              ratioPct: (amount / totalAmount) * 100,
+              casts: Number.isFinite(childCastsRaw) ? Math.max(0, Math.round(childCastsRaw)) : null
+            };
+          })
+          .filter(Boolean)
+          .sort((left, right) => right.amount - left.amount);
         return {
           spellKey: entry.spellKey,
           spellName: meta.name ?? fallbackName,
@@ -3663,10 +4066,78 @@ export function HealerPracticeSimulator() {
           spellId: Number.isFinite(meta.spellId) ? Number(meta.spellId) : null,
           amount: entry.amount,
           ratioPct: (entry.amount / totalAmount) * 100,
-          casts: Number.isFinite(castsRaw) ? Math.max(0, Math.round(castsRaw)) : null
+          casts: Number.isFinite(castsRaw) ? Math.max(0, Math.round(castsRaw)) : null,
+          children
         };
       });
-  }, [currentSnapshot, healMeterSpellMetaByKey, practiceSpellsByKey, practiceSpellIconsByKey]);
+  }, [currentSnapshot, healMeterGrouping, healMeterSpellMetaByKey, practiceSpellsByKey, practiceSpellIconsByKey]);
+  const displayedHealMeterRows = useMemo(() => {
+    const rows = [];
+    for (const row of healMeterRows) {
+      rows.push({
+        ...row,
+        depth: 0,
+        parentSpellKey: ""
+      });
+      const children = Array.isArray(row.children) ? row.children : [];
+      if (!children.length || !expandedHealMeterSpellKeys.has(row.spellKey)) {
+        continue;
+      }
+      for (const child of children) {
+        rows.push({
+          ...child,
+          depth: 1,
+          parentSpellKey: row.spellKey
+        });
+      }
+    }
+    return rows;
+  }, [expandedHealMeterSpellKeys, healMeterRows]);
+  const healMeterMaxAmount = useMemo(
+    () => displayedHealMeterRows.reduce((max, row) => Math.max(max, Math.max(0, Number(row?.amount ?? 0))), 0),
+    [displayedHealMeterRows]
+  );
+  const handleToggleHealMeterRowExpand = useCallback((spellKey) => {
+    const normalizedSpellKey = String(spellKey ?? "").trim();
+    if (!normalizedSpellKey) {
+      return;
+    }
+    setExpandedHealMeterSpellKeys((prev) => {
+      const next = new Set(prev instanceof Set ? Array.from(prev) : []);
+      if (next.has(normalizedSpellKey)) {
+        next.delete(normalizedSpellKey);
+      } else {
+        next.add(normalizedSpellKey);
+      }
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    const expandableSpellKeySet = new Set(
+      healMeterRows
+        .filter((row) => Array.isArray(row.children) && row.children.length > 0)
+        .map((row) => String(row.spellKey ?? "").trim())
+        .filter(Boolean)
+    );
+    setExpandedHealMeterSpellKeys((prev) => {
+      if (!(prev instanceof Set) || prev.size <= 0) {
+        return prev instanceof Set ? prev : new Set();
+      }
+      let hasChange = false;
+      const next = new Set();
+      for (const spellKey of prev) {
+        if (expandableSpellKeySet.has(spellKey)) {
+          next.add(spellKey);
+        } else {
+          hasChange = true;
+        }
+      }
+      if (!hasChange && next.size === prev.size) {
+        return prev;
+      }
+      return next;
+    });
+  }, [healMeterRows]);
   const sortedEventLogs = useMemo(() => {
     const logs = Array.isArray(currentSnapshot?.logs) ? [...currentSnapshot.logs] : [];
     return logs.sort((left, right) => {
@@ -3729,6 +4200,58 @@ export function HealerPracticeSimulator() {
     isSuccessfulPracticeResult,
     selfHealRatioPct
   ]);
+  const holyPriestFeedbackLines = useMemo(() => {
+    if (!isSuccessfulPracticeResult || activeCombatHealerSlug !== HOLY_PRIEST_HEALER_SLUG) {
+      return [];
+    }
+
+    const lines = [];
+    const metrics = currentSnapshot?.metrics ?? {};
+    const rawPrayerOfHealingCasts = Math.max(0, Math.round(Number(metrics.rawPrayerOfHealingCasts ?? 0)));
+    const wastedLightweaverStacks = Math.max(0, Math.round(Number(metrics.wastedLightweaverStacks ?? 0)));
+    const wastedSurgeOfLightStacks = Math.max(0, Math.round(Number(metrics.wastedSurgeOfLightStacks ?? 0)));
+    const effectiveSerenityReductionSec = Math.max(
+      0,
+      Number(metrics.effectiveSerenityCooldownReductionMs ?? 0) / 1000
+    );
+    const holyPriestScoreConfig = resolveDifficultyValue(
+      HEALER_PRACTICE_SCORE_HEALER_CONFIG_BY_SLUG?.[HOLY_PRIEST_HEALER_SLUG],
+      activeDifficultyKey
+    );
+    const serenityThresholdSec = Math.max(
+      0,
+      Number(holyPriestScoreConfig?.healerSpecific?.serenityCooldownReduction?.fullScoreAtOrAboveSec ?? 0)
+    );
+    const serenityThresholdLabel = Number.isInteger(serenityThresholdSec)
+      ? `${serenityThresholdSec}`
+      : serenityThresholdSec.toFixed(1);
+
+    if (rawPrayerOfHealingCasts >= 0) {
+      lines.push(`깡 치기 시전수가 높습니다. (권장: 0회, 현재: ${rawPrayerOfHealingCasts}회)`);
+    }
+    if (wastedLightweaverStacks >= 0) {
+      lines.push(`빛술사 스택이 ${wastedLightweaverStacks}회 낭비되었습니다.`);
+    }
+    if (wastedSurgeOfLightStacks >= 0) {
+      lines.push(`빛의 쇄도 스택이 ${wastedSurgeOfLightStacks}회 낭비되었습니다.`);
+    }
+    if (finalCpm < 38) {
+      lines.push("CPM이 낮습니다. (권장사항: 최소 39)");
+    }
+    if (serenityThresholdSec > 0 && effectiveSerenityReductionSec < serenityThresholdSec) {
+      lines.push(
+        `평온 유효 쿨감 시간이 낮습니다. (권장사항: ${activeDifficultyLabel}난이도 - ${serenityThresholdLabel}초 이상)`
+      );
+    }
+    return lines;
+  }, [
+    activeCombatHealerSlug,
+    activeDifficultyKey,
+    activeDifficultyLabel,
+    currentSnapshot,
+    finalCpm,
+    isSuccessfulPracticeResult
+  ]);
   const showSuccessBanner =
     Boolean(
       GLOBAL_SUCCESS_ON_TIMEOUT_WITHOUT_GAMEOVER &&
@@ -3790,7 +4313,7 @@ export function HealerPracticeSimulator() {
     const createdAtClientMs = Date.now();
     const mapLabel = resolveMapLabel(activeMapKey);
     const difficultyLabel = String(
-      PRACTICE_DIFFICULTY_TUNING[activeDifficultyKey]?.label ?? activeDifficultyKey
+      resolveDifficultyConfigByKey(activeCombatDifficultyTuning, activeDifficultyKey)?.label ?? activeDifficultyKey
     ).trim();
     const fallbackPlayerLabel = user?.uid ? `유저-${String(user.uid).slice(0, 6)}` : "게스트";
     const playerLabel = String(userLabel ?? "").trim() || fallbackPlayerLabel;
@@ -3901,6 +4424,16 @@ export function HealerPracticeSimulator() {
     }
     setRankingViewHealerSlug(rankingHealerTabOptions[0].slug);
   }, [rankingHealerTabOptions, rankingViewHealerSlug]);
+
+  useEffect(() => {
+    if (!rankingDifficultyTabKeys.length) {
+      return;
+    }
+    if (rankingDifficultyTabKeys.includes(rankingViewDifficultyKey)) {
+      return;
+    }
+    setRankingViewDifficultyKey(rankingDifficultyTabKeys[0]);
+  }, [rankingDifficultyTabKeys, rankingViewDifficultyKey]);
 
   useEffect(() => {
     if (!rankingPatchVersionOptions.length) {
@@ -4040,11 +4573,11 @@ export function HealerPracticeSimulator() {
   }, [activeCombatHealerSlug, activeDifficultyKey, activeMapKey, rankingCurrentPatchVersion, selectedHealerSlug]);
 
   useEffect(() => {
-    if (!hasCombatSnapshot || !healMeterRows.length) {
+    if (!hasCombatSnapshot || !displayedHealMeterRows.length) {
       return;
     }
     refreshWowheadTooltips();
-  }, [hasCombatSnapshot, healMeterRows.length]);
+  }, [displayedHealMeterRows.length, hasCombatSnapshot]);
 
   useEffect(() => {
     if (!hasCombatSnapshot) {
@@ -4180,10 +4713,11 @@ export function HealerPracticeSimulator() {
       0,
       Math.floor(Number(phaserDifficultyConfig.worldFirstKillZoneHazardRandomCountWhenUntargeted ?? 3))
     );
+    const activeCombatDifficultyConfig = resolveDifficultyConfigByKey(activeCombatDifficultyTuning, activeDifficultyKey);
     const scheduledRaidBurstStartTimesMs = Array.from(
       new Set(
-        (Array.isArray(PRACTICE_DIFFICULTY_TUNING[activeDifficultyKey]?.scheduledRaidBursts)
-          ? PRACTICE_DIFFICULTY_TUNING[activeDifficultyKey].scheduledRaidBursts
+        (Array.isArray(activeCombatDifficultyConfig?.scheduledRaidBursts)
+          ? activeCombatDifficultyConfig.scheduledRaidBursts
           : []
         )
           .filter((pattern) => pattern && pattern.enabled !== false)
@@ -4201,6 +4735,14 @@ export function HealerPracticeSimulator() {
     ).sort((left, right) => left - right);
     const raidBurstCountdownWindowMs = 10000;
     const playerHitCryFaceDurationMs = 1500;
+    const holyPriestPrayerOfHealingPulseDurationMs = Math.max(
+      1000,
+      1500 /
+      Math.max(
+        0.01,
+        1 + Math.max(0, Number(HOLY_PRIEST_DEFAULT_STATS.hastePct ?? 0)) / 100
+      )
+    );
 
     const initialPlayerHpRatio = Math.max(0, Math.min(1, Number(phaserSelfHpRatioRef.current ?? 1)));
     let player = null;
@@ -4221,6 +4763,8 @@ export function HealerPracticeSimulator() {
     let divineImageAvatarVisual = null;
     let haloPulseVisuals = [];
     let lastProcessedHaloPulseLogId = 0;
+    let prayerOfHealingGcdPulseVisuals = [];
+    let lastPrayerOfHealingCastCount = 0;
     let treeOfLifeAvatarVisual = null;
     let treeantVisuals = [];
     let recentHitUntilMs = 0;
@@ -4375,6 +4919,13 @@ export function HealerPracticeSimulator() {
       haloPulseVisuals.forEach(destroyHaloPulseVisual);
       haloPulseVisuals = [];
     };
+    const destroyPrayerOfHealingGcdPulseVisual = (visual) => {
+      visual?.graphics?.destroy();
+    };
+    const clearPrayerOfHealingGcdPulseVisuals = () => {
+      prayerOfHealingGcdPulseVisuals.forEach(destroyPrayerOfHealingGcdPulseVisual);
+      prayerOfHealingGcdPulseVisuals = [];
+    };
     const destroyTreeantVisual = (treeantVisual) => {
       treeantVisual?.container?.destroy(true);
     };
@@ -4421,40 +4972,40 @@ export function HealerPracticeSimulator() {
       visual?.container?.destroy(true);
     };
     const createDivineImageAvatarVisual = (sceneRef) => {
-      const aura = sceneRef.add.circle(0, 0, 16, 0xfef08a, 0.2);
-      const coreGlow = sceneRef.add.circle(0, 1, 9, 0xfef9c3, 0.36);
-      const core = sceneRef.add.triangle(0, 2, 0, -14, -6, 6, 6, 6, 0xfffbeb, 0.95);
-      const lowerCore = sceneRef.add.triangle(0, 13, 0, 24, -5, 5, 5, 5, 0xfef3c7, 0.92);
-      const ring = sceneRef.add.ellipse(0, -17, 18, 8, 0xfef3c7, 0.42);
-      const leftWingTop = sceneRef.add.triangle(-13, -1, -2, 0, -11, 5, -7, 14, 0xfef9c3, 0.88);
-      const leftWingBottom = sceneRef.add.triangle(-13, 11, -3, 2, -11, 8, -6, 20, 0xfef9c3, 0.82);
-      const rightWingTop = sceneRef.add.triangle(13, -1, 2, 0, 11, 5, 7, 14, 0xfef9c3, 0.88);
-      const rightWingBottom = sceneRef.add.triangle(13, 11, 3, 2, 11, 8, 6, 20, 0xfef9c3, 0.82);
-      const staff = sceneRef.add.rectangle(0, 18, 2, 20, 0xfff7d6, 0.8);
+      const aura = sceneRef.add.circle(0, 0, 16, 0xf8fcff, 0.24);
+      const ring = sceneRef.add.ellipse(0, -17, 18, 8, 0xffffff, 0.16);
+      ring.setStrokeStyle(1.2, 0xffffff, 0.9);
+      const sprite = sceneRef.textures.exists(HOLY_PRIEST_NAARU_TEXTURE_KEY)
+        ? sceneRef.add.image(0, 0, HOLY_PRIEST_NAARU_TEXTURE_KEY)
+        : null;
+      if (sprite) {
+        sprite.setAlpha(0.96);
+        sprite.setTint(0xffffff);
+      }
 
-      const container = sceneRef.add.container(0, 0, [
-        aura,
-        coreGlow,
-        ring,
-        leftWingTop,
-        leftWingBottom,
-        rightWingTop,
-        rightWingBottom,
-        core,
-        lowerCore,
-        staff
-      ]);
+      const containerChildren = [aura, ring];
+      if (sprite) {
+        containerChildren.push(sprite);
+      } else {
+        const fallbackCore = sceneRef.add.triangle(0, 4, 0, -14, -6, 7, 6, 7, 0xffffff, 0.95);
+        const fallbackShardLeft = sceneRef.add.triangle(-12, 8, -2, -2, -14, 4, -6, 13, 0xffffff, 0.9);
+        const fallbackShardRight = sceneRef.add.triangle(12, 8, 2, -2, 14, 4, 6, 13, 0xffffff, 0.9);
+        containerChildren.push(fallbackCore, fallbackShardLeft, fallbackShardRight);
+      }
+
+      const container = sceneRef.add.container(0, 0, containerChildren);
       container.setDepth(4.25);
       container.setVisible(false);
+
+      const spriteHeight = Math.max(1, Number(sprite?.height ?? 0) || 1);
+      const targetDisplayHeightPx = Math.max(24, Math.round(PHASER_ARENA_VISUAL_CONFIG.playerSizePx * 1.9));
+      const baseScale = sprite ? targetDisplayHeightPx / spriteHeight : 0.58;
 
       return {
         container,
         aura,
         ring,
-        leftWingTop,
-        leftWingBottom,
-        rightWingTop,
-        rightWingBottom
+        baseScale
       };
     };
     const updateDivineImageAvatarVisual = (nowMs = 0) => {
@@ -4477,7 +5028,7 @@ export function HealerPracticeSimulator() {
       const pulse = 0.88 + Math.sin(nowMs / 210) * 0.12;
       const stackScaleBonus = Math.min(0.32, stacks * 0.06);
       const stackAlphaBonus = Math.min(0.24, stacks * 0.05);
-      const baseScale = 0.58;
+      const baseScale = Math.max(0.01, Number(divineImageAvatarVisual.baseScale ?? 0.58));
       const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
       const sideOffset = playerRadius + 30;
       const x = Phaser.Math.Clamp(player.x + sideOffset, 16, raidGridWidthPx - 16);
@@ -4485,14 +5036,9 @@ export function HealerPracticeSimulator() {
 
       divineImageAvatarVisual.container.setPosition(x, y);
       divineImageAvatarVisual.container.setScale(baseScale * (1 + stackScaleBonus + (pulse - 0.88) * 0.2));
-      divineImageAvatarVisual.container.setAlpha(Math.max(0.46, Math.min(0.95, 0.66 + stackAlphaBonus + (pulse - 0.88))));
-      divineImageAvatarVisual.ring.setRotation(nowMs / 1300);
+      divineImageAvatarVisual.container.setAlpha(Math.max(0.56, Math.min(0.98, 0.74 + stackAlphaBonus + (pulse - 0.88))));
+      divineImageAvatarVisual.ring.setRotation(nowMs / 1400);
       divineImageAvatarVisual.aura.setScale(0.92 + pulse * 0.18);
-      const wingYOffset = Math.sin(nowMs / 260) * 0.9;
-      divineImageAvatarVisual.leftWingTop.y = -1 + wingYOffset;
-      divineImageAvatarVisual.rightWingTop.y = -1 + wingYOffset;
-      divineImageAvatarVisual.leftWingBottom.y = 11 + wingYOffset * 0.85;
-      divineImageAvatarVisual.rightWingBottom.y = 11 + wingYOffset * 0.85;
     };
     const createTreeantVisual = (sceneRef) => {
       // Draw as a single graphics object so crown/trunk cannot drift apart.
@@ -5025,6 +5571,104 @@ export function HealerPracticeSimulator() {
       }
       return Math.max(0, sceneNowMs - sceneStartAtMs);
     };
+    const syncPrayerOfHealingGcdPulseVisualEvents = (sceneRef) => {
+      if (activeCombatHealerSlug !== HOLY_PRIEST_HEALER_SLUG) {
+        if (prayerOfHealingGcdPulseVisuals.length) {
+          clearPrayerOfHealingGcdPulseVisuals();
+        }
+        lastPrayerOfHealingCastCount = 0;
+        return;
+      }
+
+      const snapshot = latestSnapshotRef.current;
+      const totalPrayerOfHealingCasts = Math.max(
+        0,
+        Math.round(Number(snapshot?.metrics?.casts?.prayerOfHealing ?? 0))
+      );
+      if (totalPrayerOfHealingCasts <= lastPrayerOfHealingCastCount) {
+        return;
+      }
+
+      const triggerAtMs = Math.max(0, Number(snapshot?.nowMs ?? 0));
+      const durationMs = Math.max(0, Math.round(holyPriestPrayerOfHealingPulseDurationMs));
+      for (let castIndex = lastPrayerOfHealingCastCount; castIndex < totalPrayerOfHealingCasts; castIndex += 1) {
+        if (durationMs <= 0) {
+          continue;
+        }
+        const graphics = sceneRef.add.graphics();
+        graphics.setDepth(3.15);
+        prayerOfHealingGcdPulseVisuals.push({
+          graphics,
+          startCombatMs: triggerAtMs,
+          durationMs: Math.max(120, durationMs)
+        });
+      }
+      lastPrayerOfHealingCastCount = totalPrayerOfHealingCasts;
+    };
+    const updatePrayerOfHealingGcdPulseVisuals = (sceneRef, nowMs = 0) => {
+      if (!player) {
+        return;
+      }
+
+      syncPrayerOfHealingGcdPulseVisualEvents(sceneRef);
+      if (!prayerOfHealingGcdPulseVisuals.length) {
+        return;
+      }
+
+      const combatElapsedMs = resolveCombatElapsedMs(nowMs);
+      const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
+      const minRadius = playerRadius + 7;
+      const maxRadius = playerRadius + 52;
+      const ringCount = 3;
+      const dotCountPerRing = 54;
+
+      prayerOfHealingGcdPulseVisuals = prayerOfHealingGcdPulseVisuals.filter((pulseVisual) => {
+        const graphics = pulseVisual?.graphics;
+        if (!graphics) {
+          return false;
+        }
+
+        const elapsedMs = combatElapsedMs - Math.max(0, Number(pulseVisual?.startCombatMs ?? 0));
+        const durationMs = Math.max(1, Number(pulseVisual?.durationMs ?? 1));
+        if (elapsedMs < 0) {
+          return true;
+        }
+        if (elapsedMs >= durationMs) {
+          graphics.clear();
+          graphics.setVisible(false);
+          destroyPrayerOfHealingGcdPulseVisual(pulseVisual);
+          return false;
+        }
+
+        const progress = Math.max(0, Math.min(1, elapsedMs / durationMs));
+        const easedProgress = 1 - Math.pow(1 - progress, 2);
+        const baseRadius = minRadius + (maxRadius - minRadius) * easedProgress;
+        const baseAlpha = Math.max(0.08, (1 - progress) * 0.78);
+        const rotation = progress * 9.2;
+
+        graphics.setVisible(true);
+        graphics.clear();
+        for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
+          const ringOffset = (ringIndex - (ringCount - 1) / 2) * 2.8;
+          const ringRadius = Math.max(minRadius * 0.72, baseRadius + ringOffset);
+          const ringAlpha = Math.max(0.06, baseAlpha * (1 - ringIndex * 0.12));
+          const dotRadius = Math.max(0.85, 1.45 - progress * 0.45 + ringIndex * 0.08);
+          graphics.fillStyle(0xf8fafc, ringAlpha);
+          for (let dotIndex = 0; dotIndex < dotCountPerRing; dotIndex += 1) {
+            const angle =
+              rotation +
+              ringIndex * 0.22 +
+              (dotIndex / dotCountPerRing) * Math.PI * 2;
+            const jitter = Math.sin(dotIndex * 1.6 + progress * 18 + ringIndex * 0.9) * 0.62;
+            const radius = ringRadius + jitter;
+            const x = player.x + Math.cos(angle) * radius;
+            const y = player.y + Math.sin(angle) * radius;
+            graphics.fillCircle(x, y, dotRadius);
+          }
+        }
+        return true;
+      });
+    };
     const resolveWorldFirstZoneGreenGridBlockedRemainingMs = (sceneNowMs = 0) => {
       if (!worldFirstZonePatternEnabled || !worldFirstZonePatternStartTimesMs.length) {
         return 0;
@@ -5093,6 +5737,7 @@ export function HealerPracticeSimulator() {
       updateInfusionOfLightVisual(sceneRef.time.now);
       updateDivineImageAvatarVisual(sceneRef.time.now);
       updateHaloPulseVisuals(sceneRef, sceneRef.time.now);
+      updatePrayerOfHealingGcdPulseVisuals(sceneRef, sceneRef.time.now);
       sceneRef.cameras.main.flash(90, 255, 80, 80, false);
 
       if (playerHealth <= 0 && !playerDeathNotified) {
@@ -5118,6 +5763,7 @@ export function HealerPracticeSimulator() {
       updateInfusionOfLightVisual(sceneRef.time.now);
       updateDivineImageAvatarVisual(sceneRef.time.now);
       updateHaloPulseVisuals(sceneRef, sceneRef.time.now);
+      updatePrayerOfHealingGcdPulseVisuals(sceneRef, sceneRef.time.now);
       sceneRef.cameras.main.flash(120, 255, 40, 40, false);
 
       if (!playerDeathNotified) {
@@ -5286,11 +5932,16 @@ export function HealerPracticeSimulator() {
       if (!player || !greenGridZonePattern) {
         return false;
       }
+      const playerRadius = Math.max(0, Number(PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx ?? 0));
+      const playerLeft = player.x - playerRadius;
+      const playerRight = player.x + playerRadius;
+      const playerTop = player.y - playerRadius;
+      const playerBottom = player.y + playerRadius;
       return (
-        player.x >= greenGridZonePattern.left &&
-        player.x <= greenGridZonePattern.right &&
-        player.y >= greenGridZonePattern.top &&
-        player.y <= greenGridZonePattern.bottom
+        playerRight >= greenGridZonePattern.left &&
+        playerLeft <= greenGridZonePattern.right &&
+        playerBottom >= greenGridZonePattern.top &&
+        playerTop <= greenGridZonePattern.bottom
       );
     };
 
@@ -5388,13 +6039,21 @@ export function HealerPracticeSimulator() {
     };
 
     const scene = {
-      preload() { },
+      preload() {
+        if (!this.textures.exists(HOLY_PRIEST_NAARU_TEXTURE_KEY)) {
+          this.load.image(HOLY_PRIEST_NAARU_TEXTURE_KEY, "/images/naaru.png");
+        }
+      },
       create() {
         sceneStartAtMs = this.time.now;
         const initialLogs = Array.isArray(latestSnapshotRef.current?.logs) ? latestSnapshotRef.current.logs : [];
         lastProcessedHaloPulseLogId = initialLogs.reduce(
           (maxId, logEntry) => Math.max(maxId, Math.max(0, Number(logEntry?.id) || 0)),
           0
+        );
+        lastPrayerOfHealingCastCount = Math.max(
+          0,
+          Math.round(Number(latestSnapshotRef.current?.metrics?.casts?.prayerOfHealing ?? 0))
         );
         this.cameras.main.setBackgroundColor("#1e293b");
         this.add
@@ -5524,6 +6183,7 @@ export function HealerPracticeSimulator() {
         updateInfusionOfLightVisual(this.time.now);
         updateDivineImageAvatarVisual(this.time.now);
         updateHaloPulseVisuals(this, this.time.now);
+        updatePrayerOfHealingGcdPulseVisuals(this, this.time.now);
         updateTreeantVisuals(this, this.time.now);
         updateTreeOfLifeAvatarVisual(this.time.now);
 
@@ -5586,6 +6246,7 @@ export function HealerPracticeSimulator() {
           updateInfusionOfLightVisual(this.time.now);
           updateDivineImageAvatarVisual(this.time.now);
           updateHaloPulseVisuals(this, this.time.now);
+          updatePrayerOfHealingGcdPulseVisuals(this, this.time.now);
           updateTreeantVisuals(this, this.time.now);
           syncSharedPlayerHpRatio();
         };
@@ -5633,6 +6294,7 @@ export function HealerPracticeSimulator() {
           updateInfusionOfLightVisual(time);
           updateDivineImageAvatarVisual(time);
           updateHaloPulseVisuals(this, time);
+          updatePrayerOfHealingGcdPulseVisuals(this, time);
           updateTreeantVisuals(this, time);
           return;
         }
@@ -5672,6 +6334,7 @@ export function HealerPracticeSimulator() {
         updateInfusionOfLightVisual(time);
         updateDivineImageAvatarVisual(time);
         updateHaloPulseVisuals(this, time);
+        updatePrayerOfHealingGcdPulseVisuals(this, time);
         updateTreeantVisuals(this, time);
 
         if (showPlayerHealthBar) {
@@ -5846,6 +6509,7 @@ export function HealerPracticeSimulator() {
       infusionLeftArc?.destroy();
       infusionRightArc?.destroy();
       clearHaloPulseVisuals();
+      clearPrayerOfHealingGcdPulseVisuals();
       destroyDivineImageAvatarVisual(divineImageAvatarVisual);
       divineImageAvatarVisual = null;
       destroyTreeOfLifeAvatarVisual(treeOfLifeAvatarVisual);
@@ -5865,6 +6529,7 @@ export function HealerPracticeSimulator() {
     raidGridWidthPx,
     raidGridHeightPx,
     activeDifficultyKey,
+    activeCombatDifficultyTuning,
     activeCombatHealerSlug,
     activeMovementKeys,
     activePhaserDifficultyConfig,
@@ -6083,7 +6748,10 @@ export function HealerPracticeSimulator() {
             style={{ width: `${holyPowerBarWidthPx}px` }}
           >
             {currentCastInfo ? (
-              <div className="relative h-5">
+              <div
+                className="relative h-5"
+                key={`cast-${String(currentCastInfo.castId ?? "") || String(currentCastInfo.spellKey ?? "unknown")}`}
+              >
                 <div className="absolute inset-y-0 left-0 bg-violet-500/60 transition-[width] duration-100 ease-linear" style={{ width: `${castProgress * 100}%` }} />
                 <div className="absolute inset-0 flex items-center justify-between gap-2 px-1.5 text-[10px] leading-none">
                   <div className="flex min-w-0 items-center gap-1 text-slate-100">
@@ -6198,7 +6866,9 @@ export function HealerPracticeSimulator() {
                 {selectedHealerDisclaimers.length ? (
                   <ul className="mt-1 list-disc space-y-1 pl-4">
                     {selectedHealerDisclaimers.map((line, index) => (
-                      <li key={`${selectedHealerSlug}-disclaimer-${index}`}>{line}</li>
+                      <li key={`${selectedHealerSlug}-disclaimer-${index}`}>
+                        {renderWowheadInlineTokenText(line, `${selectedHealerSlug}-disclaimer-${index}`)}
+                      </li>
                     ))}
                   </ul>
                 ) : null}
@@ -6224,7 +6894,7 @@ export function HealerPracticeSimulator() {
                       }}
                       value={difficultyKey}
                     >
-                      {DIFFICULTY_OPTIONS.map((option) => (
+                      {selectedDifficultyOptions.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
                         </option>
@@ -6357,18 +7027,20 @@ export function HealerPracticeSimulator() {
                     />
                     클릭캐스팅 사용
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-slate-200">
-                    <input
-                      checked={showHolyPriestEchoOnRaidFrames}
-                      disabled={running}
-                      onChange={(event) => {
-                        markSetupDirty();
-                        setShowHolyPriestEchoOnRaidFrames(event.target.checked);
-                      }}
-                      type="checkbox"
-                    />
-                    빛의 반향 레이드 프레임 표시
-                  </label>
+                  {selectedHealerSlug === HOLY_PRIEST_HEALER_SLUG ? (
+                    <label className="flex items-center gap-2 text-sm text-slate-200">
+                      <input
+                        checked={showHolyPriestEchoOnRaidFrames}
+                        disabled={running}
+                        onChange={(event) => {
+                          markSetupDirty();
+                          setShowHolyPriestEchoOnRaidFrames(event.target.checked);
+                        }}
+                        type="checkbox"
+                      />
+                      빛의 반향 레이드 프레임 표시
+                    </label>
+                  ) : null}
                 </div>
 
                 {useClickCasting ? (
@@ -6493,7 +7165,8 @@ export function HealerPracticeSimulator() {
               <p className={`text-sm ${setupConfirmed ? "text-emerald-300" : "text-amber-300"}`}>
                 설정 상태: {setupConfirmed ? "완료" : "미완료 (아래의 설정 완료 버튼을 누르세요)"}
                 {setupConfirmed
-                  ? ` | 난이도: ${PRACTICE_DIFFICULTY_TUNING[difficultyKey]?.label ?? difficultyKey} (${resolveCombatDurationMinutesByDifficulty(difficultyKey)}분)`
+                  ? ` | 난이도: ${resolveDifficultyConfigByKey(selectedDifficultyTuning, difficultyKey)?.label ?? difficultyKey
+                  } (${resolveCombatDurationMinutesByDifficulty(difficultyKey, selectedDifficultyTuning)}분)`
                   : ""}
               </p>
               {setupConfirmed && Number.isFinite(Number(setupSeed)) ? (
@@ -6725,7 +7398,7 @@ export function HealerPracticeSimulator() {
             }}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-violet-100">20인 레이드 프레임</h2>
+              <h2 className="text-base font-semibold text-violet-100">{`연습 시작 - ${activeDifficultyLabel}`}</h2>
               <p className="text-xs text-slate-400">
                 대상 규칙: {sessionConfig?.useMouseover ? "마우스오버 우선" : "선택 대상 우선"} | 레이아웃 {activeRaidFrameLayout}
               </p>
@@ -7118,11 +7791,22 @@ export function HealerPracticeSimulator() {
                               <img
                                 alt={roleName ? `${roleName} 아이콘` : "역할 아이콘"}
                                 className="h-full w-full object-contain"
+                                onLoad={(event) => {
+                                  delete event.currentTarget.dataset.fallbackStep;
+                                }}
                                 onError={(event) => {
-                                  if (event.currentTarget.getAttribute("src") === TANK_ROLE_META.iconUrl) {
+                                  const imageElement = event.currentTarget;
+                                  const fallbackStep = Number(imageElement.dataset.fallbackStep ?? "0");
+                                  if (fallbackStep === 0) {
+                                    imageElement.dataset.fallbackStep = "1";
+                                    imageElement.src = TANK_ROLE_META.iconUrl;
                                     return;
                                   }
-                                  event.currentTarget.src = TANK_ROLE_META.iconUrl;
+                                  if (imageElement.src === DEFAULT_SPELL_ICON_URL) {
+                                    return;
+                                  }
+                                  imageElement.dataset.fallbackStep = "2";
+                                  imageElement.src = DEFAULT_SPELL_ICON_URL;
                                 }}
                                 src={roleIconUrl}
                               />
@@ -7188,25 +7872,17 @@ export function HealerPracticeSimulator() {
             <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
               <h2 className="text-base font-semibold text-violet-100">전투 기록</h2>
               {currentSnapshot.finished ? (
-                <div className="mt-3 space-y-2">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {combatRecordCommonCards.map((card) => (
-                      <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300" key={card.key}>
-                        {card.title}
-                        <p className={`mt-1 text-sm font-semibold ${card.valueClassName}`}>{card.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {combatRecordHealerSpecificCards.length ? (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {combatRecordHealerSpecificCards.map((card) => (
-                        <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300" key={card.key}>
-                          {card.title}
-                          <p className={`mt-1 text-sm font-semibold ${card.valueClassName}`}>{card.value}</p>
-                        </div>
-                      ))}
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {combatRecordCards.map((card) => (
+                    <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300" key={card.key}>
+                      {card.title}
+                      <p
+                        className={`mt-1 whitespace-pre-line font-semibold ${card.valueTextClassName ?? "text-sm"} ${card.valueClassName}`}
+                      >
+                        {card.value}
+                      </p>
                     </div>
-                  ) : null}
+                  ))}
                 </div>
               ) : (
                 <p className="mt-3 text-xs text-slate-400">
@@ -7225,41 +7901,63 @@ export function HealerPracticeSimulator() {
                     <span className="text-right">시전 수</span>
                   </div>
                   <div className="divide-y divide-slate-800/80">
-                    {healMeterRows.map((row) => {
+                    {displayedHealMeterRows.map((row) => {
+                      const isChildRow = Number(row.depth) > 0;
+                      const hasChildRows = !isChildRow && Array.isArray(row.children) && row.children.length > 0;
+                      const isExpanded = hasChildRows && expandedHealMeterSpellKeys.has(row.spellKey);
                       return (
                         <div
-                          className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,2.2fr)_72px] items-center px-2 py-1.5"
-                          key={`heal-meter-${row.spellKey}`}
+                          className={`grid grid-cols-[minmax(0,1.2fr)_minmax(0,2.2fr)_72px] items-center px-2 py-1.5 ${isChildRow ? "bg-slate-900/35" : ""}`}
+                          key={`heal-meter-${row.parentSpellKey || "root"}-${row.spellKey}-${row.depth || 0}`}
                         >
-                          <div className="min-w-0">
-                            {row.spellId ? (
-                              <a
-                                className="block min-w-0 truncate text-xs font-semibold text-slate-100"
-                                data-wh-icon-size="small"
-                                data-wh-rename-link="false"
-                                href={`https://www.wowhead.com/ko/spell=${row.spellId}`}
-                                rel="noreferrer"
-                                target="_blank"
-                                title={row.spellName}
-                              >
-                                {row.spellName}
-                              </a>
-                            ) : (
-                              <div className="flex min-w-0 items-center gap-2" title={row.spellName}>
-                                <img
-                                  alt={row.spellName}
-                                  className="h-4 w-4 shrink-0 rounded-[2px] border border-black/50 object-cover"
-                                  onError={(event) => {
-                                    if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
-                                      return;
-                                    }
-                                    event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
-                                  }}
-                                  src={row.iconUrl}
-                                />
-                                <span className="truncate text-xs font-semibold text-slate-100">{row.spellName}</span>
-                              </div>
-                            )}
+                          <div className={`min-w-0 ${isChildRow ? "pl-3" : ""}`}>
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              {hasChildRows ? (
+                                <button
+                                  aria-expanded={isExpanded}
+                                  aria-label={isExpanded ? "하위 힐량 숨기기" : "하위 힐량 보기"}
+                                  className="h-4 w-4 shrink-0 rounded border border-slate-600/80 text-[10px] font-semibold leading-none text-slate-300 hover:border-violet-300/80 hover:text-violet-100"
+                                  onClick={() => handleToggleHealMeterRowExpand(row.spellKey)}
+                                  type="button"
+                                >
+                                  {isExpanded ? "▾" : "▸"}
+                                </button>
+                              ) : isChildRow ? (
+                                <span className="w-4 shrink-0 text-center text-[10px] font-semibold text-slate-500">└</span>
+                              ) : (
+                                <span className="w-4 shrink-0" />
+                              )}
+                              {row.spellId ? (
+                                <a
+                                  className={`block min-w-0 truncate text-xs font-semibold ${isChildRow ? "text-slate-300" : "text-slate-100"}`}
+                                  data-wh-icon-size="small"
+                                  data-wh-rename-link="false"
+                                  href={`https://www.wowhead.com/ko/spell=${row.spellId}`}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                  title={row.spellName}
+                                >
+                                  {row.spellName}
+                                </a>
+                              ) : (
+                                <div className="flex min-w-0 items-center gap-2" title={row.spellName}>
+                                  <img
+                                    alt={row.spellName}
+                                    className="h-4 w-4 shrink-0 rounded-[2px] border border-black/50 object-cover"
+                                    onError={(event) => {
+                                      if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                        return;
+                                      }
+                                      event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                    }}
+                                    src={row.iconUrl}
+                                  />
+                                  <span className={`truncate text-xs font-semibold ${isChildRow ? "text-slate-300" : "text-slate-100"}`}>
+                                    {row.spellName}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="w-14 shrink-0 text-right text-[11px] font-semibold text-slate-200">
@@ -7267,15 +7965,25 @@ export function HealerPracticeSimulator() {
                             </span>
                             <div className="h-4 min-w-0 flex-1 overflow-hidden rounded-[2px] border border-slate-700 bg-gray-950/90">
                               <div
-                                className="h-full bg-violet-400/80"
-                                style={{ width: `${Math.max(2, Math.min(100, row.ratioPct))}%` }}
+                                className={`h-full ${isChildRow ? "bg-violet-300/70" : "bg-violet-400/80"}`}
+                                style={{
+                                  width: `${Math.max(
+                                    2,
+                                    Math.min(
+                                      100,
+                                      healMeterMaxAmount > 0
+                                        ? (Math.max(0, Number(row.amount ?? 0)) / healMeterMaxAmount) * 100
+                                        : 0
+                                    )
+                                  )}%`
+                                }}
                               />
                             </div>
-                            <span className="w-16 shrink-0 text-right text-xs font-semibold text-violet-100">
+                            <span className={`w-16 shrink-0 text-right text-xs font-semibold ${isChildRow ? "text-violet-200/80" : "text-violet-100"}`}>
                               {formatHealingAmount(row.amount)}
                             </span>
                           </div>
-                          <div className="text-right text-xs font-semibold text-slate-200">
+                          <div className={`text-right text-xs font-semibold ${isChildRow ? "text-slate-300" : "text-slate-200"}`}>
                             {row.casts === null ? "-" : row.casts}
                           </div>
                         </div>
@@ -7392,6 +8100,24 @@ export function HealerPracticeSimulator() {
                     ) : (
                       <p className="mt-2 text-[11px] leading-tight text-slate-400">
                         신기 피드백은 전투 성공 후 표시됩니다.
+                      </p>
+                    )
+                  ) : activeCombatHealerSlug === HOLY_PRIEST_HEALER_SLUG ? (
+                    isSuccessfulPracticeResult ? (
+                      holyPriestFeedbackLines.length ? (
+                        <div className="mt-2 space-y-1">
+                          {holyPriestFeedbackLines.map((line, index) => (
+                            <p className="text-[11px] leading-tight text-amber-200" key={`holy-priest-feedback-${index}`}>
+                              - {line}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-[11px] leading-tight text-emerald-200">기준치를 모두 만족했습니다.</p>
+                      )
+                    ) : (
+                      <p className="mt-2 text-[11px] leading-tight text-slate-400">
+                        신사 피드백은 전투 성공 후 표시됩니다.
                       </p>
                     )
                   ) : (
@@ -7522,10 +8248,10 @@ export function HealerPracticeSimulator() {
             <div className="mt-2 text-xs text-slate-300">
               난이도
               <div className="mt-1 grid grid-cols-3 overflow-hidden rounded-lg border border-slate-700">
-                {RANKING_DIFFICULTY_TAB_KEYS.map((difficultyTabKey) => {
+                {rankingDifficultyTabKeys.map((difficultyTabKey) => {
                   const isActive = rankingViewDifficultyKey === difficultyTabKey;
                   const tabLabel =
-                    PRACTICE_DIFFICULTY_TUNING[difficultyTabKey]?.label ?? difficultyTabKey;
+                    resolveDifficultyConfigByKey(rankingViewDifficultyTuning, difficultyTabKey)?.label ?? difficultyTabKey;
                   return (
                     <button
                       className={`px-2.5 py-1.5 text-xs font-semibold transition ${isActive
@@ -7571,7 +8297,7 @@ export function HealerPracticeSimulator() {
             <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/55 p-3">
               <p className="text-[11px] text-slate-400">
                 {rankingSelectedHealerLabel} · {resolveMapLabel(rankingViewMapKey)} ·{" "}
-                {PRACTICE_DIFFICULTY_TUNING[rankingViewDifficultyKey]?.label ?? rankingViewDifficultyKey} · 패치 {rankingViewPatchVersion}
+                {resolveDifficultyConfigByKey(rankingViewDifficultyTuning, rankingViewDifficultyKey)?.label ?? rankingViewDifficultyKey} · 패치 {rankingViewPatchVersion}
               </p>
               {rankingLoading ? (
                 <p className="mt-2 text-xs text-slate-300">랭킹을 불러오는 중입니다...</p>

@@ -9,6 +9,65 @@ export const RESTORATION_DRUID_DEFAULT_STATS = Object.freeze({
   masteryPct: 40
 });
 
+// 힐러별 마나 튜닝 배율 (최종 마나 소모에 곱해짐)
+// 기존 globalManaTuningScale 기본값(1.2)과 동일하게 시작.
+export const RESTORATION_DRUID_MANA_TUNING_SCALE = 1.2;
+
+// 난이도별 피해 배율/전투 시간/레이드 버스트 패턴 (회복 드루이드 전용)
+// scheduledRaidBursts:
+// - startAtSec: 시작 시점(초)
+// - tickIntervalSec: 틱 간격(초)
+// - tickCount: 틱 횟수
+// - damagePerTick: 각 틱마다 모든 공대원에게 들어갈 기본 피해량(절대값)
+export const RESTORATION_DRUID_PRACTICE_DIFFICULTY_TUNING = Object.freeze({
+  normal: Object.freeze({
+    label: "일반",
+    fixedCombatDurationMinutes: 2,
+    incomingDamageMultiplier: 0.45,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 5000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-1", startAtSec: 25, tickIntervalSec: 1, tickCount: 5, damagePerTick: 6200 },
+      { id: "raid-pulse-2", startAtSec: 85, tickIntervalSec: 1, tickCount: 5, damagePerTick: 6200 }
+    ])
+  }),
+  heroic: Object.freeze({
+    label: "영웅",
+    fixedCombatDurationMinutes: 2,
+    incomingDamageMultiplier: 0.54,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 5000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-3", startAtSec: 20, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6500 },
+      { id: "raid-pulse-4", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6500 }
+    ])
+  }),
+  mythic: Object.freeze({
+    label: "신화",
+    fixedCombatDurationMinutes: 2.5,
+    incomingDamageMultiplier: 0.6,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 4000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-5", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6800 },
+      { id: "raid-pulse-6", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6800 },
+      { id: "raid-pulse-7", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 6800 }
+    ])
+  }),
+  worldFirstKill: Object.freeze({
+    label: "월퍼킬",
+    fixedCombatDurationMinutes: 2.5,
+    incomingDamageMultiplier: 0.7,
+    damageBreakEveryMs: 30000,
+    damageBreakDurationMs: 3000,
+    scheduledRaidBursts: Object.freeze([
+      { id: "raid-pulse-8", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
+      { id: "raid-pulse-9", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 },
+      { id: "raid-pulse-10", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7100 }
+    ])
+  })
+});
+
 export const RESTORATION_DRUID_PRACTICE_TUNING = Object.freeze({
   baseMana: 100000,
   dummyBaseHealth: 375000,

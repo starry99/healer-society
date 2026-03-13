@@ -12,6 +12,10 @@ export const preservationEvokerGuideContent = {
     }
   },
   talents: {
+    copyTalentStringByMode: {
+      raid: "",
+      mythic: ""
+    },
     disabledModes: ["mythic"],
     contentByMode: {
       raid:
@@ -164,6 +168,11 @@ export const preservationEvokerGuideContent = {
         url: "https://www.warcraftlogs.com/",
         description: "강화 스킬/쿨기 효율 분석"
       }
+    ]
+  },
+  changelog: {
+    entries: [
+      { date: "2026-03-14T00:00:00+09:00", text: "초안" }
     ]
   }
 };

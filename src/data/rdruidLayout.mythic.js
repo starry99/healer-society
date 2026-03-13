@@ -1,21 +1,12 @@
 export const restorationDruidTalentLayout = {
   "refWidth": 1200,
   "refHeight": 560,
-  "background": "https://assets-ng.maxroll.gg/wow/talents/talents-background-druid-restoration.webp",
   "leftHeader": {
     "titleColor": "rgb(255, 124, 10)",
-    "title": "Druid Tree",
-    "spent": "Spent: 31",
-    "level": "Requires level 70"
+    "title": "쐐기 추천 특성",
   },
-  "rightHeader": {
-    "titleColor": "",
-    "title": "Restoration Tree",
-    "spent": "Spent: 30",
-    "level": "Requires level 69"
-  },
-  "heroName": "Keeper of the Grove",
-  "exportText": "Export (12.0.1.65337)",
+  "heroName": "야생 추적자",
+  "exportText": "Export",
   "nodes": [
     {
       "id": "1226140",
@@ -887,7 +878,7 @@ export const restorationDruidTalentLayout = {
       "name": "폭주하는 합성"
     },
     {
-      "id": "428937",
+      "id": "439880",
       "x": 512,
       "y": 302,
       "shape": "choice",
@@ -895,21 +886,21 @@ export const restorationDruidTalentLayout = {
       "isHeroNode": false,
       "points": "1",
       "selected": true,
-      "name": "풍성한 개화 / 새봄"
+      "name": "Resilient Flourishing / Root Network"
     },
     {
-      "id": "94592",
+      "id": "1270592",
       "x": 554,
       "y": 302,
-      "shape": "choice",
+      "shape": "circle",
       "multiple": false,
       "isHeroNode": false,
       "points": "1",
       "selected": true,
-      "name": "꿈의 힘 / 꿈의 통제"
+      "name": "Patient Custodian"
     },
     {
-      "id": "433748",
+      "id": "439926",
       "x": 596,
       "y": 218,
       "shape": "circle",
@@ -917,10 +908,10 @@ export const restorationDruidTalentLayout = {
       "isHeroNode": false,
       "points": "1",
       "selected": true,
-      "name": "보호의 성장"
+      "name": "Wildstalker's Power"
     },
     {
-      "id": "429402",
+      "id": "440116",
       "x": 596,
       "y": 260,
       "shape": "choice",
@@ -928,10 +919,10 @@ export const restorationDruidTalentLayout = {
       "isHeroNode": false,
       "points": "1",
       "selected": true,
-      "name": "숲의 감화 / 강렬한 강화"
+      "name": "Bond with Nature / Harmonious Constitution"
     },
     {
-      "id": "428544",
+      "id": "439868",
       "x": 511,
       "y": 217,
       "shape": "circle",
@@ -939,10 +930,10 @@ export const restorationDruidTalentLayout = {
       "isHeroNode": false,
       "points": "1",
       "selected": true,
-      "name": "달의 나무정령"
+      "name": "Hunt Beneath the Open Skies"
     },
     {
-      "id": "433831",
+      "id": "439528",
       "x": 575,
       "y": 175,
       "shape": "circle",
@@ -950,21 +941,21 @@ export const restorationDruidTalentLayout = {
       "isHeroNode": false,
       "points": "",
       "selected": true,
-      "name": "꿈의 쇄도"
+      "name": "Thriving Growth"
     },
     {
-      "id": "429433",
+      "id": "440117",
       "x": 596,
       "y": 302,
-      "shape": "circle",
+      "shape": "choice",
       "multiple": false,
       "isHeroNode": false,
-      "points": "",
-      "selected": false,
-      "name": "만발하는 주입"
+      "points": "1",
+      "selected": true,
+      "name": "Twin Sprouts / Implant"
     },
     {
-      "id": "429399",
+      "id": "439890",
       "x": 554,
       "y": 218,
       "shape": "circle",
@@ -972,32 +963,32 @@ export const restorationDruidTalentLayout = {
       "isHeroNode": false,
       "points": "1",
       "selected": true,
-      "name": "광활함"
+      "name": "Strategic Infusion"
     },
     {
-      "id": "455797",
+      "id": "439901",
       "x": 554,
-      "y": 260,
-      "shape": "circle",
-      "multiple": false,
-      "isHeroNode": false,
-      "points": "1",
-      "selected": true,
-      "name": "세나리우스의 권능"
-    },
-    {
-      "id": "428859",
-      "x": 512,
       "y": 260,
       "shape": "choice",
       "multiple": false,
       "isHeroNode": false,
       "points": "1",
       "selected": true,
-      "name": "자연의 힘 / 자연의 내구력"
+      "name": "Entangling Vortex / Flower Walk"
     },
     {
-      "id": "428731",
+      "id": "455461",
+      "x": 512,
+      "y": 260,
+      "shape": "circle",
+      "multiple": false,
+      "isHeroNode": false,
+      "points": "1",
+      "selected": true,
+      "name": "Lethal Preservation"
+    },
+    {
+      "id": "440119",
       "x": 575,
       "y": 345,
       "shape": "circle",
@@ -1005,7 +996,7 @@ export const restorationDruidTalentLayout = {
       "isHeroNode": false,
       "points": "1",
       "selected": true,
-      "name": "숲의 조화"
+      "name": "Vigorous Creepers"
     },
     {
       "id": "99806",
@@ -1205,29 +1196,29 @@ export const restorationDruidTalentLayout = {
       "name": "청명의 전조"
     },
     {
-      "id": "1264899",
+      "id": "1270586",
       "x": 639,
       "y": 302,
       "shape": "circle",
       "multiple": false,
       "isHeroNode": false,
-      "points": "",
-      "selected": false,
-      "name": "덤불의 영혼"
+      "points": "1",
+      "selected": true,
+      "name": "Rampancy"
     },
     {
-      "id": "1264776",
+      "id": "440120",
       "x": 639,
       "y": 260,
       "shape": "circle",
       "multiple": false,
       "isHeroNode": false,
-      "points": "",
-      "selected": false,
-      "name": "드리아드의 춤"
+      "points": "1",
+      "selected": true,
+      "name": "Bursting Growth"
     },
     {
-      "id": "1264614",
+      "id": "1270565",
       "x": 639,
       "y": 218,
       "shape": "circle",
@@ -1235,40 +1226,7 @@ export const restorationDruidTalentLayout = {
       "isHeroNode": false,
       "points": "1",
       "selected": true,
-      "name": "녹음의 유혹"
-    },
-    {
-      "id": "392167",
-      "x": 575,
-      "y": 450,
-      "shape": "circle",
-      "multiple": false,
-      "isHeroNode": false,
-      "points": "",
-      "selected": false,
-      "name": "상록숲 / 상록숲 / 상록숲"
-    },
-    {
-      "id": "APEX_LEFT_TODO",
-      "x": 512,
-      "y": 450,
-      "shape": "circle",
-      "multiple": false,
-      "isHeroNode": false,
-      "points": "",
-      "selected": false,
-      "name": "TODO_LEFT"
-    },
-    {
-      "id": "APEX_RIGHT_TODO",
-      "x": 639,
-      "y": 450,
-      "shape": "circle",
-      "multiple": false,
-      "isHeroNode": false,
-      "points": "",
-      "selected": false,
-      "name": "TODO_RIGHT"
+      "name": "Green Thumb"
     }
   ],
   "arrows": [

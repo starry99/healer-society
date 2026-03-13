@@ -267,7 +267,15 @@ function DitheredWaves({
 
   useEffect(() => {
     const fps = Number(targetFps);
+    const isStaticFrame = disableAnimation && !enableMouseInteraction;
     if (!Number.isFinite(fps) || fps <= 0 || fps >= 60) {
+      invalidate();
+      return;
+    }
+
+    // If animation and mouse interaction are both disabled, render once and stop.
+    if (isStaticFrame) {
+      invalidate();
       return;
     }
 
@@ -280,7 +288,7 @@ function DitheredWaves({
     return () => {
       window.clearInterval(timerId);
     };
-  }, [targetFps, invalidate]);
+  }, [targetFps, invalidate, disableAnimation, enableMouseInteraction]);
 
   return (
     <>
