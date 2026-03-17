@@ -88,7 +88,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_druid_equinox.jpg"
         }
       ],
-      "selectedIndex": 1
+      "selectedIndex": 0
     },
     "rdruid-spec-43": {
       "options": [

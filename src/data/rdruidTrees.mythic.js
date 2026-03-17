@@ -309,9 +309,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "별빛 도관",
         "href": "https://www.wowhead.com/ko/spell=451211/별빛-도관",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_arcane_arcane01.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 451211,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "rdruid-class-117",

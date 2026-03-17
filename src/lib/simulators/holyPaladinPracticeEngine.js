@@ -5,6 +5,7 @@ import {
 } from "../../components/simulators/healerPracticeGlobalSettings";
 import {
   HOLY_PALADIN_ADDED_TALENT_TOGGLES,
+  HOLY_PALADIN_DIVINE_PURPOSE_CONFIG,
   HOLY_PALADIN_PRACTICE_TUNING as SHARED_HOLY_PALADIN_PRACTICE_TUNING
 } from "../../components/simulators/holyPaladinPracticeSettings";
 
@@ -46,6 +47,10 @@ const DEFAULT_INFUSION_OF_LIGHT_PROC_CHANCE = 0.1;
 const DEFAULT_INFUSION_OF_LIGHT_DURATION_MS = 15000;
 const DEFAULT_INFUSION_OF_LIGHT_FLASH_OF_LIGHT_HEAL_MULTIPLIER = 2;
 const DEFAULT_INFUSION_OF_LIGHT_TALENT_ENABLED = true;
+const DEFAULT_DIVINE_PURPOSE_TALENT_ENABLED = HOLY_PALADIN_ADDED_TALENT_TOGGLES.divinePurpose !== false;
+const DEFAULT_DIVINE_PURPOSE_PROC_CHANCE = Math.max(0, Number(HOLY_PALADIN_DIVINE_PURPOSE_CONFIG.procChance ?? 0.15));
+const DEFAULT_DIVINE_PURPOSE_HEAL_BONUS_RATIO = Math.max(0, Number(HOLY_PALADIN_DIVINE_PURPOSE_CONFIG.healBonusPct ?? 0.15));
+const DEFAULT_DIVINE_PURPOSE_DURATION_MS = Math.max(0, Number(HOLY_PALADIN_DIVINE_PURPOSE_CONFIG.durationMs ?? 12000));
 const DEFAULT_HOLY_REVELATION_TALENT_ENABLED = true;
 const DEFAULT_HOLY_REVELATION_INFUSED_FLASH_OF_LIGHT_HEAL_BONUS_RATIO = 0.2;
 const DEFAULT_RADIANT_LIGHT_TALENT_ENABLED = true;
@@ -588,6 +593,22 @@ export class HolyPaladinPracticeEngine {
     this.infusionOfLightTalentEnabled =
       config.infusionOfLightTalentEnabled !== false &&
       Boolean(config.infusionOfLightTalentEnabled ?? DEFAULT_INFUSION_OF_LIGHT_TALENT_ENABLED);
+    this.divinePurposeTalentEnabled =
+      config.divinePurposeTalentEnabled !== false &&
+      Boolean(config.divinePurposeTalentEnabled ?? DEFAULT_DIVINE_PURPOSE_TALENT_ENABLED);
+    this.divinePurposeProcChance = clamp(
+      Number(config.divinePurposeProcChance ?? DEFAULT_DIVINE_PURPOSE_PROC_CHANCE),
+      0,
+      1
+    );
+    this.divinePurposeHealBonusRatio = Math.max(
+      0,
+      Number(config.divinePurposeHealBonusRatio ?? DEFAULT_DIVINE_PURPOSE_HEAL_BONUS_RATIO)
+    );
+    this.divinePurposeDurationMs = Math.max(
+      0,
+      Number(config.divinePurposeDurationMs ?? DEFAULT_DIVINE_PURPOSE_DURATION_MS)
+    );
     this.handOfFaithTalentEnabled =
       config.handOfFaithTalentEnabled !== false &&
       Boolean(config.handOfFaithTalentEnabled ?? DEFAULT_HAND_OF_FAITH_TALENT_ENABLED);
@@ -863,6 +884,7 @@ export class HolyPaladinPracticeEngine {
       divineProtectionMs: 0,
       infusionOfLightMs: 0,
       infusionOfLightCharges: 0,
+      divinePurposeMs: 0,
       handOfFaithMs: 0,
       handOfFaithCharges: 0,
       dawnlightEmpowermentMs: 0,
@@ -1496,6 +1518,39 @@ export class HolyPaladinPracticeEngine {
     }
   }
 
+  isHolyPowerSpenderSpell(spell) {
+    return Boolean(spell) && Math.max(0, Number(spell?.holyPowerCost ?? 0)) > 0;
+  }
+
+  hasDivinePurposeBuff() {
+    return this.divinePurposeTalentEnabled && this.buffs.divinePurposeMs > 0;
+  }
+
+  shouldApplyDivinePurposeToSpell(spell) {
+    return this.isHolyPowerSpenderSpell(spell) && this.hasDivinePurposeBuff();
+  }
+
+  consumeDivinePurposeBuff() {
+    if (!this.hasDivinePurposeBuff()) {
+      return false;
+    }
+    this.buffs.divinePurposeMs = 0;
+    return true;
+  }
+
+  tryProcDivinePurposeFromHolyPowerSpender() {
+    if (!this.divinePurposeTalentEnabled || this.divinePurposeDurationMs <= 0) {
+      return false;
+    }
+    if (this.divinePurposeProcChance <= 0 || this.rng() > this.divinePurposeProcChance) {
+      return false;
+    }
+    const wasActive = this.buffs.divinePurposeMs > 0;
+    this.buffs.divinePurposeMs = this.divinePurposeDurationMs;
+    this.pushLog(wasActive ? "신성한 목적 갱신" : "신성한 목적 발동", "buff");
+    return true;
+  }
+
   tryProcInfusionOfLight() {
     if (!this.infusionOfLightTalentEnabled) {
       return false;
@@ -1566,8 +1621,12 @@ export class HolyPaladinPracticeEngine {
     return true;
   }
 
-  resolveSpellManaCost(spell) {
+  resolveSpellManaCost(spell, options = {}) {
     if (!spell) {
+      return 0;
+    }
+    const divinePurposeEmpowered = Boolean(options.divinePurposeEmpowered);
+    if (divinePurposeEmpowered && this.isHolyPowerSpenderSpell(spell)) {
       return 0;
     }
     const baseCost = Math.max(0, Number(spell.manaCost) || 0);
@@ -1785,6 +1844,7 @@ export class HolyPaladinPracticeEngine {
     if (this.buffs.infusionOfLightMs <= 0) {
       this.buffs.infusionOfLightCharges = 0;
     }
+    this.buffs.divinePurposeMs = Math.max(0, this.buffs.divinePurposeMs - dt);
     this.buffs.handOfFaithMs = Math.max(0, this.buffs.handOfFaithMs - dt);
     if (this.buffs.handOfFaithMs <= 0) {
       this.buffs.handOfFaithCharges = 0;
@@ -1985,7 +2045,9 @@ export class HolyPaladinPracticeEngine {
 
     const completedCast = this.currentCast;
     this.currentCast = null;
-    this.resolveSpellCast(completedCast.spellKey, completedCast.targetId);
+    this.resolveSpellCast(completedCast.spellKey, completedCast.targetId, {
+      divinePurposeEmpowered: Boolean(completedCast.divinePurposeEmpowered)
+    });
   }
 
   processOffGcdActionQueue() {
@@ -2018,13 +2080,14 @@ export class HolyPaladinPracticeEngine {
         }
       }
 
-      if (spell.holyPowerCost > 0 && this.holyPower < spell.holyPowerCost) {
+      const divinePurposeEmpowered = this.shouldApplyDivinePurposeToSpell(spell);
+      if (!divinePurposeEmpowered && spell.holyPowerCost > 0 && this.holyPower < spell.holyPowerCost) {
         this.offGcdActionQueue.shift();
         this.pushLog(`${spell.name} 실패: 신성한 힘 부족`, "warn");
         continue;
       }
 
-      const spellManaCost = this.resolveSpellManaCost(spell);
+      const spellManaCost = this.resolveSpellManaCost(spell, { divinePurposeEmpowered });
       if (spellManaCost > this.mana + 1e-6) {
         this.offGcdActionQueue.shift();
         this.pushLog(`${spell.name} 실패: 마나 부족`, "warn");
@@ -2084,13 +2147,14 @@ export class HolyPaladinPracticeEngine {
         }
       }
 
-      if (spell.holyPowerCost > 0 && this.holyPower < spell.holyPowerCost) {
+      const divinePurposeEmpowered = this.shouldApplyDivinePurposeToSpell(spell);
+      if (!divinePurposeEmpowered && spell.holyPowerCost > 0 && this.holyPower < spell.holyPowerCost) {
         this.actionQueue.shift();
         this.pushLog(`${spell.name} 실패: 신성한 힘 부족`, "warn");
         continue;
       }
 
-      const spellManaCost = this.resolveSpellManaCost(spell);
+      const spellManaCost = this.resolveSpellManaCost(spell, { divinePurposeEmpowered });
       if (spellManaCost > this.mana + 1e-6) {
         this.actionQueue.shift();
         this.pushLog(`${spell.name} 실패: 마나 부족`, "warn");
@@ -2123,6 +2187,7 @@ export class HolyPaladinPracticeEngine {
   }
 
   startCast(spell, targetId) {
+    const divinePurposeEmpowered = this.shouldApplyDivinePurposeToSpell(spell);
     if (spell.key === "holyShock") {
       this.holyShockCharges = Math.max(0, this.holyShockCharges - 1);
       if (this.holyShockCharges < HOLY_SHOCK_MAX_CHARGES && this.holyShockRechargeRemainingMs <= 0) {
@@ -2133,7 +2198,7 @@ export class HolyPaladinPracticeEngine {
       this.cooldowns[spell.key] = spell.cooldownMs;
     }
 
-    const spellManaCost = this.resolveSpellManaCost(spell);
+    const spellManaCost = this.resolveSpellManaCost(spell, { divinePurposeEmpowered });
     if (spellManaCost > 0) {
       this.mana = round(Math.max(0, this.mana - spellManaCost), 2);
       this.metrics.manaSpent = round(this.metrics.manaSpent + spellManaCost, 2);
@@ -2164,13 +2229,14 @@ export class HolyPaladinPracticeEngine {
         remainingMs: castTimeMs,
         castTimeMs,
         startedAtMs: this.nowMs,
-        spentManaCost: spellManaCost
+        spentManaCost: spellManaCost,
+        divinePurposeEmpowered
       };
       this.pushLog(`${spell.name} 시전 시작`, "info");
       return;
     }
 
-    this.resolveSpellCast(spell.key, targetId);
+    this.resolveSpellCast(spell.key, targetId, { divinePurposeEmpowered });
   }
 
   interruptCurrentCastByMovement() {
@@ -2196,10 +2262,19 @@ export class HolyPaladinPracticeEngine {
     return true;
   }
 
-  resolveSpellCast(spellKey, targetId) {
+  resolveSpellCast(spellKey, targetId, castContext = {}) {
     const spell = HOLY_PALADIN_PRACTICE_SPELLS[spellKey];
     if (!spell) {
       return;
+    }
+
+    const divinePurposeEmpowered =
+      Boolean(castContext?.divinePurposeEmpowered) &&
+      this.divinePurposeTalentEnabled &&
+      this.isHolyPowerSpenderSpell(spell);
+    if (divinePurposeEmpowered) {
+      this.consumeDivinePurposeBuff();
+      this.pushLog("신성한 목적 소모", "buff");
     }
 
     this.metrics.casts[spellKey] += 1;
@@ -2294,19 +2369,26 @@ export class HolyPaladinPracticeEngine {
         return;
       }
       case "lightOfDawn": {
-        this.modifyHolyPower(-spell.holyPowerCost);
+        if (!divinePurposeEmpowered) {
+          this.modifyHolyPower(-spell.holyPowerCost);
+        }
         const targets = this.getMostInjuredAlivePlayers(5);
+        const divinePurposeHealMultiplier = divinePurposeEmpowered ? 1 + this.divinePurposeHealBonusRatio : 1;
         if (!targets.length) {
           const fallbackTargetId =
             targetId ?? this.getLowestHealthAlivePlayer({ injuredOnly: false })?.id ?? this.getAlivePlayers()[0]?.id ?? null;
           const dawnlightApplied = this.applyDawnlightFromHolyPowerSpender(fallbackTargetId, spell.name);
-          this.pushLog(`${spell.name} 사용 (유효 대상 없음)${dawnlightApplied ? " (새벽빛 부여)" : ""}`, "info");
+          this.tryProcDivinePurposeFromHolyPowerSpender();
+          this.pushLog(
+            `${spell.name} 사용 (유효 대상 없음)${divinePurposeEmpowered ? " (신성한 목적)" : ""}${dawnlightApplied ? " (새벽빛 부여)" : ""}`,
+            "info"
+          );
           return;
         }
 
         let totalEffective = 0;
         let totalBarrier = 0;
-        const lightOfDawnBaseAmount = getHealAmount("lightOfDawn");
+        const lightOfDawnBaseAmount = getHealAmount("lightOfDawn") * divinePurposeHealMultiplier;
         const lightOfDawnMasteryEffectMultiplier = this.unfadingLightTalentEnabled
           ? UNFADING_LIGHT_LIGHT_OF_DAWN_MASTERY_EFFECT_MULTIPLIER
           : 1;
@@ -2357,9 +2439,10 @@ export class HolyPaladinPracticeEngine {
         const dawnlightTargetId =
           targetId ?? targets[0]?.id ?? this.getLowestHealthAlivePlayer({ injuredOnly: false })?.id ?? null;
         const dawnlightApplied = this.applyDawnlightFromHolyPowerSpender(dawnlightTargetId, spell.name);
+        this.tryProcDivinePurposeFromHolyPowerSpender();
 
         this.pushLog(
-          `${spell.name} 광역 치유 ${fmtSigned(totalEffective + secondSunriseEffective)}${secondSunriseEffective > 0 ? ` (두번째 일출 ${fmtSigned(secondSunriseEffective)})` : ""}${dawnlightApplied ? " (새벽빛 부여)" : ""}`,
+          `${spell.name} 광역 치유 ${fmtSigned(totalEffective + secondSunriseEffective)}${divinePurposeEmpowered ? " (신성한 목적)" : ""}${secondSunriseEffective > 0 ? ` (두번째 일출 ${fmtSigned(secondSunriseEffective)})` : ""}${dawnlightApplied ? " (새벽빛 부여)" : ""}`,
           "heal"
         );
         if (totalBarrier > 0) {
@@ -2374,8 +2457,11 @@ export class HolyPaladinPracticeEngine {
           return;
         }
 
-        this.modifyHolyPower(-spell.holyPowerCost);
-        const result = this.applyHeal(target.id, getHealAmount("eternalFlame"), true, {
+        if (!divinePurposeEmpowered) {
+          this.modifyHolyPower(-spell.holyPowerCost);
+        }
+        const divinePurposeHealMultiplier = divinePurposeEmpowered ? 1 + this.divinePurposeHealBonusRatio : 1;
+        const result = this.applyHeal(target.id, getHealAmount("eternalFlame") * divinePurposeHealMultiplier, true, {
           spellKey: "eternalFlame",
           isDirectHeal: true
         });
@@ -2383,9 +2469,10 @@ export class HolyPaladinPracticeEngine {
         target.eternalFlameTickTimerMs = ETERNAL_FLAME_TICK_MS;
         const barrierShield = this.applyArchangelsBarrier(target.id, result.effective);
         const dawnlightApplied = this.applyDawnlightFromHolyPowerSpender(target.id, spell.name);
+        this.tryProcDivinePurposeFromHolyPowerSpender();
 
         this.pushLog(
-          `${spell.name} ${target.name} ${fmtSigned(result.effective)}${result.isCritical ? " (치명타)" : ""} (지속 치유 적용)${dawnlightApplied ? " (새벽빛 부여)" : ""}`,
+          `${spell.name} ${target.name} ${fmtSigned(result.effective)}${divinePurposeEmpowered ? " (신성한 목적)" : ""}${result.isCritical ? " (치명타)" : ""} (지속 치유 적용)${dawnlightApplied ? " (새벽빛 부여)" : ""}`,
           "heal"
         );
         if (barrierShield > 0) {

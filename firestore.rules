@@ -168,6 +168,18 @@ service cloud.firestore {
           "movementCustomKeys",
           "keyboardBindings",
           "clickCastBindings",
+          "cooldownSpellOrder",
+          "cooldownSecondarySpellOrder",
+          "cooldownReserveSpellOrder",
+          "specialProcOrder",
+          "specialProcOrderKeys",
+          "specialProcEnabledKeys",
+          "specialProcOverlayIconSizePx",
+          "cooldownManagerPrimaryIconSizePx",
+          "cooldownManagerPrimaryIconSizeSettingPx",
+          "cooldownManagerSecondaryIconSizePx",
+          "cooldownManagerSecondaryIconSizeSettingPx",
+          "cooldownResourceBarOffsets",
           "updatedAt"
         ])
         && request.resource.data.keys().hasAll([
@@ -217,6 +229,154 @@ service cloud.firestore {
         )
         && request.resource.data.keyboardBindings is map
         && request.resource.data.clickCastBindings is map
+        && request.resource.data.clickCastBindings.values().hasOnly([
+          "",
+          "LMB",
+          "RMB",
+          "SHIFT+LMB",
+          "SHIFT+RMB",
+          "CTRL+LMB",
+          "CTRL+RMB",
+          "ALT+LMB",
+          "ALT+RMB",
+          "MMB",
+          "MB4",
+          "SHIFT+MB4",
+          "CTRL+MB4",
+          "ALT+MB4",
+          "MB5",
+          "SHIFT+MB5",
+          "CTRL+MB5",
+          "ALT+MB5",
+          "WHEELUP",
+          "WHEELDOWN",
+          "SHIFT+WHEELUP",
+          "SHIFT+WHEELDOWN",
+          "CTRL+WHEELUP",
+          "CTRL+WHEELDOWN",
+          "ALT+WHEELUP",
+          "ALT+WHEELDOWN"
+        ])
+        && (
+          !request.resource.data.keys().hasAny(["cooldownSpellOrder"])
+          || request.resource.data.cooldownSpellOrder is list
+        )
+        && (
+          !request.resource.data.keys().hasAny(["cooldownSecondarySpellOrder"])
+          || request.resource.data.cooldownSecondarySpellOrder is list
+        )
+        && (
+          !request.resource.data.keys().hasAny(["cooldownReserveSpellOrder"])
+          || request.resource.data.cooldownReserveSpellOrder is list
+        )
+        && (
+          !request.resource.data.keys().hasAny(["specialProcOrder"])
+          || request.resource.data.specialProcOrder is list
+        )
+        && (
+          !request.resource.data.keys().hasAny(["specialProcOrderKeys"])
+          || request.resource.data.specialProcOrderKeys is list
+        )
+        && (
+          !request.resource.data.keys().hasAny(["specialProcEnabledKeys"])
+          || request.resource.data.specialProcEnabledKeys is list
+        )
+        && (
+          !request.resource.data.keys().hasAny(["specialProcOverlayIconSizePx"])
+          || (
+            request.resource.data.specialProcOverlayIconSizePx is int
+            || request.resource.data.specialProcOverlayIconSizePx is float
+          )
+        )
+        && (
+          !request.resource.data.keys().hasAny(["cooldownManagerPrimaryIconSizePx"])
+          || (
+            request.resource.data.cooldownManagerPrimaryIconSizePx is int
+            || request.resource.data.cooldownManagerPrimaryIconSizePx is float
+          )
+        )
+        && (
+          !request.resource.data.keys().hasAny(["cooldownManagerPrimaryIconSizeSettingPx"])
+          || (
+            request.resource.data.cooldownManagerPrimaryIconSizeSettingPx is int
+            || request.resource.data.cooldownManagerPrimaryIconSizeSettingPx is float
+          )
+        )
+        && (
+          !request.resource.data.keys().hasAny(["cooldownManagerSecondaryIconSizePx"])
+          || (
+            request.resource.data.cooldownManagerSecondaryIconSizePx is int
+            || request.resource.data.cooldownManagerSecondaryIconSizePx is float
+          )
+        )
+        && (
+          !request.resource.data.keys().hasAny(["cooldownManagerSecondaryIconSizeSettingPx"])
+          || (
+            request.resource.data.cooldownManagerSecondaryIconSizeSettingPx is int
+            || request.resource.data.cooldownManagerSecondaryIconSizeSettingPx is float
+          )
+        )
+        && (
+          !request.resource.data.keys().hasAny(["cooldownResourceBarOffsets"])
+          || (
+            request.resource.data.cooldownResourceBarOffsets is map
+            && request.resource.data.cooldownResourceBarOffsets.keys().hasOnly([
+              "sectionOrder",
+              "holyPowerWidthBonusPx",
+              "manaWidthBonusPx",
+              "holyPowerOffsetXPx",
+              "holyPowerOffsetYPx",
+              "manaOffsetXPx",
+              "manaOffsetYPx"
+            ])
+            && (
+              !request.resource.data.cooldownResourceBarOffsets.keys().hasAny(["sectionOrder"])
+              || request.resource.data.cooldownResourceBarOffsets.sectionOrder is list
+            )
+            && (
+              !request.resource.data.cooldownResourceBarOffsets.keys().hasAny(["holyPowerWidthBonusPx"])
+              || (
+                request.resource.data.cooldownResourceBarOffsets.holyPowerWidthBonusPx is int
+                || request.resource.data.cooldownResourceBarOffsets.holyPowerWidthBonusPx is float
+              )
+            )
+            && (
+              !request.resource.data.cooldownResourceBarOffsets.keys().hasAny(["manaWidthBonusPx"])
+              || (
+                request.resource.data.cooldownResourceBarOffsets.manaWidthBonusPx is int
+                || request.resource.data.cooldownResourceBarOffsets.manaWidthBonusPx is float
+              )
+            )
+            && (
+              !request.resource.data.cooldownResourceBarOffsets.keys().hasAny(["holyPowerOffsetXPx"])
+              || (
+                request.resource.data.cooldownResourceBarOffsets.holyPowerOffsetXPx is int
+                || request.resource.data.cooldownResourceBarOffsets.holyPowerOffsetXPx is float
+              )
+            )
+            && (
+              !request.resource.data.cooldownResourceBarOffsets.keys().hasAny(["holyPowerOffsetYPx"])
+              || (
+                request.resource.data.cooldownResourceBarOffsets.holyPowerOffsetYPx is int
+                || request.resource.data.cooldownResourceBarOffsets.holyPowerOffsetYPx is float
+              )
+            )
+            && (
+              !request.resource.data.cooldownResourceBarOffsets.keys().hasAny(["manaOffsetXPx"])
+              || (
+                request.resource.data.cooldownResourceBarOffsets.manaOffsetXPx is int
+                || request.resource.data.cooldownResourceBarOffsets.manaOffsetXPx is float
+              )
+            )
+            && (
+              !request.resource.data.cooldownResourceBarOffsets.keys().hasAny(["manaOffsetYPx"])
+              || (
+                request.resource.data.cooldownResourceBarOffsets.manaOffsetYPx is int
+                || request.resource.data.cooldownResourceBarOffsets.manaOffsetYPx is float
+              )
+            )
+          )
+        )
         && request.resource.data.updatedAt == request.time;
       allow delete: if signedIn() && uid == request.auth.uid;
     }

@@ -430,7 +430,7 @@ export function GuidePage({ healerMap }) {
                 const rotationAccent = resolveStatAccent(healer.color, siteAccentFallback);
                 const talentsExtraStateKey = `${healer.slug}:${section.id}:${currentMode}`;
                 const talentCopyStateKey = `${talentsExtraStateKey}:copy`;
-                const talentsExtraDefaultOpen = healer.slug === "restoration-druid" && section.type === "talents";
+                const talentsExtraDefaultOpen = section.type === "talents";
                 const talentsExtraOpen = Object.prototype.hasOwnProperty.call(
                   talentsExtraOpenByKey,
                   talentsExtraStateKey

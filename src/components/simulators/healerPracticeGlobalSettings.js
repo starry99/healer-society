@@ -57,7 +57,7 @@ export const HOLY_PALADIN_ADDED_TALENT_SUMMARY_LINES = Object.freeze([
 // 신성 사제 커스텀 반영 Talent 목록입니다.
 // 이 텍스트 배열을 수정하면 안내문에 그대로 반영됩니다.
 export const HOLY_PRIEST_ADDED_TALENT_SUMMARY_LINES = Object.freeze([
-  "필수 스킬 및 특성 외에도 [[공명하는 마력#453845]], [[위기 관리#390954]], [[고결한 자의 기도#390977]], [[빛의 흔적#200128]], [[빛의 회생#193157]], [[흔들림없는 의지#373456]], [[결속의 치유#368276]], [[보호의 빛#193063]] 등의 특성이 구현되어 있으며, 시즌 1 티어셋 효과 또한 반영되어있습니다.",
+  "필수 스킬 및 특성 외에도 [[공명하는 마력#453845]], [[위기 관리#390954]], [[흩어지는 빛#1215265]], [[빛의 회생#193157]], [[흔들림없는 의지#373456]], [[결속의 치유#368276]], [[보호의 빛#193063]] 등의 특성이 구현되어 있으며, 시즌 1 티어셋 효과 또한 반영되어있습니다.",
 ]);
 
 // 힐러 아이콘 선택 시 안내문을 리스트 형태로 표시합니다.
@@ -71,19 +71,19 @@ export const HEALER_PRACTICE_DISCLAIMER_BY_HEALER = Object.freeze({
     "기준치 - 지능:2000, 가속:30%, 특화:40%, 치명타:30%, 유연: 0%, 마나: 275,000, 생흡: 6%",
     "실제 게임 튜닝 수치와 다를 수 있습니다. 특히 특화는 모두 최대 효율로 계산됩니다.",
     "전투시간이 짧으므로 마나 소모가 원래보다 조금 더 많게 변경됩니다.",
-    "가이드의 레이드 특성을 기반으로 하며 신성한 목적, 빛의 교부, 새벽빛 연결힐 등 몇몇 특성은 구현되지 않았습니다.",
+    "가이드의 레이드 특성을 기반으로 하며 빛의 교부, 새벽빛 연결힐 등 몇몇 특성은 구현되지 않았습니다.",
     ...HOLY_PALADIN_ADDED_TALENT_SUMMARY_LINES
   ]),
   "restoration-druid": Object.freeze([
     "실제 게임 튜닝 수치와 다를 수 있습니다.",
-    "새벽빛 빨대 등 몇몇 사항은 구현되지 않았습니다."
+    "새벽빛빨대[[태양의 화신#431425]] 등 몇몇 사항은 구현되지 않았습니다."
   ]),
   "holy-priest": Object.freeze([
     "기준치 - 지능:2000, 가속:15%, 특화:30%, 치명타:30%, 유연: 2%, 마나: 275,000, 생흡: 6%",
     "실제 게임 튜닝 수치와 다를 수 있습니다.",
     "전투시간이 짧으므로 마나 소모가 원래보다 조금 더 많게 변경됩니다.",
-    "[[구원의 영혼#20711]], [[마력 주입#10060]], [[수호 영혼#97983]], [[천사의 보루#108945]] 등은 힐 허수아비에 부적합하다 여겨져서 구현되지 않았습니다. [[응징#88625]] 또한 구현되지 않은 점 참고바랍니다.",
-    "가이드의 레이드 특성을 기반으로 하며, 절정 선택 노드에는 [[신앙#1215241]]을, 후광 선택 노드에는 [[마력 압축#449874]]을 넣었습니다 (전투시간이 짧으므로).",
+    "[[구원의 영혼#20711]], [[마력 주입#10060]], [[수호 영혼#97983]], [[천사의 보루#108945]] 등은 힐 허수아비에 부적합하다 여겨져서 구현되지 않았습니다. [[응징#88625]] 또한 없는 점 참고바랍니다.",
+    "가이드의 레이드 특성을 기반으로 하며, 절정 선택 노드에는 [[신앙#1215241]]을, 후광 선택 노드에는 [[마력 압축#449874]]을 넣었습니다. (전투시간이 짧으므로).",
     ...HOLY_PRIEST_ADDED_TALENT_SUMMARY_LINES
   ])
 });
@@ -105,9 +105,22 @@ export const HEALER_PRACTICE_PATCH_META_BY_HEALER = Object.freeze({
     patchVersion: ""
   }),
   "holy-priest": Object.freeze({
-    lastUpdatedAt: "2026-03-12",
+    lastUpdatedAt: "2026-03-14",
     patchVersion: "12.0.1"
   })
+});
+
+// 패치 노트를 위한 상수
+export const HEALER_PRACTICE_PATCH_NOTES_BY_HEALER = Object.freeze({
+  default: Object.freeze([]),
+  "holy-paladin": Object.freeze([
+    { date: "2026-03-16", text: "티어셋 및 신성한 목적 특성 추가, 사운드 추가, 아이콘 버그 수정, 새벽빛 계수 조정" }
+  ]),
+  "restoration-druid": Object.freeze([]),
+  "holy-priest": Object.freeze([
+    { date: "2026-03-14", text: "평온 쿨감 버그 수정, 빛의 쇄도 발동률 등 버그 수정으로 랭킹 초기화" },
+    { date: "2026-03-17", text: "새로 뜬 특성 기반으로 변경 " }
+  ])
 });
 
 // 랭킹은 패치 단위로 분리 저장/조회됩니다.
@@ -298,6 +311,14 @@ export const MOUSE_BINDING_OPTIONS = [
   { token: "ALT+LMB", label: "Alt + 좌클릭", label_cdm: "Alt+좌" },
   { token: "ALT+RMB", label: "Alt + 우클릭", label_cdm: "Alt+우" },
   { token: "MMB", label: "마우스휠클릭", label_cdm: "휠클" },
+  { token: "MB4", label: "마우스 추가버튼 4", label_cdm: "B4" },
+  { token: "SHIFT+MB4", label: "Shift + 추가버튼 4", label_cdm: "Sh+B4" },
+  { token: "CTRL+MB4", label: "Ctrl + 추가버튼 4", label_cdm: "Ctl+B4" },
+  { token: "ALT+MB4", label: "Alt + 추가버튼 4", label_cdm: "Alt+B4" },
+  { token: "MB5", label: "마우스 추가버튼 5", label_cdm: "B5" },
+  { token: "SHIFT+MB5", label: "Shift + 추가버튼 5", label_cdm: "Sh+B5" },
+  { token: "CTRL+MB5", label: "Ctrl + 추가버튼 5", label_cdm: "Ctl+B5" },
+  { token: "ALT+MB5", label: "Alt + 추가버튼 5", label_cdm: "Alt+B5" },
   { token: "WHEELUP", label: "휠 업", label_cdm: "휠↑" },
   { token: "WHEELDOWN", label: "휠 다운", label_cdm: "휠↓" },
   { token: "SHIFT+WHEELUP", label: "Shift + 휠 업", label_cdm: "Sh+휠↑" },
@@ -404,10 +425,10 @@ const DEFAULT_SCORE_HOLY_PRIEST_SELF_HEAL_CONFIG = Object.freeze({
 // 신성 사제: 평온 유효 쿨감 만점 기준(초)
 // 난이도별로 숫자만 바꾸면 점수 기준이 즉시 반영됩니다.
 export const HOLY_PRIEST_SERENITY_CDR_FULL_SCORE_SEC_BY_DIFFICULTY = Object.freeze({
-  normal: 600,
-  heroic: 650,
-  mythic: 900,
-  worldFirstKill: 900
+  normal: 350,
+  heroic: 400,
+  mythic: 500,
+  worldFirstKill: 500
 });
 
 function buildHolyPriestSpecificScoreConfig(serenityCooldownFullScoreAtOrAboveSec = 350) {

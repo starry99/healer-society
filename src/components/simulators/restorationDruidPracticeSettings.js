@@ -232,6 +232,9 @@ export const RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_KEYS = Object.freeze([
   "barkskin"
 ]);
 
+// 쿨다운 매니저 2번째 줄 기본 스킬 (코드에서 자유롭게 수정 가능)
+export const RESTORATION_DRUID_COOLDOWN_MANAGER_SECONDARY_SPELL_KEYS = Object.freeze([]);
+
 // 쿨다운 매니저에는 표시하지 않지만, 세팅 UI 하단 보조줄에 표시할 스킬
 export const RESTORATION_DRUID_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS = Object.freeze([
   "rejuvenation",
@@ -307,6 +310,7 @@ export const RESTORATION_DRUID_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "forestRenewal",
     label: "삼림 재생",
+    spellId: 400129,
     iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.forestRenewal,
     buffRemainingMsKey: "forestRenewalCounterActiveMs",
     stackCountBuffKey: "forestRenewalSwiftmendCount",
@@ -319,6 +323,7 @@ export const RESTORATION_DRUID_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "treeOfLife",
     label: "나무 변신",
+    spellId: 33891,
     iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.treeOfLife,
     buffRemainingMsKey: "treeOfLifeMs",
     showAboveCooldownManager: true,
@@ -330,6 +335,7 @@ export const RESTORATION_DRUID_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "abundance",
     label: "풍요",
+    spellId: 207383,
     iconUrl: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY.abundance,
     buffRemainingMsKey: "abundanceActiveMs",
     stackCountBuffKey: "abundanceRejuvenationCount",

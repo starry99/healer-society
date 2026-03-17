@@ -50,6 +50,7 @@ const SEASON_ONE_TIER_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.seasonOn
 const UPLIFTING_WORDS_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.upliftingWords !== false;
 const CRISIS_MANAGEMENT_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.crisisManagement !== false;
 const TRAIL_OF_LIGHT_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.trailOfLight !== false;
+const DISPERSING_LIGHT_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.dispersingLight !== false;
 const LIGHTS_RESURGENCE_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.lightsResurgence !== false;
 const RESONANT_ENERGY_TALENT_ENABLED = HOLY_PRIEST_ADDED_TALENT_TOGGLES.resonantEnergy !== false;
 const UPLIFTING_WORDS_SERENITY_CRIT_CHANCE_BONUS = clamp(
@@ -304,6 +305,15 @@ const TRAIL_OF_LIGHT_HEAL_RATIO = clamp(
   Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.trailOfLightHealRatio ?? 0.25),
   0,
   1
+);
+const DISPERSING_LIGHT_REPLICATE_RATIO = clamp(
+  Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.dispersingLightReplicateRatio ?? 0.05),
+  0,
+  1
+);
+const DISPERSING_LIGHT_TARGET_COUNT = Math.max(
+  0,
+  Math.floor(Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.dispersingLightTargetCount ?? 4))
 );
 const LIGHTS_RESURGENCE_RENEW_PROC_CHANCE = clamp(
   Number(HOLY_PRIEST_PRACTICE_TUNING.durations?.lightsResurgenceRenewProcChance ?? 0.12),
@@ -685,6 +695,7 @@ const HEALING_METRIC_SPELL_KEYS = Object.freeze([
   "ultimateSerenity",
   "benediction",
   "trailOfLight",
+  "dispersingLight",
   "renew",
   "bindingHeal",
   "cosmicRipple",
@@ -770,6 +781,9 @@ export class HolyPriestPracticeEngine {
     this.trailOfLightTalentEnabled =
       config.trailOfLightTalentEnabled !== false &&
       Boolean(config.trailOfLightTalentEnabled ?? TRAIL_OF_LIGHT_TALENT_ENABLED);
+    this.dispersingLightTalentEnabled =
+      config.dispersingLightTalentEnabled !== false &&
+      Boolean(config.dispersingLightTalentEnabled ?? DISPERSING_LIGHT_TALENT_ENABLED);
     this.lightsResurgenceTalentEnabled =
       config.lightsResurgenceTalentEnabled !== false &&
       Boolean(config.lightsResurgenceTalentEnabled ?? LIGHTS_RESURGENCE_TALENT_ENABLED);
@@ -1043,6 +1057,15 @@ export class HolyPriestPracticeEngine {
       Number(config.trailOfLightHealRatio ?? TRAIL_OF_LIGHT_HEAL_RATIO),
       0,
       1
+    );
+    this.dispersingLightReplicateRatio = clamp(
+      Number(config.dispersingLightReplicateRatio ?? DISPERSING_LIGHT_REPLICATE_RATIO),
+      0,
+      1
+    );
+    this.dispersingLightTargetCount = Math.max(
+      0,
+      Math.floor(Number(config.dispersingLightTargetCount ?? DISPERSING_LIGHT_TARGET_COUNT))
     );
     this.lightsResurgenceRenewProcChance = clamp(
       Number(config.lightsResurgenceRenewProcChance ?? LIGHTS_RESURGENCE_RENEW_PROC_CHANCE),
@@ -1364,6 +1387,54 @@ export class HolyPriestPracticeEngine {
     }
 
     this.updateTrailOfLightTargetHistory(currentTargetId);
+  }
+
+  triggerDispersingLightAfterFlashHeal(currentTarget, flashHealResult, sourceLabel = "순간치유") {
+    if (
+      !this.dispersingLightTalentEnabled ||
+      this.dispersingLightReplicateRatio <= 0 ||
+      this.dispersingLightTargetCount <= 0
+    ) {
+      return;
+    }
+
+    const currentTargetId = String(currentTarget?.id ?? "").trim();
+    const sourceHealAmount = Math.max(0, Number(flashHealResult?.effective ?? 0));
+    if (!currentTargetId || sourceHealAmount <= 0) {
+      return;
+    }
+
+    const replicatedHealPerTarget = sourceHealAmount * this.dispersingLightReplicateRatio;
+    if (replicatedHealPerTarget <= 0) {
+      return;
+    }
+
+    const targets = this.getMostInjuredAlivePlayers(this.dispersingLightTargetCount + 1, false)
+      .filter((candidate) => candidate.id !== currentTargetId)
+      .slice(0, this.dispersingLightTargetCount);
+    if (!targets.length) {
+      return;
+    }
+
+    let totalEffective = 0;
+    for (const target of targets) {
+      const result = this.applyHeal(target.id, replicatedHealPerTarget, false, {
+        spellKey: "dispersingLight",
+        canCrit: false,
+        rawAmount: true,
+        isDirectHeal: true,
+        ignoreHealingDoneModifiers: true,
+        ignoreHealingTakenModifiers: true
+      });
+      totalEffective += Math.max(0, Number(result?.effective ?? 0));
+    }
+
+    if (totalEffective > 0) {
+      this.pushLog(
+        `흩어지는 빛 ${targets.length}명 ${fmtSigned(totalEffective)} (${sourceLabel})`,
+        "heal"
+      );
+    }
   }
 
   getSerenityCharges() {
@@ -2626,7 +2697,7 @@ export class HolyPriestPracticeEngine {
     const sourceLabel = String(options.sourceLabel ?? "").trim();
     const sourcePrefix = sourceLabel ? `${sourceLabel}: ` : "";
     if (!targets.length) {
-      this.pushLog(`${sourcePrefix}우주 파동 발동 (유효 대상 없음)`, "info");
+      this.pushLog(`${sourcePrefix}우주의 파장 발동 (유효 대상 없음)`, "info");
       return { targetCount: 0, total: 0, criticalCount: 0 };
     }
 
@@ -2644,7 +2715,7 @@ export class HolyPriestPracticeEngine {
       }
     }
     this.pushLog(
-      `${sourcePrefix}우주 파동 발동 ${targets.length}명 ${fmtSigned(total)}${criticalCount > 0 ? ` (치명 ${criticalCount})` : ""}`,
+      `${sourcePrefix}우주의 파장 발동 ${targets.length}명 ${fmtSigned(total)}${criticalCount > 0 ? ` (치명 ${criticalCount})` : ""}`,
       "heal"
     );
     return {
@@ -3241,6 +3312,7 @@ export class HolyPriestPracticeEngine {
           "heal"
         );
         this.triggerTrailOfLightAfterFlashHeal(target, result, castLabel);
+        this.triggerDispersingLightAfterFlashHeal(target, result, castLabel);
         const selfPlayerId = String(this.selfPlayerId ?? "").trim();
         if (selfPlayerId && target.id === selfPlayerId) {
           this.grantProtectiveLight(castLabel);

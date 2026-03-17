@@ -145,6 +145,26 @@ a {
   display: block;
 }
 
+.wh-tooltip-only-link {
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+  background: none !important;
+  background-image: none !important;
+}
+
+.wh-tooltip-only-link::before,
+.wh-tooltip-only-link::after {
+  display: none !important;
+}
+
+.wh-tooltip-only-link > .iconsmall,
+.wh-tooltip-only-link > .iconmedium,
+.wh-tooltip-only-link > .icontiny,
+.wh-tooltip-only-link > span[class*="icon"],
+.wh-tooltip-only-link > ins {
+  display: none !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

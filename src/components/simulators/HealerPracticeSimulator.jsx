@@ -67,18 +67,22 @@ import {
   TANK_CLASS_POOL,
   TANK_ROLE_META,
   UI_STEP_MS,
-  VALID_MODIFIERS
+  VALID_MODIFIERS,
+  HEALER_PRACTICE_PATCH_NOTES_BY_HEALER
 } from "./healerPracticeGlobalSettings";
 import {
   COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
+  COOLDOWN_MANAGER_SECONDARY_SPELL_KEYS,
   COOLDOWN_MANAGER_SPELL_KEYS,
   COOLDOWN_MANAGER_SPELL_META,
   HOLY_PALADIN_ADDED_TALENT_TOGGLES,
   HOLY_PALADIN_CRIT_CONFIG,
   HOLY_PALADIN_DAWNLIGHT_CONFIG,
   HOLY_PALADIN_DEFAULT_STATS,
+  HOLY_PALADIN_DIVINE_PURPOSE_CONFIG,
   HOLY_PALADIN_MANA_TUNING_SCALE,
   HOLY_PALADIN_PRACTICE_DIFFICULTY_TUNING,
+  HOLY_PALADIN_SOUND_CONFIG,
   HOLY_PALADIN_SUN_SEAR_CONFIG,
   DEFAULT_CLICK_CAST_PREFERRED,
   HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG,
@@ -86,6 +90,7 @@ import {
   SPELL_ICON_URL_BY_KEY
 } from "./holyPaladinPracticeSettings";
 import {
+  HOLY_PRIEST_COOLDOWN_MANAGER_SECONDARY_SPELL_KEYS,
   HOLY_PRIEST_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
   HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_KEYS,
   HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_META,
@@ -96,10 +101,12 @@ import {
   HOLY_PRIEST_HEALER_SLUG,
   HOLY_PRIEST_MANA_TUNING_SCALE,
   HOLY_PRIEST_PRACTICE_DIFFICULTY_TUNING,
+  HOLY_PRIEST_SOUND_CONFIG,
   HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG,
   HOLY_PRIEST_SPELL_ICON_URL_BY_KEY
 } from "./holyPriestPracticeSettings";
 import {
+  RESTORATION_DRUID_COOLDOWN_MANAGER_SECONDARY_SPELL_KEYS,
   RESTORATION_DRUID_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
   RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_KEYS,
   RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_META,
@@ -123,6 +130,45 @@ const HOLY_PALADIN_FEEDBACK_SKILL_HIT_DAMAGE_MAX = 100;
 const HOLY_PALADIN_FEEDBACK_SELF_HEAL_RATIO_MAX_PCT = 10;
 const HOLY_PALADIN_FEEDBACK_WASTED_HOLY_POWER_MAX = 5;
 const HOLY_PALADIN_FEEDBACK_OVERHEAL_MAX_PCT = 20;
+const DEFAULT_SPECIAL_PROC_ICON_SIZE_PX = Math.max(12, Number(SPECIAL_PROC_OVERLAY_ICON_SIZE_PX ?? 19));
+const MAX_SPECIAL_PROC_ICON_SIZE_BONUS_PX = 10;
+const DEFAULT_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX = Math.max(
+  1,
+  Number(COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayIconSizePx ?? COOLDOWN_MANAGER_LAYOUT_CONFIG.iconSizePx ?? 34)
+);
+const MIN_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX = Math.max(
+  1,
+  DEFAULT_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX - 4
+);
+const MAX_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX = DEFAULT_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX + 12;
+const MIN_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX = 12;
+const MAX_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX = 32;
+const DEFAULT_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX = Math.max(
+  MIN_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX,
+  Math.min(
+    MAX_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX,
+    Math.round(DEFAULT_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX * 0.75)
+  )
+);
+const COOLDOWN_MANAGER_ICON_SIZE_STEP_PX = 2;
+const COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_MIN_PX = 0;
+const COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_MAX_PX = 24;
+const COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_STEP_PX = 1;
+const COOLDOWN_MANAGER_SPELL_SECTION_INNER_GAP_PX = 1;
+const COOLDOWN_MANAGER_RESOURCE_SECTION_GAP_PX = 1;
+const COOLDOWN_MANAGER_CAST_BAR_TOP_MARGIN_PX = 0;
+const COOLDOWN_MANAGER_CAST_BAR_BOTTOM_MARGIN_PX = 0;
+const DEFAULT_COOLDOWN_RESOURCE_BAR_LAYOUT = Object.freeze({
+  sectionOrder: Object.freeze(["spells", "holyPower", "mana", "castBar"]),
+  holyPowerWidthBonusPx: 0,
+  manaWidthBonusPx: 0
+});
+const COOLDOWN_RESOURCE_SECTION_LABEL_BY_KEY = Object.freeze({
+  spells: "스킬",
+  holyPower: "자원바",
+  mana: "마나바",
+  castBar: "시전바"
+});
 const DEFAULT_IMPLEMENTED_HEALER_SLUG = HOLY_PALADIN_HEALER_SLUG;
 const IMPLEMENTED_HEALER_SLUGS = new Set([HOLY_PALADIN_HEALER_SLUG, HOLY_PRIEST_HEALER_SLUG]); // 여기서 추가하면 카드 열림
 const MY_RAID_FRAME_POSITION_OPTIONS = Object.freeze([
@@ -156,6 +202,63 @@ const HEALER_PRACTICE_OPEN_RANKING_EVENT = "healer-practice-open-ranking";
 function normalizeRankingPatchVersion(value, fallback = "12.0.1") {
   const normalized = String(value ?? "").trim();
   return normalized || fallback;
+}
+
+function clampCooldownResourceBarWidthBonusValue(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return Math.max(
+    COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_MIN_PX,
+    Math.min(COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_MAX_PX, Math.round(numeric))
+  );
+}
+
+function normalizeCooldownResourceSectionOrder(value) {
+  const source = Array.isArray(value) ? value : [];
+  const allowedKeys = ["spells", "holyPower", "mana", "castBar"];
+  const allowedKeySet = new Set(allowedKeys);
+  const used = new Set();
+  const normalized = [];
+  for (const item of source) {
+    const key = String(item ?? "").trim();
+    if (!allowedKeySet.has(key) || used.has(key)) {
+      continue;
+    }
+    used.add(key);
+    normalized.push(key);
+  }
+  for (const key of allowedKeys) {
+    if (used.has(key)) {
+      continue;
+    }
+    normalized.push(key);
+  }
+  return normalized;
+}
+
+function normalizeCooldownResourceBarLayout(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    sectionOrder: normalizeCooldownResourceSectionOrder(source.sectionOrder),
+    holyPowerWidthBonusPx: clampCooldownResourceBarWidthBonusValue(source.holyPowerWidthBonusPx),
+    manaWidthBonusPx: clampCooldownResourceBarWidthBonusValue(source.manaWidthBonusPx)
+  };
+}
+
+function resolveVisibleCooldownResourceSectionOrder(sectionOrder, visibleKeys = []) {
+  const normalizedOrder = normalizeCooldownResourceSectionOrder(sectionOrder);
+  const rawVisibleKeys = Array.isArray(visibleKeys) ? visibleKeys : [];
+  const visibleSet = new Set(
+    rawVisibleKeys
+      .map((value) => String(value ?? "").trim())
+      .filter((value) => normalizedOrder.includes(value))
+  );
+  if (!visibleSet.size) {
+    return normalizedOrder;
+  }
+  return normalizedOrder.filter((key) => visibleSet.has(key));
 }
 
 function pctToChance(value) {
@@ -276,7 +379,7 @@ const HEAL_METER_SPELL_META_BY_HEALER = Object.freeze({
       spellId: 120517
     }),
     cosmicRipple: Object.freeze({
-      name: "우주 파동",
+      name: "우주의 파장",
       iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.cosmicRipple || DEFAULT_SPELL_ICON_URL,
       spellId: 238136
     }),
@@ -309,6 +412,11 @@ const HEAL_METER_SPELL_META_BY_HEALER = Object.freeze({
       name: "빛의 흔적",
       iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.trailOfLight || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.flashHeal,
       spellId: 234946
+    }),
+    dispersingLight: Object.freeze({
+      name: "흩어지는 빛",
+      iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.dispersingLight || HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.flashHeal,
+      spellId: 1215265
     }),
     bindingHeal: Object.freeze({
       name: "결속의 치유",
@@ -451,6 +559,7 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
     defaultKeybinds: HOLY_PALADIN_DEFAULT_KEYBINDS,
     defaultClickCastPreferred: DEFAULT_CLICK_CAST_PREFERRED,
     cooldownManagerSpellKeys: COOLDOWN_MANAGER_SPELL_KEYS,
+    cooldownManagerSecondarySpellKeys: COOLDOWN_MANAGER_SECONDARY_SPELL_KEYS,
     cooldownManagerNonDisplaySpellKeys: COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
     cooldownManagerSpellMeta: COOLDOWN_MANAGER_SPELL_META,
     spellIconUrlByKey: SPELL_ICON_URL_BY_KEY,
@@ -463,6 +572,10 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
       infusionOfLightDurationMs: HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG.durationMs,
       infusionOfLightFlashOfLightHealMultiplier: HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG.flashOfLightHealMultiplier,
       infusionOfLightTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.infusionOfLight,
+      divinePurposeTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.divinePurpose,
+      divinePurposeProcChance: HOLY_PALADIN_DIVINE_PURPOSE_CONFIG.procChance,
+      divinePurposeHealBonusRatio: HOLY_PALADIN_DIVINE_PURPOSE_CONFIG.healBonusPct,
+      divinePurposeDurationMs: HOLY_PALADIN_DIVINE_PURPOSE_CONFIG.durationMs,
       handOfFaithTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.handOfFaith,
       holyRevelationTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.holyRevelation,
       radiantLightTalentEnabled: HOLY_PALADIN_ADDED_TALENT_TOGGLES.radiantLight,
@@ -506,6 +619,7 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
     defaultKeybinds: HOLY_PRIEST_DEFAULT_KEYBINDS,
     defaultClickCastPreferred: HOLY_PRIEST_DEFAULT_CLICK_CAST_PREFERRED,
     cooldownManagerSpellKeys: HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_KEYS,
+    cooldownManagerSecondarySpellKeys: HOLY_PRIEST_COOLDOWN_MANAGER_SECONDARY_SPELL_KEYS,
     cooldownManagerNonDisplaySpellKeys: HOLY_PRIEST_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
     cooldownManagerSpellMeta: HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_META,
     spellIconUrlByKey: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY,
@@ -523,6 +637,7 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
       upliftingWordsTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.upliftingWords,
       crisisManagementTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.crisisManagement,
       trailOfLightTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.trailOfLight,
+      dispersingLightTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.dispersingLight,
       lightsResurgenceTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.lightsResurgence,
       resonantEnergyTalentEnabled: HOLY_PRIEST_ADDED_TALENT_TOGGLES.resonantEnergy,
       manaTuningScale: HOLY_PRIEST_MANA_TUNING_SCALE,
@@ -544,6 +659,7 @@ const HEALER_PRACTICE_RUNTIME_BY_SLUG = Object.freeze({
     defaultKeybinds: RESTORATION_DRUID_DEFAULT_KEYBINDS,
     defaultClickCastPreferred: RESTORATION_DRUID_DEFAULT_CLICK_CAST_PREFERRED,
     cooldownManagerSpellKeys: RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_KEYS,
+    cooldownManagerSecondarySpellKeys: RESTORATION_DRUID_COOLDOWN_MANAGER_SECONDARY_SPELL_KEYS,
     cooldownManagerNonDisplaySpellKeys: RESTORATION_DRUID_COOLDOWN_MANAGER_NON_DISPLAY_SPELL_KEYS,
     cooldownManagerSpellMeta: RESTORATION_DRUID_COOLDOWN_MANAGER_SPELL_META,
     spellIconUrlByKey: RESTORATION_DRUID_SPELL_ICON_URL_BY_KEY,
@@ -1017,12 +1133,43 @@ function scrollElementIntoViewWithStickyTopOffset(element, behavior = "smooth") 
 }
 
 function refreshWowheadTooltips() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const stripInjectedTooltipIcons = () => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const links = document.querySelectorAll("a.wh-tooltip-only-link");
+    links.forEach((node) => {
+      if (!(node instanceof HTMLAnchorElement)) {
+        return;
+      }
+      node.style.backgroundImage = "none";
+      node.style.paddingLeft = "0px";
+      node.classList.remove("iconsmall", "iconmedium", "icontiny");
+      const injectedChildren = node.querySelectorAll(
+        ":scope > .iconsmall, :scope > .iconmedium, :scope > .icontiny, :scope > span[class*='icon'], :scope > ins"
+      );
+      injectedChildren.forEach((child) => child.remove());
+    });
+  };
+
   if (window?.WH?.Tooltips?.refreshLinks) {
     window.WH.Tooltips.refreshLinks();
+    stripInjectedTooltipIcons();
+    window.requestAnimationFrame(stripInjectedTooltipIcons);
+    window.setTimeout(stripInjectedTooltipIcons, 0);
+    window.setTimeout(stripInjectedTooltipIcons, 50);
     return;
   }
   if (window?.$WowheadPower?.refreshLinks) {
     window.$WowheadPower.refreshLinks();
+    stripInjectedTooltipIcons();
+    window.requestAnimationFrame(stripInjectedTooltipIcons);
+    window.setTimeout(stripInjectedTooltipIcons, 0);
+    window.setTimeout(stripInjectedTooltipIcons, 50);
   }
 }
 
@@ -1234,12 +1381,14 @@ function resolveStoredClickCastBindings(rawBindings, clickCastableKeys, defaultC
 function buildCooldownManagerSpellOrderBuckets(
   activeSpellKeys,
   preferredManagerSpellKeys = [],
+  preferredSecondarySpellKeys = [],
   preferredReserveSpellKeys = []
 ) {
   const activeKeys = Array.isArray(activeSpellKeys) ? activeSpellKeys.filter(Boolean) : [];
   const activeSet = new Set(activeKeys);
   const used = new Set();
   const manager = [];
+  const secondary = [];
   const reserve = [];
 
   const pushUnique = (target, spellKey) => {
@@ -1253,6 +1402,9 @@ function buildCooldownManagerSpellOrderBuckets(
   for (const spellKey of Array.isArray(preferredManagerSpellKeys) ? preferredManagerSpellKeys : []) {
     pushUnique(manager, spellKey);
   }
+  for (const spellKey of Array.isArray(preferredSecondarySpellKeys) ? preferredSecondarySpellKeys : []) {
+    pushUnique(secondary, spellKey);
+  }
   for (const spellKey of Array.isArray(preferredReserveSpellKeys) ? preferredReserveSpellKeys : []) {
     pushUnique(reserve, spellKey);
   }
@@ -1260,7 +1412,67 @@ function buildCooldownManagerSpellOrderBuckets(
     pushUnique(reserve, spellKey);
   }
 
-  return { manager, reserve };
+  return { manager, secondary, reserve };
+}
+
+function buildSpecialProcDisplayOrder(specialProcDisplayConfig = [], preferredOrderKeys = []) {
+  const entries = Array.isArray(specialProcDisplayConfig) ? specialProcDisplayConfig : [];
+  const availableKeys = entries.map((entry) => String(entry?.key ?? "").trim()).filter(Boolean);
+  const availableSet = new Set(availableKeys);
+  const used = new Set();
+  const order = [];
+
+  const pushUnique = (key) => {
+    const normalizedKey = String(key ?? "").trim();
+    if (!normalizedKey || !availableSet.has(normalizedKey) || used.has(normalizedKey)) {
+      return;
+    }
+    used.add(normalizedKey);
+    order.push(normalizedKey);
+  };
+
+  for (const key of Array.isArray(preferredOrderKeys) ? preferredOrderKeys : []) {
+    pushUnique(key);
+  }
+  for (const key of availableKeys) {
+    pushUnique(key);
+  }
+
+  return order;
+}
+
+function buildSpecialProcEnabledKeys(specialProcDisplayConfig = [], preferredEnabledKeys) {
+  const entries = Array.isArray(specialProcDisplayConfig) ? specialProcDisplayConfig : [];
+  const availableKeys = entries.map((entry) => String(entry?.key ?? "").trim()).filter(Boolean);
+  const availableSet = new Set(availableKeys);
+  const defaultEnabledKeys = entries
+    .filter((entry) => entry?.defaultEnabledInSetup !== false)
+    .map((entry) => String(entry?.key ?? "").trim())
+    .filter(Boolean);
+
+  const used = new Set();
+  const enabled = [];
+  const pushUnique = (key) => {
+    const normalizedKey = String(key ?? "").trim();
+    if (!normalizedKey || !availableSet.has(normalizedKey) || used.has(normalizedKey)) {
+      return;
+    }
+    used.add(normalizedKey);
+    enabled.push(normalizedKey);
+  };
+
+  const hasExplicitEnabledList = Array.isArray(preferredEnabledKeys);
+  if (hasExplicitEnabledList) {
+    for (const key of preferredEnabledKeys) {
+      pushUnique(key);
+    }
+  } else {
+    for (const key of defaultEnabledKeys) {
+      pushUnique(key);
+    }
+  }
+
+  return enabled;
 }
 
 function buildKeyboardTokenToSpellMap(
@@ -1546,6 +1758,10 @@ function mouseEventToBindingToken(event) {
     base = "MMB";
   } else if (event.button === 2) {
     base = "RMB";
+  } else if (event.button === 3) {
+    base = "MB4";
+  } else if (event.button === 4) {
+    base = "MB5";
   }
 
   if (!base) {
@@ -1949,7 +2165,15 @@ const DEFAULT_PRACTICE_RUNTIME = resolveHealerPracticeRuntime(DEFAULT_IMPLEMENTE
 const DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS = buildCooldownManagerSpellOrderBuckets(
   DEFAULT_PRACTICE_RUNTIME.activeSpellKeys,
   DEFAULT_PRACTICE_RUNTIME.cooldownManagerSpellKeys,
+  DEFAULT_PRACTICE_RUNTIME.cooldownManagerSecondarySpellKeys,
   DEFAULT_PRACTICE_RUNTIME.cooldownManagerNonDisplaySpellKeys
+);
+const DEFAULT_SPECIAL_PROC_ORDER_KEYS = buildSpecialProcDisplayOrder(
+  DEFAULT_PRACTICE_RUNTIME.specialProcDisplayConfig,
+  []
+);
+const DEFAULT_SPECIAL_PROC_ENABLED_KEYS = buildSpecialProcEnabledKeys(
+  DEFAULT_PRACTICE_RUNTIME.specialProcDisplayConfig
 );
 
 export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
@@ -1981,9 +2205,14 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   const [cooldownSpellOrder, setCooldownSpellOrder] = useState(() => [
     ...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.manager
   ]);
+  const [cooldownSecondarySpellOrder, setCooldownSecondarySpellOrder] = useState(() => [
+    ...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.secondary
+  ]);
   const [cooldownReserveSpellOrder, setCooldownReserveSpellOrder] = useState(() => [
     ...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.reserve
   ]);
+  const [specialProcOrderKeys, setSpecialProcOrderKeys] = useState(() => [...DEFAULT_SPECIAL_PROC_ORDER_KEYS]);
+  const [specialProcEnabledKeys, setSpecialProcEnabledKeys] = useState(() => [...DEFAULT_SPECIAL_PROC_ENABLED_KEYS]);
 
   const [running, setRunning] = useState(false);
   const [snapshot, setSnapshot] = useState(null);
@@ -1993,7 +2222,10 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   const [inCombatView, setInCombatView] = useState(false);
   const [gameOverReason, setGameOverReason] = useState("");
   const [keybindProfileSyncBusy, setKeybindProfileSyncBusy] = useState(false);
+  const [cloudProfileStatusText, setCloudProfileStatusText] = useState("");
+  const [cloudProfileStatusTone, setCloudProfileStatusTone] = useState("info");
   const [rankingModalOpen, setRankingModalOpen] = useState(false);
+  const [patchNotesModalOpen, setPatchNotesModalOpen] = useState(false);
   const [rankingViewMapKey, setRankingViewMapKey] = useState(DEFAULT_PRACTICE_MAP_KEY);
   const [rankingViewDifficultyKey, setRankingViewDifficultyKey] = useState("heroic");
   const [rankingViewPatchVersion, setRankingViewPatchVersion] = useState(() =>
@@ -2008,6 +2240,21 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   const [canvasRawDamageTaken, setCanvasRawDamageTaken] = useState(0);
   const [canvasHitCounts, setCanvasHitCounts] = useState(() => createInitialCanvasHitCounts());
   const [expandedHealMeterSpellKeys, setExpandedHealMeterSpellKeys] = useState(() => new Set());
+  const [cooldownManagerPrimaryIconSizeSettingPx, setCooldownManagerPrimaryIconSizeSettingPx] = useState(
+    DEFAULT_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX
+  );
+  const [cooldownManagerSecondaryIconSizeSettingPx, setCooldownManagerSecondaryIconSizeSettingPx] = useState(
+    DEFAULT_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX
+  );
+  const [specialProcOverlayIconSizePx, setSpecialProcOverlayIconSizePx] = useState(
+    DEFAULT_SPECIAL_PROC_ICON_SIZE_PX
+  );
+  const [cooldownResourceBarLayout, setCooldownResourceBarLayout] = useState(() =>
+    normalizeCooldownResourceBarLayout(DEFAULT_COOLDOWN_RESOURCE_BAR_LAYOUT)
+  );
+  const [combatCooldownManagerReservedHeightPx, setCombatCooldownManagerReservedHeightPx] = useState(() =>
+    Math.max(0, Number(RAID_FRAME_VISUAL_CONFIG.topOverlayReservedHeightPx ?? 114))
+  );
 
   const [sessionConfig, setSessionConfig] = useState(null);
 
@@ -2037,6 +2284,7 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   const gameOverReasonRef = useRef("");
   const draggedCooldownSpellRef = useRef({ spellKey: "", groupKey: "manager" });
   const combatViewRef = useRef(null);
+  const combatCooldownManagerRef = useRef(null);
   const phaserHostRef = useRef(null);
   const phaserGameRef = useRef(null);
   const selfPlayerIdRef = useRef("");
@@ -2044,7 +2292,13 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   const canvasRawDamageTakenRef = useRef(0);
   const canvasHitCountsRef = useRef(createInitialCanvasHitCounts());
   const cooldownSpellOrderRef = useRef([...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.manager]);
+  const cooldownSecondarySpellOrderRef = useRef([...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.secondary]);
   const cooldownReserveSpellOrderRef = useRef([...DEFAULT_COOLDOWN_SPELL_ORDER_BUCKETS.reserve]);
+  const specialProcOrderKeysRef = useRef([...DEFAULT_SPECIAL_PROC_ORDER_KEYS]);
+  const specialProcEnabledKeysRef = useRef([...DEFAULT_SPECIAL_PROC_ENABLED_KEYS]);
+  const cooldownResourceBarLayoutRef = useRef(
+    normalizeCooldownResourceBarLayout(DEFAULT_COOLDOWN_RESOURCE_BAR_LAYOUT)
+  );
   const movementStateRef = useRef({
     up: false,
     down: false,
@@ -2085,26 +2339,151 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       buildCooldownManagerSpellOrderBuckets(
         activeSpellKeys,
         cooldownSpellOrder,
+        cooldownSecondarySpellOrder,
         cooldownReserveSpellOrder
       ),
-    [activeSpellKeys, cooldownSpellOrder, cooldownReserveSpellOrder]
+    [activeSpellKeys, cooldownSpellOrder, cooldownSecondarySpellOrder, cooldownReserveSpellOrder]
   );
   const managerCooldownSpellOrder = normalizedCooldownOrders.manager;
+  const secondaryCooldownSpellOrder = normalizedCooldownOrders.secondary;
   const reserveCooldownSpellOrder = normalizedCooldownOrders.reserve;
-  const reserveCooldownSectionWidthPx = useMemo(() => {
-    const iconCount = Math.max(0, reserveCooldownSpellOrder.length);
-    const iconSizePx = Math.max(1, Number(COOLDOWN_MANAGER_LAYOUT_CONFIG.iconSizePx ?? 50));
-    const iconGapPx = Math.max(0, Number(COOLDOWN_MANAGER_LAYOUT_CONFIG.iconGapPx ?? 4));
-    const iconRowWidthPx = iconCount > 0 ? iconCount * iconSizePx + (iconCount - 1) * iconGapPx : iconSizePx;
-    const barHorizontalPaddingPx = 12; // renderCooldownManagerBar p-1.5 * 좌우
-    const sectionHorizontalPaddingPx = 24; // 외부 p-3 * 좌우
-    return Math.round(iconRowWidthPx + barHorizontalPaddingPx + sectionHorizontalPaddingPx);
-  }, [reserveCooldownSpellOrder]);
+  const cooldownManagerPrimaryIconSizePx = Math.max(
+    MIN_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX,
+    Math.min(
+      MAX_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX,
+      Math.round(
+        Number(
+          cooldownManagerPrimaryIconSizeSettingPx ??
+          DEFAULT_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX
+        )
+      )
+    )
+  );
+  const cooldownManagerSecondaryIconSizePx = Math.max(
+    MIN_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX,
+    Math.min(
+      MAX_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX,
+      Math.round(
+        Number(
+          cooldownManagerSecondaryIconSizeSettingPx ??
+          DEFAULT_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX
+        )
+      )
+    )
+  );
+  const maxSpecialProcOverlayIconSizePx = DEFAULT_SPECIAL_PROC_ICON_SIZE_PX + MAX_SPECIAL_PROC_ICON_SIZE_BONUS_PX;
+  const configuredSpecialProcOverlayIconSizePx = Math.max(
+    DEFAULT_SPECIAL_PROC_ICON_SIZE_PX,
+    Math.min(maxSpecialProcOverlayIconSizePx, Number(specialProcOverlayIconSizePx ?? DEFAULT_SPECIAL_PROC_ICON_SIZE_PX))
+  );
+  const normalizedCooldownResourceBarLayout = useMemo(
+    () => normalizeCooldownResourceBarLayout(cooldownResourceBarLayout),
+    [cooldownResourceBarLayout]
+  );
 
   const activeSpells = useMemo(
     () => activeSpellKeys.map((spellKey) => practiceSpellsByKey[spellKey]).filter(Boolean),
     [activeSpellKeys, practiceSpellsByKey]
   );
+  const setupSpecialProcDisplayConfig = useMemo(() => {
+    const source = Array.isArray(selectedPracticeRuntime.specialProcDisplayConfig)
+      ? selectedPracticeRuntime.specialProcDisplayConfig
+      : [];
+    const order = buildSpecialProcDisplayOrder(source, specialProcOrderKeys);
+    const entryByKey = new Map();
+    source.forEach((entry) => {
+      const key = String(entry?.key ?? "").trim();
+      if (!key || entryByKey.has(key)) {
+        return;
+      }
+      entryByKey.set(key, entry);
+    });
+    return order.map((key) => entryByKey.get(key)).filter(Boolean);
+  }, [selectedPracticeRuntime.specialProcDisplayConfig, specialProcOrderKeys]);
+  const normalizedSetupSpecialProcEnabledKeys = useMemo(
+    () => buildSpecialProcEnabledKeys(selectedPracticeRuntime.specialProcDisplayConfig, specialProcEnabledKeys),
+    [selectedPracticeRuntime.specialProcDisplayConfig, specialProcEnabledKeys]
+  );
+  const setupSpecialProcEnabledKeySet = useMemo(
+    () => new Set(normalizedSetupSpecialProcEnabledKeys),
+    [normalizedSetupSpecialProcEnabledKeys]
+  );
+  const setupSpecialProcDisplayEntries = useMemo(() => {
+    return setupSpecialProcDisplayConfig
+      .map((entry, index) => {
+        const procKey = String(entry?.key ?? "").trim();
+        const label = String(entry?.label ?? "").trim() || procKey || "버프";
+        const configuredSpellIdRaw = Number(entry?.spellId);
+        const fallbackSpellIdRaw = Number(practiceCooldownSpellMetaByKey?.[procKey]?.spellId);
+        const spellId = Number.isFinite(configuredSpellIdRaw) && configuredSpellIdRaw > 0
+          ? Math.floor(configuredSpellIdRaw)
+          : Number.isFinite(fallbackSpellIdRaw) && fallbackSpellIdRaw > 0
+            ? Math.floor(fallbackSpellIdRaw)
+            : null;
+
+        return {
+          id: `${procKey || "proc"}-${index}`,
+          key: procKey || `proc-${index}`,
+          label,
+          iconUrl:
+            String(entry?.iconUrl ?? "").trim() ||
+            (procKey ? practiceSpellIconsByKey[procKey] : "") ||
+            DEFAULT_SPELL_ICON_URL,
+          spellId
+        };
+      })
+      .filter(Boolean);
+  }, [practiceCooldownSpellMetaByKey, practiceSpellIconsByKey, setupSpecialProcDisplayConfig]);
+  const setupSpecialProcEnabledEntries = useMemo(
+    () => setupSpecialProcDisplayEntries.filter((entry) => setupSpecialProcEnabledKeySet.has(entry.key)),
+    [setupSpecialProcDisplayEntries, setupSpecialProcEnabledKeySet]
+  );
+  const setupSpecialProcDisabledEntries = useMemo(
+    () => setupSpecialProcDisplayEntries.filter((entry) => !setupSpecialProcEnabledKeySet.has(entry.key)),
+    [setupSpecialProcDisplayEntries, setupSpecialProcEnabledKeySet]
+  );
+  const setupSpecialProcEnabledPaneWidthPx = useMemo(() => {
+    const iconCount = Math.max(1, setupSpecialProcEnabledEntries.length);
+    const iconGapPx = 6;
+    const paneHorizontalPaddingPx = 16;
+    const paneBorderAllowancePx = 4;
+    return Math.round(
+      iconCount * configuredSpecialProcOverlayIconSizePx +
+      Math.max(0, iconCount - 1) * iconGapPx +
+      paneHorizontalPaddingPx +
+      paneBorderAllowancePx
+    );
+  }, [configuredSpecialProcOverlayIconSizePx, setupSpecialProcEnabledEntries.length]);
+  const setupSpecialProcDisabledPaneWidthPx = useMemo(() => {
+    if (setupSpecialProcDisabledEntries.length <= 0) {
+      return 112;
+    }
+    const iconCount = Math.max(1, setupSpecialProcDisabledEntries.length);
+    const iconGapPx = 6;
+    const paneHorizontalPaddingPx = 16;
+    const paneBorderAllowancePx = 4;
+    return Math.round(
+      iconCount * configuredSpecialProcOverlayIconSizePx +
+      Math.max(0, iconCount - 1) * iconGapPx +
+      paneHorizontalPaddingPx +
+      paneBorderAllowancePx
+    );
+  }, [configuredSpecialProcOverlayIconSizePx, setupSpecialProcDisabledEntries.length]);
+  const setupSpecialProcSectionWidthPx = useMemo(() => {
+    const paneGapPx = 8;
+    const sectionHorizontalPaddingPx = 24;
+    const sectionBorderAllowancePx = 4;
+    return Math.round(
+      Math.max(
+        300,
+        setupSpecialProcEnabledPaneWidthPx +
+        setupSpecialProcDisabledPaneWidthPx +
+        paneGapPx +
+        sectionHorizontalPaddingPx +
+        sectionBorderAllowancePx
+      )
+    );
+  }, [setupSpecialProcDisabledPaneWidthPx, setupSpecialProcEnabledPaneWidthPx]);
 
   const disabledKeyboardSpellSet = useMemo(() => {
     const result = new Set();
@@ -2154,6 +2533,22 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   );
 
   const selectedHealerIsImplemented = IMPLEMENTED_HEALER_SLUGS.has(selectedHealerSlug);
+  const selectedHealerIsHolyPaladin = selectedHealerSlug === HOLY_PALADIN_HEALER_SLUG;
+  const selectedHealerIsHolyPriest = selectedHealerSlug === HOLY_PRIEST_HEALER_SLUG;
+  const selectedHealerSupportsCooldownResourceOrder = selectedHealerIsHolyPaladin || selectedHealerIsHolyPriest;
+  const setupVisibleCooldownResourceSectionKeys = useMemo(() => {
+    if (selectedHealerIsHolyPaladin) {
+      return ["spells", "holyPower", "mana", "castBar"];
+    }
+    if (selectedHealerIsHolyPriest) {
+      return ["spells", "mana", "castBar"];
+    }
+    return [];
+  }, [selectedHealerIsHolyPaladin, selectedHealerIsHolyPriest]);
+  const setupVisibleCooldownResourceSectionOrder = useMemo(
+    () => resolveVisibleCooldownResourceSectionOrder(normalizedCooldownResourceBarLayout.sectionOrder, setupVisibleCooldownResourceSectionKeys),
+    [normalizedCooldownResourceBarLayout.sectionOrder, setupVisibleCooldownResourceSectionKeys]
+  );
   const selectedHealerMeta = useMemo(
     () => healers.find((healer) => healer.slug === selectedHealerSlug) ?? null,
     [selectedHealerSlug]
@@ -2297,8 +2692,68 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   }, [managerCooldownSpellOrder]);
 
   useEffect(() => {
+    cooldownSecondarySpellOrderRef.current = secondaryCooldownSpellOrder;
+  }, [secondaryCooldownSpellOrder]);
+
+  useEffect(() => {
     cooldownReserveSpellOrderRef.current = reserveCooldownSpellOrder;
   }, [reserveCooldownSpellOrder]);
+
+  useEffect(() => {
+    specialProcOrderKeysRef.current = specialProcOrderKeys;
+  }, [specialProcOrderKeys]);
+
+  useEffect(() => {
+    specialProcEnabledKeysRef.current = specialProcEnabledKeys;
+  }, [specialProcEnabledKeys]);
+
+  useEffect(() => {
+    cooldownResourceBarLayoutRef.current = normalizedCooldownResourceBarLayout;
+  }, [normalizedCooldownResourceBarLayout]);
+
+  useEffect(() => {
+    const defaultReservedHeightPx = Math.max(0, Number(RAID_FRAME_VISUAL_CONFIG.topOverlayReservedHeightPx ?? 114));
+    if (!inCombatView) {
+      setCombatCooldownManagerReservedHeightPx(defaultReservedHeightPx);
+      return undefined;
+    }
+    const node = combatCooldownManagerRef.current;
+    if (!(node instanceof HTMLElement)) {
+      return undefined;
+    }
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const measure = () => {
+      const measuredHeightPx = Math.max(0, Math.ceil(node.getBoundingClientRect().height));
+      const nextHeightPx = measuredHeightPx > 0 ? measuredHeightPx : defaultReservedHeightPx;
+      setCombatCooldownManagerReservedHeightPx(nextHeightPx);
+    };
+
+    measure();
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        measure();
+      });
+      resizeObserver.observe(node);
+    }
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [
+    inCombatView,
+    managerCooldownSpellOrder.length,
+    secondaryCooldownSpellOrder.length,
+    configuredSpecialProcOverlayIconSizePx,
+    cooldownManagerPrimaryIconSizePx,
+    cooldownManagerSecondaryIconSizePx
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -2333,7 +2788,15 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       return;
     }
     refreshWowheadTooltips();
-  }, [setupConfirmed, managerCooldownSpellOrder, reserveCooldownSpellOrder]);
+  }, [
+    setupConfirmed,
+    managerCooldownSpellOrder,
+    secondaryCooldownSpellOrder,
+    reserveCooldownSpellOrder,
+    setupSpecialProcDisplayEntries.length,
+    specialProcOrderKeys,
+    specialProcEnabledKeys
+  ]);
 
   useEffect(() => {
     if (inCombatView) {
@@ -2346,7 +2809,10 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     showPreCombatSetupSections,
     selectedHealerSlug,
     selectedHealerDisclaimers.length,
-    activeSpells.length
+    activeSpells.length,
+    setupSpecialProcDisplayEntries.length,
+    specialProcOrderKeys,
+    specialProcEnabledKeys
   ]);
 
   useEffect(
@@ -2615,9 +3081,11 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   }
 
   function handleCooldownSpellDragStart(event, spellKey, groupKey = "manager") {
+    const normalizedGroupKey =
+      groupKey === "reserve" ? "reserve" : groupKey === "secondary" ? "secondary" : "manager";
     draggedCooldownSpellRef.current = {
       spellKey,
-      groupKey: groupKey === "reserve" ? "reserve" : "manager"
+      groupKey: normalizedGroupKey
     };
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = "move";
@@ -2646,7 +3114,12 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         if (parsed?.spellKey) {
           return {
             spellKey: String(parsed.spellKey),
-            groupKey: String(parsed.groupKey) === "reserve" ? "reserve" : "manager"
+            groupKey:
+              String(parsed.groupKey) === "reserve"
+                ? "reserve"
+                : String(parsed.groupKey) === "secondary"
+                  ? "secondary"
+                  : "manager"
           };
         }
       } catch {
@@ -2661,15 +3134,18 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     return { spellKey: String(fallbackSpellKey), groupKey: "manager" };
   }
 
-  function applyCooldownSpellOrders(nextManagerOrder, nextReserveOrder) {
+  function applyCooldownSpellOrders(nextManagerOrder, nextSecondaryOrder, nextReserveOrder) {
     const normalized = buildCooldownManagerSpellOrderBuckets(
       activeSpellKeys,
       nextManagerOrder,
+      nextSecondaryOrder,
       nextReserveOrder
     );
     cooldownSpellOrderRef.current = normalized.manager;
+    cooldownSecondarySpellOrderRef.current = normalized.secondary;
     cooldownReserveSpellOrderRef.current = normalized.reserve;
     setCooldownSpellOrder(normalized.manager);
+    setCooldownSecondarySpellOrder(normalized.secondary);
     setCooldownReserveSpellOrder(normalized.reserve);
   }
 
@@ -2679,34 +3155,209 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
 
     const payload = resolveDraggedCooldownSpellPayload(event);
     const sourceSpellKey = String(payload.spellKey ?? "");
-    const targetGroup = targetGroupKey === "reserve" ? "reserve" : "manager";
+    const targetGroup =
+      targetGroupKey === "reserve" ? "reserve" : targetGroupKey === "secondary" ? "secondary" : "manager";
     if (!sourceSpellKey) {
       return;
     }
 
     const managerOrder = [...(cooldownSpellOrderRef.current ?? [])];
+    const secondaryOrder = [...(cooldownSecondarySpellOrderRef.current ?? [])];
     const reserveOrder = [...(cooldownReserveSpellOrderRef.current ?? [])];
     const removeFrom = (list) => list.filter((key) => key !== sourceSpellKey);
     const nextManagerOrder = removeFrom(managerOrder);
+    const nextSecondaryOrder = removeFrom(secondaryOrder);
     const nextReserveOrder = removeFrom(reserveOrder);
-    const targetList = targetGroup === "reserve" ? nextReserveOrder : nextManagerOrder;
+    const targetList =
+      targetGroup === "reserve"
+        ? nextReserveOrder
+        : targetGroup === "secondary"
+          ? nextSecondaryOrder
+          : nextManagerOrder;
     if (targetSpellKey && sourceSpellKey === targetSpellKey) {
       return;
     }
 
     if (!targetSpellKey || !targetList.includes(targetSpellKey)) {
       targetList.push(sourceSpellKey);
-      applyCooldownSpellOrders(nextManagerOrder, nextReserveOrder);
+      applyCooldownSpellOrders(nextManagerOrder, nextSecondaryOrder, nextReserveOrder);
       return;
     }
 
     const targetIndex = targetList.indexOf(targetSpellKey);
     targetList.splice(targetIndex, 0, sourceSpellKey);
-    applyCooldownSpellOrders(nextManagerOrder, nextReserveOrder);
+    applyCooldownSpellOrders(nextManagerOrder, nextSecondaryOrder, nextReserveOrder);
   }
 
   function handleCooldownSpellDragEnd() {
     draggedCooldownSpellRef.current = { spellKey: "", groupKey: "manager" };
+  }
+
+  function applySpecialProcOrder(nextOrderKeys) {
+    const normalized = buildSpecialProcDisplayOrder(
+      selectedPracticeRuntime.specialProcDisplayConfig,
+      Array.isArray(nextOrderKeys) ? nextOrderKeys : []
+    );
+    specialProcOrderKeysRef.current = normalized;
+    setSpecialProcOrderKeys(normalized);
+  }
+
+  function applySpecialProcEnabled(nextEnabledKeys) {
+    const preferredEnabledKeys = Array.isArray(nextEnabledKeys)
+      ? nextEnabledKeys
+      : specialProcEnabledKeysRef.current;
+    const normalized = buildSpecialProcEnabledKeys(
+      selectedPracticeRuntime.specialProcDisplayConfig,
+      preferredEnabledKeys
+    );
+    specialProcEnabledKeysRef.current = normalized;
+    setSpecialProcEnabledKeys(normalized);
+  }
+
+  function shiftSpecialProcOrder(procKey, direction = 0) {
+    const key = String(procKey ?? "").trim();
+    if (!key) {
+      return;
+    }
+    const move = Number(direction);
+    if (!Number.isFinite(move) || move === 0) {
+      return;
+    }
+
+    const allOrderedKeys = buildSpecialProcDisplayOrder(
+      selectedPracticeRuntime.specialProcDisplayConfig,
+      specialProcOrderKeysRef.current
+    );
+    const enabledKeySet = new Set(
+      buildSpecialProcEnabledKeys(
+        selectedPracticeRuntime.specialProcDisplayConfig,
+        specialProcEnabledKeysRef.current
+      )
+    );
+    const enabledOrderedKeys = allOrderedKeys.filter((entryKey) => enabledKeySet.has(entryKey));
+    const index = enabledOrderedKeys.indexOf(key);
+    if (index < 0) {
+      return;
+    }
+    const targetIndex = index + (move > 0 ? 1 : -1);
+    if (targetIndex < 0 || targetIndex >= enabledOrderedKeys.length) {
+      return;
+    }
+
+    [enabledOrderedKeys[index], enabledOrderedKeys[targetIndex]] = [
+      enabledOrderedKeys[targetIndex],
+      enabledOrderedKeys[index]
+    ];
+    let enabledCursor = 0;
+    const nextAllOrderedKeys = allOrderedKeys.map((entryKey) => {
+      if (!enabledKeySet.has(entryKey)) {
+        return entryKey;
+      }
+      const nextKey = enabledOrderedKeys[enabledCursor];
+      enabledCursor += 1;
+      return nextKey;
+    });
+    applySpecialProcOrder(nextAllOrderedKeys);
+  }
+
+  function setSpecialProcEnabledState(procKey, nextEnabled) {
+    const key = String(procKey ?? "").trim();
+    if (!key) {
+      return;
+    }
+    const allOrderedKeys = buildSpecialProcDisplayOrder(
+      selectedPracticeRuntime.specialProcDisplayConfig,
+      specialProcOrderKeysRef.current
+    );
+    if (!allOrderedKeys.includes(key)) {
+      return;
+    }
+    const enabledSet = new Set(
+      buildSpecialProcEnabledKeys(
+        selectedPracticeRuntime.specialProcDisplayConfig,
+        specialProcEnabledKeysRef.current
+      )
+    );
+    const currentlyEnabledOrderedKeys = allOrderedKeys.filter((entryKey) => enabledSet.has(entryKey));
+    const currentlyDisabledOrderedKeys = allOrderedKeys.filter((entryKey) => !enabledSet.has(entryKey));
+
+    let nextEnabledOrderedKeys = currentlyEnabledOrderedKeys;
+    let nextDisabledOrderedKeys = currentlyDisabledOrderedKeys;
+    if (nextEnabled) {
+      if (enabledSet.has(key)) {
+        return;
+      }
+      nextEnabledOrderedKeys = [...currentlyEnabledOrderedKeys, key];
+      nextDisabledOrderedKeys = currentlyDisabledOrderedKeys.filter((entryKey) => entryKey !== key);
+    } else {
+      if (!enabledSet.has(key)) {
+        return;
+      }
+      nextEnabledOrderedKeys = currentlyEnabledOrderedKeys.filter((entryKey) => entryKey !== key);
+      nextDisabledOrderedKeys = [...currentlyDisabledOrderedKeys, key];
+    }
+
+    applySpecialProcOrder([...nextEnabledOrderedKeys, ...nextDisabledOrderedKeys]);
+    applySpecialProcEnabled(nextEnabledOrderedKeys);
+  }
+
+  function moveCooldownResourceSection(sectionKey, direction, visibleSectionKeys = null) {
+    const key = String(sectionKey ?? "").trim();
+    if (!key) {
+      return;
+    }
+    const delta = Number(direction);
+    if (!Number.isFinite(delta) || delta === 0) {
+      return;
+    }
+    setCooldownResourceBarLayout((prev) => {
+      const normalized = normalizeCooldownResourceBarLayout(prev);
+      const allOrder = normalizeCooldownResourceSectionOrder(normalized.sectionOrder);
+      const hasVisibleFilter = Array.isArray(visibleSectionKeys) && visibleSectionKeys.length > 0;
+      const visibleOrder = hasVisibleFilter
+        ? resolveVisibleCooldownResourceSectionOrder(allOrder, visibleSectionKeys)
+        : [...allOrder];
+      const visibleKeySet = new Set(visibleOrder);
+      const index = visibleOrder.indexOf(key);
+      if (index < 0) {
+        return normalized;
+      }
+      const targetIndex = index + (delta > 0 ? 1 : -1);
+      if (targetIndex < 0 || targetIndex >= visibleOrder.length) {
+        return normalized;
+      }
+      [visibleOrder[index], visibleOrder[targetIndex]] = [visibleOrder[targetIndex], visibleOrder[index]];
+      const hiddenOrder = allOrder.filter((entryKey) => !visibleKeySet.has(entryKey));
+      return {
+        ...normalized,
+        sectionOrder: [...visibleOrder, ...hiddenOrder]
+      };
+    });
+  }
+
+  function adjustCooldownResourceBarWidth(barKey, delta) {
+    const key = barKey === "mana" ? "mana" : "holyPower";
+    const widthDelta = Math.round(Number(delta) || 0);
+    if (!widthDelta) {
+      return;
+    }
+    setCooldownResourceBarLayout((prev) => {
+      const normalized = normalizeCooldownResourceBarLayout(prev);
+      if (key === "mana") {
+        return {
+          ...normalized,
+          manaWidthBonusPx: clampCooldownResourceBarWidthBonusValue(
+            Number(normalized.manaWidthBonusPx ?? 0) + widthDelta
+          )
+        };
+      }
+      return {
+        ...normalized,
+        holyPowerWidthBonusPx: clampCooldownResourceBarWidthBonusValue(
+          Number(normalized.holyPowerWidthBonusPx ?? 0) + widthDelta
+        )
+      };
+    });
   }
 
   function resolveKeybindProfileDocRef() {
@@ -2725,14 +3376,18 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     const silent = Boolean(options?.silent);
     if (!canUseCloudKeybindProfile) {
       if (!silent) {
-        setStatusText("로그인 후에 직업별 키바인드 불러오기를 사용할 수 있습니다.");
+        setStatusText("로그인 후에 직업별 세팅 불러오기를 사용할 수 있습니다.");
+        setCloudProfileStatusTone("error");
+        setCloudProfileStatusText("로그인 후에 내 세팅 불러오기를 사용할 수 있습니다.");
       }
       return false;
     }
     const docRef = resolveKeybindProfileDocRef();
     if (!docRef) {
       if (!silent) {
-        setStatusText("키바인드 저장소에 접근할 수 없습니다.");
+        setStatusText("세팅 저장소에 접근할 수 없습니다.");
+        setCloudProfileStatusTone("error");
+        setCloudProfileStatusText("세팅 저장소에 접근할 수 없습니다.");
       }
       return false;
     }
@@ -2748,13 +3403,14 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       }
       if (!snapshot.exists) {
         if (!silent) {
-          setStatusText("저장된 키바인드가 없습니다.");
+          setStatusText("저장된 세팅이 없습니다.");
+          setCloudProfileStatusTone("info");
+          setCloudProfileStatusText("저장된 내 세팅이 없습니다.");
         }
         return false;
       }
 
       const data = snapshot.data() ?? {};
-      markSetupDirty();
       setKeyboardBindings(
         resolveStoredKeyboardBindings(
           data.keyboardBindings,
@@ -2781,16 +3437,103 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       if (data.movementCustomKeys && typeof data.movementCustomKeys === "object") {
         setCustomMovementKeys(normalizeMovementCustomKeys(data.movementCustomKeys));
       }
+      const hasSavedCooldownManagerLayout =
+        Array.isArray(data.cooldownSpellOrder) ||
+        Array.isArray(data.cooldownSecondarySpellOrder) ||
+        Array.isArray(data.cooldownReserveSpellOrder);
+      if (hasSavedCooldownManagerLayout) {
+        const normalizedCooldownOrders = buildCooldownManagerSpellOrderBuckets(
+          activeSpellKeys,
+          data.cooldownSpellOrder ?? cooldownSpellOrderRef.current,
+          data.cooldownSecondarySpellOrder ?? cooldownSecondarySpellOrderRef.current,
+          data.cooldownReserveSpellOrder ?? cooldownReserveSpellOrderRef.current
+        );
+        cooldownSpellOrderRef.current = normalizedCooldownOrders.manager;
+        cooldownSecondarySpellOrderRef.current = normalizedCooldownOrders.secondary;
+        cooldownReserveSpellOrderRef.current = normalizedCooldownOrders.reserve;
+        setCooldownSpellOrder(normalizedCooldownOrders.manager);
+        setCooldownSecondarySpellOrder(normalizedCooldownOrders.secondary);
+        setCooldownReserveSpellOrder(normalizedCooldownOrders.reserve);
+      }
+      const hasSavedSpecialProcLayout =
+        Array.isArray(data.specialProcOrderKeys) ||
+        Array.isArray(data.specialProcOrder) ||
+        Array.isArray(data.specialProcEnabledKeys);
+      if (hasSavedSpecialProcLayout) {
+        const savedSpecialProcOrder = Array.isArray(data.specialProcOrderKeys)
+          ? data.specialProcOrderKeys
+          : data.specialProcOrder;
+        const normalizedSpecialProcOrder = buildSpecialProcDisplayOrder(
+          selectedPracticeRuntime.specialProcDisplayConfig,
+          savedSpecialProcOrder ?? specialProcOrderKeysRef.current
+        );
+        specialProcOrderKeysRef.current = normalizedSpecialProcOrder;
+        setSpecialProcOrderKeys(normalizedSpecialProcOrder);
+        const normalizedSpecialProcEnabled = buildSpecialProcEnabledKeys(
+          selectedPracticeRuntime.specialProcDisplayConfig,
+          data.specialProcEnabledKeys ?? specialProcEnabledKeysRef.current
+        );
+        specialProcEnabledKeysRef.current = normalizedSpecialProcEnabled;
+        setSpecialProcEnabledKeys(normalizedSpecialProcEnabled);
+      }
+      const savedSpecialProcIconSizePx = Number(data.specialProcOverlayIconSizePx);
+      if (Number.isFinite(savedSpecialProcIconSizePx)) {
+        setSpecialProcOverlayIconSizePx(
+          Math.max(
+            DEFAULT_SPECIAL_PROC_ICON_SIZE_PX,
+            Math.min(maxSpecialProcOverlayIconSizePx, Math.round(savedSpecialProcIconSizePx))
+          )
+        );
+      }
+      const savedSecondaryIconSizePx = Number(
+        data.cooldownManagerSecondaryIconSizeSettingPx ?? data.cooldownManagerSecondaryIconSizePx
+      );
+      if (Number.isFinite(savedSecondaryIconSizePx)) {
+        setCooldownManagerSecondaryIconSizeSettingPx(
+          Math.max(
+            MIN_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX,
+            Math.min(MAX_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX, Math.round(savedSecondaryIconSizePx))
+          )
+        );
+      }
+      const savedPrimaryIconSizePx = Number(
+        data.cooldownManagerPrimaryIconSizeSettingPx ?? data.cooldownManagerPrimaryIconSizePx
+      );
+      if (Number.isFinite(savedPrimaryIconSizePx)) {
+        setCooldownManagerPrimaryIconSizeSettingPx(
+          Math.max(
+            MIN_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX,
+            Math.min(MAX_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX, Math.round(savedPrimaryIconSizePx))
+          )
+        );
+      }
+      const savedResourceBarLayout =
+        data.cooldownResourceBarLayout && typeof data.cooldownResourceBarLayout === "object"
+          ? data.cooldownResourceBarLayout
+          : data.cooldownResourceBarOffsets && typeof data.cooldownResourceBarOffsets === "object"
+            ? data.cooldownResourceBarOffsets
+            : null;
+      if (savedResourceBarLayout) {
+        setCooldownResourceBarLayout(
+          normalizeCooldownResourceBarLayout(savedResourceBarLayout)
+        );
+      }
       if (!silent) {
-        setStatusText("저장된 개인 키바인드를 불러왔습니다.");
+        setStatusText("저장된 개인 세팅을 불러왔습니다.");
+        setCloudProfileStatusTone("success");
+        setCloudProfileStatusText("내 세팅 불러오기 완료");
       }
       return true;
     } catch (error) {
       if (!silent) {
         if (error?.code === "permission-denied") {
-          setStatusText("권한 오류로 개인 키바인드 불러오기에 실패했습니다.");
+          setStatusText("권한 오류로 개인 세팅 불러오기에 실패했습니다.");
+          setCloudProfileStatusTone("error");
+          setCloudProfileStatusText("권한 오류로 내 세팅 불러오기에 실패했습니다.");
         } else {
-          setStatusText("개인 키바인드 불러오기에 실패했습니다.");
+          setStatusText("개인 세팅 불러오기에 실패했습니다.");
+          setCloudProfileStatusTone("error");
+          setCloudProfileStatusText("내 세팅 불러오기에 실패했습니다.");
         }
       }
       return false;
@@ -2803,16 +3546,22 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
 
   async function handleSaveCloudKeybindProfile() {
     if (!canUseCloudKeybindProfile) {
-      setStatusText("로그인 후에 직업별 키바인드 저장을 사용할 수 있습니다.");
+      setStatusText("로그인 후에 직업별 세팅 저장을 사용할 수 있습니다.");
+      setCloudProfileStatusTone("error");
+      setCloudProfileStatusText("로그인 후에 내 세팅 저장을 사용할 수 있습니다.");
       return;
     }
     const docRef = resolveKeybindProfileDocRef();
     if (!docRef) {
-      setStatusText("키바인드 저장소에 접근할 수 없습니다.");
+      setStatusText("세팅 저장소에 접근할 수 없습니다.");
+      setCloudProfileStatusTone("error");
+      setCloudProfileStatusText("세팅 저장소에 접근할 수 없습니다.");
       return;
     }
 
     setKeybindProfileSyncBusy(true);
+    setCloudProfileStatusTone("info");
+    setCloudProfileStatusText("내 세팅 저장 중...");
     try {
       const basePayload = {
         healerSlug: selectedHealerSlug,
@@ -2821,6 +3570,15 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         movementCustomKeys: normalizeMovementCustomKeys(customMovementKeys),
         keyboardBindings: buildPersistableKeyboardBindings(keyboardBindings, activeSpellKeys),
         clickCastBindings: buildPersistableClickCastBindings(clickCastBindings, clickCastableKeys),
+        cooldownSpellOrder: [...cooldownSpellOrderRef.current],
+        cooldownSecondarySpellOrder: [...cooldownSecondarySpellOrderRef.current],
+        cooldownReserveSpellOrder: [...cooldownReserveSpellOrderRef.current],
+        specialProcOrderKeys: [...specialProcOrderKeysRef.current],
+        specialProcEnabledKeys: [...specialProcEnabledKeysRef.current],
+        specialProcOverlayIconSizePx: configuredSpecialProcOverlayIconSizePx,
+        cooldownManagerPrimaryIconSizeSettingPx: cooldownManagerPrimaryIconSizePx,
+        cooldownManagerSecondaryIconSizeSettingPx: cooldownManagerSecondaryIconSizePx,
+        cooldownResourceBarOffsets: normalizeCooldownResourceBarLayout(cooldownResourceBarLayoutRef.current),
         updatedAt: serverTimestamp()
       };
       const payload =
@@ -2842,14 +3600,22 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         }
         await docRef.set(basePayload, { merge: true });
       }
-      setStatusText("개인 키바인드를 저장했습니다.");
+      setStatusText("개인 세팅을 저장했습니다.");
+      setCloudProfileStatusTone("success");
+      setCloudProfileStatusText("내 세팅 저장 완료");
     } catch (error) {
       console.error("Failed to save healer keybind profile", error);
       if (error?.code === "permission-denied") {
-        setStatusText("권한 오류로 개인 키바인드 저장에 실패했습니다. Firestore rules 배포 상태를 확인해 주세요.");
+        setStatusText("권한 오류로 개인 세팅 저장에 실패했습니다. Firestore rules 배포 상태를 확인해 주세요.");
+        setCloudProfileStatusTone("error");
+        setCloudProfileStatusText("권한 오류로 내 세팅 저장에 실패했습니다.");
       } else {
         const errorCode = String(error?.code ?? "").trim();
-        setStatusText(errorCode ? `개인 키바인드 저장에 실패했습니다. (${errorCode})` : "개인 키바인드 저장에 실패했습니다.");
+        setStatusText(errorCode ? `개인 세팅 저장에 실패했습니다. (${errorCode})` : "개인 세팅 저장에 실패했습니다.");
+        setCloudProfileStatusTone("error");
+        setCloudProfileStatusText(
+          errorCode ? `내 세팅 저장 실패 (${errorCode})` : "내 세팅 저장에 실패했습니다."
+        );
       }
     } finally {
       setKeybindProfileSyncBusy(false);
@@ -2945,7 +3711,12 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       triageMinEffectiveHealPct: normalizedTriageMinEffectiveHealPct,
       keybinds: { ...effectiveBindingLabels },
       keyboardTokenToSpell,
-      mouseTokenToSpell
+      mouseTokenToSpell,
+      cooldownManagerPrimaryIconSizePx,
+      cooldownManagerSecondaryIconSizePx,
+      cooldownResourceBarOffsets: normalizeCooldownResourceBarLayout(cooldownResourceBarLayoutRef.current),
+      specialProcOrder: [...specialProcOrderKeysRef.current],
+      specialProcEnabledKeys: [...specialProcEnabledKeysRef.current]
     };
 
     const firstSnapshot = engine.getSnapshot();
@@ -3281,6 +4052,7 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   }, [running]);
 
   const currentSnapshot = snapshot;
+  const showPostCombatSummaryPanels = Boolean(currentSnapshot) && !running;
   const bindingLabelsForDisplay = sessionConfig?.keybinds ?? effectiveBindingLabels;
   const activeRaidFrameLayout = sessionConfig?.raidFrameLayout ?? raidFrameLayout;
   const activeMyRaidFramePositionMode = normalizeMyRaidFramePositionMode(
@@ -3290,6 +4062,39 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
   const activeMapKey = sessionConfig?.mapKey ?? selectedMapKey;
   const activeShowHolyPriestEchoOnRaidFrames = Boolean(
     sessionConfig?.showHolyPriestEchoOnRaidFrames ?? showHolyPriestEchoOnRaidFrames
+  );
+  const activeCooldownManagerPrimaryIconSizePx = Math.max(
+    MIN_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX,
+    Math.min(
+      MAX_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX,
+      Math.round(
+        Number(
+          sessionConfig?.cooldownManagerPrimaryIconSizePx ??
+          cooldownManagerPrimaryIconSizePx
+        )
+      )
+    )
+  );
+  const activeCooldownManagerSecondaryIconSizePx = Math.max(
+    MIN_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX,
+    Math.min(
+      MAX_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX,
+      Math.round(
+        Number(
+          sessionConfig?.cooldownManagerSecondaryIconSizePx ??
+          cooldownManagerSecondaryIconSizePx
+        )
+      )
+    )
+  );
+  const activeCooldownResourceBarLayout = useMemo(
+    () =>
+      normalizeCooldownResourceBarLayout(
+        sessionConfig?.cooldownResourceBarOffsets ??
+        sessionConfig?.cooldownResourceBarLayout ??
+        normalizedCooldownResourceBarLayout
+      ),
+    [sessionConfig?.cooldownResourceBarLayout, sessionConfig?.cooldownResourceBarOffsets, normalizedCooldownResourceBarLayout]
   );
   const activeMovementKeyPreset = normalizeMovementPreset(sessionConfig?.movementKeyPreset ?? movementKeyPreset);
   const activeMovementCustomKeys = useMemo(
@@ -3392,7 +4197,37 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     queueLockoutRemainingMs: 0,
     spellQueueWindowMs: SPELL_QUEUE_WINDOW_MS
   };
-  const activeSpecialProcDisplayConfig = activeCombatPracticeRuntime.specialProcDisplayConfig ?? [];
+  const activeSpecialProcDisplayConfig = useMemo(() => {
+    const source = Array.isArray(activeCombatPracticeRuntime.specialProcDisplayConfig)
+      ? activeCombatPracticeRuntime.specialProcDisplayConfig
+      : [];
+    const preferredOrder = Array.isArray(sessionConfig?.specialProcOrder)
+      ? sessionConfig.specialProcOrder
+      : specialProcOrderKeys;
+    const preferredEnabledKeys = Array.isArray(sessionConfig?.specialProcEnabledKeys)
+      ? sessionConfig.specialProcEnabledKeys
+      : specialProcEnabledKeys;
+    const orderedKeys = buildSpecialProcDisplayOrder(source, preferredOrder);
+    const enabledKeySet = new Set(buildSpecialProcEnabledKeys(source, preferredEnabledKeys));
+    const entryByKey = new Map();
+    source.forEach((entry) => {
+      const key = String(entry?.key ?? "").trim();
+      if (!key || entryByKey.has(key)) {
+        return;
+      }
+      entryByKey.set(key, entry);
+    });
+    return orderedKeys
+      .filter((key) => enabledKeySet.has(key))
+      .map((key) => entryByKey.get(key))
+      .filter(Boolean);
+  }, [
+    activeCombatPracticeRuntime.specialProcDisplayConfig,
+    sessionConfig?.specialProcOrder,
+    sessionConfig?.specialProcEnabledKeys,
+    specialProcOrderKeys,
+    specialProcEnabledKeys
+  ]);
   const activeSpecialProcIndicators = useMemo(() => {
     if (!currentSnapshot) {
       return [];
@@ -3403,11 +4238,25 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       .map((entry, index) => {
         const procKey = String(entry?.key ?? "").trim();
         const buffRemainingMsKey = String(entry?.buffRemainingMsKey ?? "").trim();
-        if (!buffRemainingMsKey) {
+        const alternateBuffRemainingMsKeys = Array.isArray(entry?.alternateBuffRemainingMsKeys)
+          ? entry.alternateBuffRemainingMsKeys
+            .map((value) => String(value ?? "").trim())
+            .filter(Boolean)
+          : [];
+        if (!buffRemainingMsKey && !alternateBuffRemainingMsKeys.length) {
           return null;
         }
 
-        const remainingMs = Math.max(0, Number(buffState[buffRemainingMsKey] ?? 0));
+        const candidateRemainingMsValues = [];
+        if (buffRemainingMsKey) {
+          candidateRemainingMsValues.push(Math.max(0, Number(buffState[buffRemainingMsKey] ?? 0)));
+        }
+        for (const alternateKey of alternateBuffRemainingMsKeys) {
+          candidateRemainingMsValues.push(Math.max(0, Number(buffState[alternateKey] ?? 0)));
+        }
+        const remainingMs = candidateRemainingMsValues.length
+          ? Math.max(...candidateRemainingMsValues)
+          : 0;
         if (remainingMs <= 0) {
           return null;
         }
@@ -3415,10 +4264,16 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         const stackCountValueRaw = stackCountBuffKey ? Number(buffState[stackCountBuffKey] ?? 0) : Number.NaN;
         const stackCount = Number.isFinite(stackCountValueRaw) ? Math.max(0, Math.floor(stackCountValueRaw)) : null;
 
-        const iconSizePx = Math.max(12, Number(SPECIAL_PROC_OVERLAY_ICON_SIZE_PX ?? 19));
-        const topOffsetPx = Number.isFinite(Number(SPECIAL_PROC_OVERLAY_TOP_OFFSET_PX))
+        const defaultTopOffsetPx = Number.isFinite(Number(SPECIAL_PROC_OVERLAY_TOP_OFFSET_PX))
           ? Number(SPECIAL_PROC_OVERLAY_TOP_OFFSET_PX)
           : -22;
+        const showAboveCooldownManager = Boolean(entry?.showAboveCooldownManager);
+        const iconSizePx = showAboveCooldownManager
+          ? configuredSpecialProcOverlayIconSizePx
+          : DEFAULT_SPECIAL_PROC_ICON_SIZE_PX;
+        const topOffsetPx = showAboveCooldownManager
+          ? defaultTopOffsetPx - Math.max(0, iconSizePx - DEFAULT_SPECIAL_PROC_ICON_SIZE_PX)
+          : defaultTopOffsetPx;
         const label = String(entry?.label ?? "").trim() || procKey || "버프";
 
         return {
@@ -3432,7 +4287,7 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
           remainingMs,
           iconSizePx,
           topOffsetPx,
-          showAboveCooldownManager: Boolean(entry?.showAboveCooldownManager),
+          showAboveCooldownManager,
           showOnMyRaidFrame: Boolean(entry?.showOnMyRaidFrame),
           showCountdownOnOverlay: entry?.showCountdownOnOverlay !== false,
           showCountdownOnRaidFrame: Boolean(entry?.showCountdownOnRaidFrame),
@@ -3441,7 +4296,12 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         };
       })
       .filter(Boolean);
-  }, [activeCombatSpellIconsByKey, activeSpecialProcDisplayConfig, currentSnapshot]);
+  }, [
+    activeCombatSpellIconsByKey,
+    activeSpecialProcDisplayConfig,
+    configuredSpecialProcOverlayIconSizePx,
+    currentSnapshot
+  ]);
   const overlayTopProcIndicators = useMemo(
     () => activeSpecialProcIndicators.filter((entry) => entry.showAboveCooldownManager),
     [activeSpecialProcIndicators]
@@ -3760,6 +4620,9 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     setupSeed
   ]);
   const combatRecordCommonCards = useMemo(() => {
+    if (!showPostCombatSummaryPanels) {
+      return [];
+    }
     const deaths = Math.max(0, Math.round(Number(currentSnapshot?.metrics?.deaths ?? 0)));
     const mana = Math.max(0, Number(currentSnapshot?.mana ?? 0));
     const manaPct = Math.max(0, Math.min(100, Number(currentSnapshot?.manaPct ?? 0)));
@@ -3798,9 +4661,9 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         valueClassName: "text-sky-200"
       }
     ];
-  }, [currentSnapshot, finalAverageRaidHealthPct, finalOverhealingPct]);
+  }, [currentSnapshot, finalAverageRaidHealthPct, finalOverhealingPct, showPostCombatSummaryPanels]);
   const combatRecordHealerSpecificCards = useMemo(() => {
-    if (!currentSnapshot) {
+    if (!showPostCombatSummaryPanels || !currentSnapshot) {
       return [];
     }
     if (activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG) {
@@ -3850,6 +4713,14 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         surgeOfLightConsumedTotal > 0
           ? (surgeOfLightConsumedFlashHealCasts / surgeOfLightConsumedTotal) * 100
           : 0;
+      const fadeCasts = Math.max(
+        0,
+        Math.round(Number(currentSnapshot.metrics?.casts?.fade ?? 0))
+      );
+      const desperatePrayerCasts = Math.max(
+        0,
+        Math.round(Number(currentSnapshot.metrics?.casts?.desperatePrayer ?? 0))
+      );
       return [
         {
           key: "effective-serenity-cdr",
@@ -3881,6 +4752,13 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
           value: `치유의 기원: ${surgePrayerOfHealingUsagePct.toFixed(1)}%\n순간 치유: ${surgeFlashHealUsagePct.toFixed(1)}%`,
           valueClassName: "text-purple-100",
           valueTextClassName: "text-[11px]"
+        },
+        {
+          key: "holy-priest-defensive-usage",
+          title: "생존기 사용 수",
+          value: `소실: ${fadeCasts}회\n구원의 기도: ${desperatePrayerCasts}회`,
+          valueClassName: "text-emerald-100",
+          valueTextClassName: "text-[11px]"
         }
       ];
     }
@@ -3896,12 +4774,15 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       ];
     }
     return [];
-  }, [activeCombatHealerSlug, currentSnapshot]);
+  }, [activeCombatHealerSlug, currentSnapshot, showPostCombatSummaryPanels]);
   const combatRecordCards = useMemo(
     () => [...combatRecordCommonCards, ...combatRecordHealerSpecificCards],
     [combatRecordCommonCards, combatRecordHealerSpecificCards]
   );
   const finalCpm = useMemo(() => {
+    if (!showPostCombatSummaryPanels) {
+      return 0;
+    }
     const direct = Number(currentSnapshot?.metrics?.cpm);
     if (Number.isFinite(direct)) {
       return Math.max(0, direct);
@@ -3918,7 +4799,7 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     );
     const elapsedMinutes = Math.max(1e-6, Number(currentSnapshot?.nowMs ?? 0) / 60000);
     return Math.max(0, totalCasts / elapsedMinutes);
-  }, [currentSnapshot]);
+  }, [currentSnapshot, showPostCombatSummaryPanels]);
   const showZoneFloorHitCount = Boolean(activePhaserDifficultyConfig?.worldFirstKillZonePatternEnabled);
   const feedbackGameOverReason = useMemo(
     () => mapGameOverFeedbackReason(gameOverReason, DEATH_GAMEOVER_THRESHOLD),
@@ -3952,6 +4833,9 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     sessionConfig
   ]);
   const canvasDamageHealingEquivalentAmount = useMemo(() => {
+    if (!showPostCombatSummaryPanels) {
+      return 0;
+    }
     const myPlayer = findMyPlayerInSnapshot(currentSnapshot, selfPlayerIdRef.current);
     if (!myPlayer?.maxHp) {
       return 0;
@@ -3959,15 +4843,21 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     const canvasMaxHealth = Math.max(1, Number(activePhaserDifficultyConfig.playerMaxHealth ?? 100));
     const hpScale = Math.max(0, Number(myPlayer.maxHp ?? 0)) / canvasMaxHealth;
     return Math.max(0, canvasRawDamageTaken * hpScale);
-  }, [activePhaserDifficultyConfig, canvasRawDamageTaken, currentSnapshot]);
+  }, [activePhaserDifficultyConfig, canvasRawDamageTaken, currentSnapshot, showPostCombatSummaryPanels]);
   const canvasDamageHealingSharePct = useMemo(() => {
+    if (!showPostCombatSummaryPanels) {
+      return 0;
+    }
     const totalHealingDone = Math.max(0, Number(currentSnapshot?.metrics?.healingDone ?? 0));
     if (totalHealingDone <= 0) {
       return 0;
     }
     return Math.max(0, Math.min(100, (canvasDamageHealingEquivalentAmount / totalHealingDone) * 100));
-  }, [canvasDamageHealingEquivalentAmount, currentSnapshot]);
+  }, [canvasDamageHealingEquivalentAmount, currentSnapshot, showPostCombatSummaryPanels]);
   const healMeterRows = useMemo(() => {
+    if (!showPostCombatSummaryPanels) {
+      return [];
+    }
     const healingBySpell = currentSnapshot?.metrics?.healingBySpell;
     if (!healingBySpell || typeof healingBySpell !== "object") {
       return [];
@@ -4070,7 +4960,14 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
           children
         };
       });
-  }, [currentSnapshot, healMeterGrouping, healMeterSpellMetaByKey, practiceSpellsByKey, practiceSpellIconsByKey]);
+  }, [
+    currentSnapshot,
+    healMeterGrouping,
+    healMeterSpellMetaByKey,
+    practiceSpellsByKey,
+    practiceSpellIconsByKey,
+    showPostCombatSummaryPanels
+  ]);
   const displayedHealMeterRows = useMemo(() => {
     const rows = [];
     for (const row of healMeterRows) {
@@ -4139,6 +5036,9 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     });
   }, [healMeterRows]);
   const sortedEventLogs = useMemo(() => {
+    if (!showPostCombatSummaryPanels) {
+      return [];
+    }
     const logs = Array.isArray(currentSnapshot?.logs) ? [...currentSnapshot.logs] : [];
     return logs.sort((left, right) => {
       const byTime = Number(right?.timeMs ?? 0) - Number(left?.timeMs ?? 0);
@@ -4147,8 +5047,11 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       }
       return Number(right?.id ?? 0) - Number(left?.id ?? 0);
     });
-  }, [currentSnapshot]);
+  }, [currentSnapshot, showPostCombatSummaryPanels]);
   const selfHealRatioPct = useMemo(() => {
+    if (!showPostCombatSummaryPanels) {
+      return 0;
+    }
     const metrics = currentSnapshot?.metrics;
     if (!metrics) {
       return 0;
@@ -4167,7 +5070,7 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     }
     const selfHealingDone = Math.max(0, Number(healingByTarget[myPlayer.id] ?? 0));
     return Math.max(0, Math.min(100, (selfHealingDone / totalHealingDone) * 100));
-  }, [currentSnapshot]);
+  }, [currentSnapshot, showPostCombatSummaryPanels]);
   const holyPaladinFeedbackLines = useMemo(() => {
     if (!isSuccessfulPracticeResult || activeCombatHealerSlug !== HOLY_PALADIN_HEALER_SLUG) {
       return [];
@@ -4226,22 +5129,24 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       ? `${serenityThresholdSec}`
       : serenityThresholdSec.toFixed(1);
 
-    if (rawPrayerOfHealingCasts >= 0) {
+    if (rawPrayerOfHealingCasts > 0) {
       lines.push(`깡 치기 시전수가 높습니다. (권장: 0회, 현재: ${rawPrayerOfHealingCasts}회)`);
     }
-    if (wastedLightweaverStacks >= 0) {
+    const fadeCasts = Math.max(0, Math.round(Number(metrics.casts?.fade ?? 0)));
+    if (fadeCasts <= 3) {
+      lines.push("소실 시전 수가 낮습니다.");
+    }
+    if (wastedLightweaverStacks > 0) {
       lines.push(`빛술사 스택이 ${wastedLightweaverStacks}회 낭비되었습니다.`);
     }
-    if (wastedSurgeOfLightStacks >= 0) {
+    if (wastedSurgeOfLightStacks > 0) {
       lines.push(`빛의 쇄도 스택이 ${wastedSurgeOfLightStacks}회 낭비되었습니다.`);
     }
     if (finalCpm < 38) {
       lines.push("CPM이 낮습니다. (권장사항: 최소 39)");
     }
-    if (serenityThresholdSec > 0 && effectiveSerenityReductionSec < serenityThresholdSec) {
-      lines.push(
-        `평온 유효 쿨감 시간이 낮습니다. (권장사항: ${activeDifficultyLabel}난이도 - ${serenityThresholdLabel}초 이상)`
-      );
+    if (serenityThresholdSec > 0 && effectiveSerenityReductionSec <= serenityThresholdSec - 100) {
+      lines.push("평온 쿨감 시간이 낮습니다.");
     }
     return lines;
   }, [
@@ -4743,6 +5648,8 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         1 + Math.max(0, Number(HOLY_PRIEST_DEFAULT_STATS.hastePct ?? 0)) / 100
       )
     );
+    const holyPaladinLightOfDawnGlowDurationMs = 400;
+    const holyPaladinLightOfDawnFollowupDelayMs = 200;
 
     const initialPlayerHpRatio = Math.max(0, Math.min(1, Number(phaserSelfHpRatioRef.current ?? 1)));
     let player = null;
@@ -4760,11 +5667,26 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     let playerMouth = null;
     let infusionLeftArc = null;
     let infusionRightArc = null;
+    let divinePurposeArc = null;
     let divineImageAvatarVisual = null;
     let haloPulseVisuals = [];
     let lastProcessedHaloPulseLogId = 0;
+    let lightOfDawnGlowVisuals = [];
+    let lastLightOfDawnCastCount = 0;
     let prayerOfHealingGcdPulseVisuals = [];
     let lastPrayerOfHealingCastCount = 0;
+    let lastHolyPaladinFlashOfLightCastCount = 0;
+    let lastHolyPaladinHolyLightCastCount = 0;
+    let lastHolyPaladinHolyShockCastCount = 0;
+    let lastHolyPaladinDivineTollCastCount = 0;
+    let lastHolyPaladinLightOfDawnCastCount = 0;
+    let holyPriestPrayerOfHealingCastAudio = null;
+    let holyPaladinSpellCastAudioByKey = {
+      flashOfLightAndHolyLight: null,
+      holyShock: null,
+      divineToll: null,
+      lightOfDawn: null
+    };
     let treeOfLifeAvatarVisual = null;
     let treeantVisuals = [];
     let recentHitUntilMs = 0;
@@ -4900,6 +5822,8 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       Math.max(0, Number(latestSnapshotRef.current?.buffs?.infusionOfLightMs ?? 0));
     const getInfusionOfLightCharges = () =>
       Math.max(0, Math.floor(Number(latestSnapshotRef.current?.buffs?.infusionOfLightCharges ?? 0)));
+    const getHolyPaladinDivinePurposeRemainingMs = () =>
+      Math.max(0, Number(latestSnapshotRef.current?.buffs?.divinePurposeMs ?? 0));
     const getHolyPriestSurgeOfLightRemainingMs = () =>
       Math.max(0, Number(latestSnapshotRef.current?.buffs?.surgeOfLightMs ?? 0));
     const getHolyPriestSurgeOfLightStacks = () =>
@@ -4912,12 +5836,180 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       Math.max(0, Number(latestSnapshotRef.current?.buffs?.divineProtectionMs ?? 0));
     const getTreeOfLifeRemainingMs = () =>
       Math.max(0, Number(latestSnapshotRef.current?.buffs?.treeOfLifeMs ?? 0));
+    const getHolyPaladinSpellCastSfxConfig = (spellSoundKey) => {
+      switch (spellSoundKey) {
+        case "flashOfLightAndHolyLight":
+          return {
+            enabled: HOLY_PALADIN_SOUND_CONFIG.flashOfLightAndHolyLightCastSfxEnabled !== false,
+            src: String(HOLY_PALADIN_SOUND_CONFIG.flashOfLightAndHolyLightCastSfxSrc ?? "").trim(),
+            volume: Math.max(0, Math.min(1, Number(HOLY_PALADIN_SOUND_CONFIG.flashOfLightAndHolyLightCastSfxVolume ?? 0.03)))
+          };
+        case "holyShock":
+          return {
+            enabled: HOLY_PALADIN_SOUND_CONFIG.holyShockCastSfxEnabled !== false,
+            src: String(HOLY_PALADIN_SOUND_CONFIG.holyShockCastSfxSrc ?? "").trim(),
+            volume: Math.max(0, Math.min(1, Number(HOLY_PALADIN_SOUND_CONFIG.holyShockCastSfxVolume ?? 0.03)))
+          };
+        case "divineToll":
+          return {
+            enabled: HOLY_PALADIN_SOUND_CONFIG.divineTollCastSfxEnabled !== false,
+            src: String(HOLY_PALADIN_SOUND_CONFIG.divineTollCastSfxSrc ?? "").trim(),
+            volume: Math.max(0, Math.min(1, Number(HOLY_PALADIN_SOUND_CONFIG.divineTollCastSfxVolume ?? 0.03)))
+          };
+        case "lightOfDawn":
+          return {
+            enabled: HOLY_PALADIN_SOUND_CONFIG.lightOfDawnCastSfxEnabled !== false,
+            src: String(HOLY_PALADIN_SOUND_CONFIG.lightOfDawnCastSfxSrc ?? "").trim(),
+            volume: Math.max(0, Math.min(1, Number(HOLY_PALADIN_SOUND_CONFIG.lightOfDawnCastSfxVolume ?? 0.03)))
+          };
+        default:
+          return {
+            enabled: false,
+            src: "",
+            volume: 0
+          };
+      }
+    };
+    const ensureHolyPaladinSpellCastAudio = (spellSoundKey) => {
+      if (holyPaladinSpellCastAudioByKey[spellSoundKey]) {
+        return holyPaladinSpellCastAudioByKey[spellSoundKey];
+      }
+      const sfxConfig = getHolyPaladinSpellCastSfxConfig(spellSoundKey);
+      if (!sfxConfig.enabled || !sfxConfig.src || typeof Audio === "undefined") {
+        return null;
+      }
+      try {
+        const audio = new Audio(sfxConfig.src);
+        audio.preload = "auto";
+        audio.volume = sfxConfig.volume;
+        audio.load();
+        holyPaladinSpellCastAudioByKey[spellSoundKey] = audio;
+        return audio;
+      } catch (_error) {
+        // Ignore audio creation failures and keep simulator running silently.
+        return null;
+      }
+    };
+    const playHolyPaladinSpellCastSfx = (spellSoundKey) => {
+      if (activeCombatHealerSlug !== HOLY_PALADIN_HEALER_SLUG) {
+        return;
+      }
+      const sfxConfig = getHolyPaladinSpellCastSfxConfig(spellSoundKey);
+      if (!sfxConfig.enabled) {
+        return;
+      }
+      const audio = ensureHolyPaladinSpellCastAudio(spellSoundKey);
+      if (!audio) {
+        return;
+      }
+      try {
+        audio.volume = sfxConfig.volume;
+        audio.currentTime = 0;
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => { });
+        }
+      } catch (_error) {
+        // Ignore play interruption errors (autoplay policy, tab focus changes, etc).
+      }
+    };
+    const syncHolyPaladinCastSfxEvents = () => {
+      const snapshot = latestSnapshotRef.current;
+      if (activeCombatHealerSlug !== HOLY_PALADIN_HEALER_SLUG || !snapshot) {
+        lastHolyPaladinFlashOfLightCastCount = 0;
+        lastHolyPaladinHolyLightCastCount = 0;
+        lastHolyPaladinHolyShockCastCount = 0;
+        lastHolyPaladinDivineTollCastCount = 0;
+        lastHolyPaladinLightOfDawnCastCount = 0;
+        return;
+      }
+
+      const totalFlashOfLightCasts = Math.max(0, Math.round(Number(snapshot?.metrics?.casts?.flashOfLight ?? 0)));
+      const totalHolyLightCasts = Math.max(0, Math.round(Number(snapshot?.metrics?.casts?.holyLight ?? 0)));
+      const totalHolyShockCasts = Math.max(0, Math.round(Number(snapshot?.metrics?.casts?.holyShock ?? 0)));
+      const totalDivineTollCasts = Math.max(0, Math.round(Number(snapshot?.metrics?.casts?.divineToll ?? 0)));
+      const totalLightOfDawnCasts = Math.max(0, Math.round(Number(snapshot?.metrics?.casts?.lightOfDawn ?? 0)));
+
+      for (let castIndex = lastHolyPaladinFlashOfLightCastCount; castIndex < totalFlashOfLightCasts; castIndex += 1) {
+        playHolyPaladinSpellCastSfx("flashOfLightAndHolyLight");
+      }
+      for (let castIndex = lastHolyPaladinHolyLightCastCount; castIndex < totalHolyLightCasts; castIndex += 1) {
+        playHolyPaladinSpellCastSfx("flashOfLightAndHolyLight");
+      }
+      for (let castIndex = lastHolyPaladinHolyShockCastCount; castIndex < totalHolyShockCasts; castIndex += 1) {
+        playHolyPaladinSpellCastSfx("holyShock");
+      }
+      for (let castIndex = lastHolyPaladinDivineTollCastCount; castIndex < totalDivineTollCasts; castIndex += 1) {
+        playHolyPaladinSpellCastSfx("divineToll");
+      }
+      for (let castIndex = lastHolyPaladinLightOfDawnCastCount; castIndex < totalLightOfDawnCasts; castIndex += 1) {
+        playHolyPaladinSpellCastSfx("lightOfDawn");
+      }
+
+      lastHolyPaladinFlashOfLightCastCount = totalFlashOfLightCasts;
+      lastHolyPaladinHolyLightCastCount = totalHolyLightCasts;
+      lastHolyPaladinHolyShockCastCount = totalHolyShockCasts;
+      lastHolyPaladinDivineTollCastCount = totalDivineTollCasts;
+      lastHolyPaladinLightOfDawnCastCount = totalLightOfDawnCasts;
+    };
+    const getHolyPriestPrayerOfHealingCastSfxVolume = () =>
+      Math.max(0, Math.min(1, Number(HOLY_PRIEST_SOUND_CONFIG.prayerOfHealingCastSfxVolume ?? 0.45)));
+    const ensureHolyPriestPrayerOfHealingCastAudio = () => {
+      if (holyPriestPrayerOfHealingCastAudio) {
+        return holyPriestPrayerOfHealingCastAudio;
+      }
+      const sfxEnabled = HOLY_PRIEST_SOUND_CONFIG.prayerOfHealingCastSfxEnabled !== false;
+      const sfxSrc = String(HOLY_PRIEST_SOUND_CONFIG.prayerOfHealingCastSfxSrc ?? "").trim();
+      if (!sfxEnabled || !sfxSrc || typeof Audio === "undefined") {
+        return null;
+      }
+      try {
+        const audio = new Audio(sfxSrc);
+        audio.preload = "auto";
+        audio.volume = getHolyPriestPrayerOfHealingCastSfxVolume();
+        audio.load();
+        holyPriestPrayerOfHealingCastAudio = audio;
+        return audio;
+      } catch (_error) {
+        // Ignore audio creation failures and keep simulator running silently.
+        return null;
+      }
+    };
+    const playHolyPriestPrayerOfHealingCastSfx = () => {
+      if (activeCombatHealerSlug !== HOLY_PRIEST_HEALER_SLUG) {
+        return;
+      }
+      if (HOLY_PRIEST_SOUND_CONFIG.prayerOfHealingCastSfxEnabled === false) {
+        return;
+      }
+      const audio = ensureHolyPriestPrayerOfHealingCastAudio();
+      if (!audio) {
+        return;
+      }
+      try {
+        audio.volume = getHolyPriestPrayerOfHealingCastSfxVolume();
+        audio.currentTime = 0;
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => { });
+        }
+      } catch (_error) {
+        // Ignore play interruption errors (autoplay policy, tab focus changes, etc).
+      }
+    };
     const destroyHaloPulseVisual = (haloVisual) => {
       haloVisual?.graphics?.destroy();
     };
     const clearHaloPulseVisuals = () => {
       haloPulseVisuals.forEach(destroyHaloPulseVisual);
       haloPulseVisuals = [];
+    };
+    const destroyLightOfDawnGlowVisual = (visual) => {
+      visual?.graphics?.destroy();
+    };
+    const clearLightOfDawnGlowVisuals = () => {
+      lightOfDawnGlowVisuals.forEach(destroyLightOfDawnGlowVisual);
+      lightOfDawnGlowVisuals = [];
     };
     const destroyPrayerOfHealingGcdPulseVisual = (visual) => {
       visual?.graphics?.destroy();
@@ -5427,11 +6519,9 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       }
 
       const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
-      const sideOffset = playerRadius + 18;
-      const arcRadius = playerRadius + 4;
-      const arcCenterY = player.y - (playerRadius + 7);
+      const arcRadius = 30;
+      const arcCenterY = player.y;
       const pulse = 0.72 + Math.sin(nowMs / 120) * 0.16;
-      const sparkAlpha = Math.max(0.45, Math.min(0.98, pulse + 0.1));
       const arcThickness = 3.2;
       const shouldShowLeftArc = chargeCount >= leftArcMinChargeCount;
       const shouldShowRightArc = chargeCount >= rightArcMinChargeCount;
@@ -5442,16 +6532,14 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         infusionLeftArc.lineStyle(arcThickness, 0xfacc15, pulse);
         infusionLeftArc.beginPath();
         infusionLeftArc.arc(
-          player.x - sideOffset,
+          player.x,
           arcCenterY,
           arcRadius,
-          Phaser.Math.DegToRad(300),
-          Phaser.Math.DegToRad(60),
+          Phaser.Math.DegToRad(140),
+          Phaser.Math.DegToRad(220),
           false
         );
         infusionLeftArc.strokePath();
-        infusionLeftArc.fillStyle(0xfef08a, sparkAlpha);
-        infusionLeftArc.fillCircle(player.x - sideOffset + arcRadius * 0.9, arcCenterY, 1.8);
       } else {
         infusionLeftArc.clear();
         infusionLeftArc.setVisible(false);
@@ -5463,20 +6551,55 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         infusionRightArc.lineStyle(arcThickness, 0xfacc15, pulse);
         infusionRightArc.beginPath();
         infusionRightArc.arc(
-          player.x + sideOffset,
+          player.x,
           arcCenterY,
           arcRadius,
-          Phaser.Math.DegToRad(120),
-          Phaser.Math.DegToRad(240),
+          Phaser.Math.DegToRad(320),
+          Phaser.Math.DegToRad(40),
           false
         );
         infusionRightArc.strokePath();
-        infusionRightArc.fillStyle(0xfef08a, sparkAlpha);
-        infusionRightArc.fillCircle(player.x + sideOffset - arcRadius * 0.9, arcCenterY, 1.8);
       } else {
         infusionRightArc.clear();
         infusionRightArc.setVisible(false);
       }
+    };
+    const updateDivinePurposeVisual = (nowMs = 0) => {
+      if (!player || !divinePurposeArc) {
+        return;
+      }
+
+      const remainingMs = getHolyPaladinDivinePurposeRemainingMs();
+      const active =
+        activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG &&
+        playerHealth > 0 &&
+        remainingMs > 0;
+      if (!active) {
+        divinePurposeArc.clear();
+        divinePurposeArc.setVisible(false);
+        return;
+      }
+
+      const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
+      const arcRadius = 20;
+      const arcCenterY = player.y - (playerRadius);
+      const pulse = 0.76 + Math.sin(nowMs / 120) * 0.16;
+      const sparkAlpha = Math.max(0.45, Math.min(0.98, pulse + 0.12));
+      const arcThickness = 3.2;
+      divinePurposeArc.setVisible(true);
+      divinePurposeArc.clear();
+      divinePurposeArc.lineStyle(arcThickness, 0xfacc15, pulse);
+      divinePurposeArc.beginPath();
+      divinePurposeArc.arc(
+        player.x,
+        arcCenterY,
+        arcRadius,
+        Phaser.Math.DegToRad(230),
+        Phaser.Math.DegToRad(310),
+        false
+      );
+      divinePurposeArc.strokePath();
+      divinePurposeArc.fillStyle(0xfef08a, sparkAlpha);
     };
     const syncHaloPulseVisualEvents = (sceneRef) => {
       if (activeCombatHealerSlug !== HOLY_PRIEST_HEALER_SLUG) {
@@ -5571,6 +6694,88 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       }
       return Math.max(0, sceneNowMs - sceneStartAtMs);
     };
+    const syncLightOfDawnGlowVisualEvents = (sceneRef) => {
+      if (activeCombatHealerSlug !== HOLY_PALADIN_HEALER_SLUG) {
+        if (lightOfDawnGlowVisuals.length) {
+          clearLightOfDawnGlowVisuals();
+        }
+        lastLightOfDawnCastCount = 0;
+        return;
+      }
+
+      const snapshot = latestSnapshotRef.current;
+      const totalLightOfDawnCasts = Math.max(0, Math.round(Number(snapshot?.metrics?.casts?.lightOfDawn ?? 0)));
+      if (totalLightOfDawnCasts <= lastLightOfDawnCastCount) {
+        return;
+      }
+
+      const triggerAtMs = Math.max(0, Number(snapshot?.nowMs ?? 0));
+      const pulseCountPerCast = HOLY_PALADIN_ADDED_TALENT_TOGGLES.secondSunrise ? 2 : 1;
+      const pulseDurationMs = Math.max(120, Math.round(holyPaladinLightOfDawnGlowDurationMs));
+      for (let castIndex = lastLightOfDawnCastCount; castIndex < totalLightOfDawnCasts; castIndex += 1) {
+        for (let pulseIndex = 0; pulseIndex < pulseCountPerCast; pulseIndex += 1) {
+          const graphics = sceneRef.add.graphics();
+          graphics.setDepth(3.05);
+          lightOfDawnGlowVisuals.push({
+            graphics,
+            startCombatMs: triggerAtMs + pulseIndex * holyPaladinLightOfDawnFollowupDelayMs,
+            durationMs: pulseDurationMs
+          });
+        }
+      }
+      lastLightOfDawnCastCount = totalLightOfDawnCasts;
+    };
+    const updateLightOfDawnGlowVisuals = (sceneRef, nowMs = 0) => {
+      if (!player) {
+        return;
+      }
+
+      syncLightOfDawnGlowVisualEvents(sceneRef);
+      if (!lightOfDawnGlowVisuals.length) {
+        return;
+      }
+
+      const combatElapsedMs = resolveCombatElapsedMs(nowMs);
+      const playerRadius = Math.max(6, PHASER_ARENA_VISUAL_CONFIG.playerRadiusPx);
+      const minRadius = playerRadius + 5;
+      const maxRadius = playerRadius + 46;
+
+      lightOfDawnGlowVisuals = lightOfDawnGlowVisuals.filter((pulseVisual) => {
+        const graphics = pulseVisual?.graphics;
+        if (!graphics) {
+          return false;
+        }
+
+        const elapsedMs = combatElapsedMs - Math.max(0, Number(pulseVisual?.startCombatMs ?? 0));
+        const durationMs = Math.max(1, Number(pulseVisual?.durationMs ?? 1));
+        if (elapsedMs < 0) {
+          return true;
+        }
+        if (elapsedMs >= durationMs) {
+          graphics.clear();
+          graphics.setVisible(false);
+          destroyLightOfDawnGlowVisual(pulseVisual);
+          return false;
+        }
+
+        const progress = Math.max(0, Math.min(1, elapsedMs / durationMs));
+        const easedProgress = 1 - Math.pow(1 - progress, 2.3);
+        const radius = minRadius + (maxRadius - minRadius) * easedProgress;
+        const ringAlpha = Math.max(0.03, (1 - progress) * 0.55);
+        const coreAlpha = Math.max(0.02, (1 - progress) * 0.2);
+        const outerThickness = 2.1 + (1 - progress) * 2.6;
+
+        graphics.setVisible(true);
+        graphics.clear();
+        graphics.fillStyle(0xfef08a, coreAlpha);
+        graphics.fillCircle(player.x, player.y, radius * 0.86);
+        graphics.lineStyle(outerThickness, 0xfacc15, ringAlpha);
+        graphics.strokeCircle(player.x, player.y, radius);
+        graphics.lineStyle(Math.max(1, outerThickness - 0.9), 0xf59e0b, Math.max(0.02, ringAlpha * 0.66));
+        graphics.strokeCircle(player.x, player.y, Math.max(minRadius * 0.75, radius - 4));
+        return true;
+      });
+    };
     const syncPrayerOfHealingGcdPulseVisualEvents = (sceneRef) => {
       if (activeCombatHealerSlug !== HOLY_PRIEST_HEALER_SLUG) {
         if (prayerOfHealingGcdPulseVisuals.length) {
@@ -5592,6 +6797,7 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       const triggerAtMs = Math.max(0, Number(snapshot?.nowMs ?? 0));
       const durationMs = Math.max(0, Math.round(holyPriestPrayerOfHealingPulseDurationMs));
       for (let castIndex = lastPrayerOfHealingCastCount; castIndex < totalPrayerOfHealingCasts; castIndex += 1) {
+        playHolyPriestPrayerOfHealingCastSfx();
         if (durationMs <= 0) {
           continue;
         }
@@ -5735,6 +6941,7 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       updatePlayerFaceUi(sceneRef.time.now);
       updateTreeOfLifeAvatarVisual(sceneRef.time.now);
       updateInfusionOfLightVisual(sceneRef.time.now);
+      updateDivinePurposeVisual(sceneRef.time.now);
       updateDivineImageAvatarVisual(sceneRef.time.now);
       updateHaloPulseVisuals(sceneRef, sceneRef.time.now);
       updatePrayerOfHealingGcdPulseVisuals(sceneRef, sceneRef.time.now);
@@ -5761,6 +6968,7 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       updatePlayerHealthUi();
       updateTreeOfLifeAvatarVisual(sceneRef.time.now);
       updateInfusionOfLightVisual(sceneRef.time.now);
+      updateDivinePurposeVisual(sceneRef.time.now);
       updateDivineImageAvatarVisual(sceneRef.time.now);
       updateHaloPulseVisuals(sceneRef, sceneRef.time.now);
       updatePrayerOfHealingGcdPulseVisuals(sceneRef, sceneRef.time.now);
@@ -6055,6 +7263,26 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
           0,
           Math.round(Number(latestSnapshotRef.current?.metrics?.casts?.prayerOfHealing ?? 0))
         );
+        lastHolyPaladinFlashOfLightCastCount = Math.max(
+          0,
+          Math.round(Number(latestSnapshotRef.current?.metrics?.casts?.flashOfLight ?? 0))
+        );
+        lastHolyPaladinHolyLightCastCount = Math.max(
+          0,
+          Math.round(Number(latestSnapshotRef.current?.metrics?.casts?.holyLight ?? 0))
+        );
+        lastHolyPaladinHolyShockCastCount = Math.max(
+          0,
+          Math.round(Number(latestSnapshotRef.current?.metrics?.casts?.holyShock ?? 0))
+        );
+        lastHolyPaladinDivineTollCastCount = Math.max(
+          0,
+          Math.round(Number(latestSnapshotRef.current?.metrics?.casts?.divineToll ?? 0))
+        );
+        lastHolyPaladinLightOfDawnCastCount = Math.max(
+          0,
+          Math.round(Number(latestSnapshotRef.current?.metrics?.casts?.lightOfDawn ?? 0))
+        );
         this.cameras.main.setBackgroundColor("#1e293b");
         this.add
           .grid(
@@ -6175,14 +7403,27 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         playerMouth.setDepth(4);
         infusionLeftArc = this.add.graphics();
         infusionRightArc = this.add.graphics();
+        divinePurposeArc = this.add.graphics();
         infusionLeftArc.setDepth(3);
         infusionRightArc.setDepth(3);
+        divinePurposeArc.setDepth(3);
         treeOfLifeAvatarVisual = createTreeOfLifeAvatarVisual(this);
         divineImageAvatarVisual = createDivineImageAvatarVisual(this);
         updatePlayerFaceUi(this.time.now);
         updateInfusionOfLightVisual(this.time.now);
+        updateDivinePurposeVisual(this.time.now);
         updateDivineImageAvatarVisual(this.time.now);
+        if (activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG) {
+          ensureHolyPaladinSpellCastAudio("flashOfLightAndHolyLight");
+          ensureHolyPaladinSpellCastAudio("holyShock");
+          ensureHolyPaladinSpellCastAudio("divineToll");
+          ensureHolyPaladinSpellCastAudio("lightOfDawn");
+        }
+        if (activeCombatHealerSlug === HOLY_PRIEST_HEALER_SLUG) {
+          ensureHolyPriestPrayerOfHealingCastAudio();
+        }
         updateHaloPulseVisuals(this, this.time.now);
+        updateLightOfDawnGlowVisuals(this, this.time.now);
         updatePrayerOfHealingGcdPulseVisuals(this, this.time.now);
         updateTreeantVisuals(this, this.time.now);
         updateTreeOfLifeAvatarVisual(this.time.now);
@@ -6244,8 +7485,10 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
           updatePlayerFaceUi(this.time.now);
           updateTreeOfLifeAvatarVisual(this.time.now);
           updateInfusionOfLightVisual(this.time.now);
+          updateDivinePurposeVisual(this.time.now);
           updateDivineImageAvatarVisual(this.time.now);
           updateHaloPulseVisuals(this, this.time.now);
+          updateLightOfDawnGlowVisuals(this, this.time.now);
           updatePrayerOfHealingGcdPulseVisuals(this, this.time.now);
           updateTreeantVisuals(this, this.time.now);
           syncSharedPlayerHpRatio();
@@ -6287,13 +7530,16 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
           worldFirstZoneNextScheduledStartIndex = 0;
         }
         updateWorldFirstZoneCycle(this, time);
+        syncHolyPaladinCastSfxEvents();
         if (playerHealth <= 0) {
           updatePlayerHealthUi();
           updatePlayerFaceUi(time);
           updateTreeOfLifeAvatarVisual(time);
           updateInfusionOfLightVisual(time);
+          updateDivinePurposeVisual(time);
           updateDivineImageAvatarVisual(time);
           updateHaloPulseVisuals(this, time);
+          updateLightOfDawnGlowVisuals(this, time);
           updatePrayerOfHealingGcdPulseVisuals(this, time);
           updateTreeantVisuals(this, time);
           return;
@@ -6332,8 +7578,10 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
         updatePlayerFaceUi(time);
         updateTreeOfLifeAvatarVisual(time);
         updateInfusionOfLightVisual(time);
+        updateDivinePurposeVisual(time);
         updateDivineImageAvatarVisual(time);
         updateHaloPulseVisuals(this, time);
+        updateLightOfDawnGlowVisuals(this, time);
         updatePrayerOfHealingGcdPulseVisuals(this, time);
         updateTreeantVisuals(this, time);
 
@@ -6508,8 +7756,28 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
       playerMouth?.destroy();
       infusionLeftArc?.destroy();
       infusionRightArc?.destroy();
+      divinePurposeArc?.destroy();
       clearHaloPulseVisuals();
+      clearLightOfDawnGlowVisuals();
       clearPrayerOfHealingGcdPulseVisuals();
+      Object.values(holyPaladinSpellCastAudioByKey).forEach((audio) => {
+        if (!audio) {
+          return;
+        }
+        audio.pause();
+        audio.currentTime = 0;
+      });
+      holyPaladinSpellCastAudioByKey = {
+        flashOfLightAndHolyLight: null,
+        holyShock: null,
+        divineToll: null,
+        lightOfDawn: null
+      };
+      if (holyPriestPrayerOfHealingCastAudio) {
+        holyPriestPrayerOfHealingCastAudio.pause();
+        holyPriestPrayerOfHealingCastAudio.currentTime = 0;
+      }
+      holyPriestPrayerOfHealingCastAudio = null;
       destroyDivineImageAvatarVisual(divineImageAvatarVisual);
       divineImageAvatarVisual = null;
       destroyTreeOfLifeAvatarVisual(treeOfLifeAvatarVisual);
@@ -6543,17 +7811,32 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     spellOrder = managerCooldownSpellOrder,
     groupKey = "manager",
     interactive = false,
+    enableWowheadTooltip = interactive,
     showHolyPower = true,
     showManaBar = false,
     showCastBar = false,
+    resourceSectionOrder = DEFAULT_COOLDOWN_RESOURCE_BAR_LAYOUT.sectionOrder,
+    holyPowerWidthBonusPx = 0,
+    manaBarWidthBonusPx = 0,
     showBindings = true,
-    enableDragReorder = false
+    enableDragReorder = false,
+    showFrame = true
   }) {
     const bindingFontPx = Math.max(8, Math.round(iconSizePx * 0.22));
     const bindingPaddingXPx = Math.max(1, Math.round(iconSizePx * 0.04));
     const bindingPaddingYPx = Math.max(1, Math.round(iconSizePx * 0.03));
     const holyPowerValue = Math.max(0, Math.min(5, Number(cooldownBarSnapshot.holyPower ?? 0)));
-    const holyPowerBarWidthPx = Math.max(1, holyPowerCellWidthPx * 5);
+    const baseResourceBarWidthPx = Math.max(1, holyPowerCellWidthPx * 5);
+    const normalizedHolyPowerWidthBonusPx = clampCooldownResourceBarWidthBonusValue(holyPowerWidthBonusPx);
+    const normalizedManaBarWidthBonusPx = clampCooldownResourceBarWidthBonusValue(manaBarWidthBonusPx);
+    const holyPowerBarWidthPx = Math.max(1, baseResourceBarWidthPx + normalizedHolyPowerWidthBonusPx);
+    const holyPowerSegmentWidthPx = holyPowerBarWidthPx / 5;
+    const manaBarWidthPx = Math.max(1, baseResourceBarWidthPx + normalizedManaBarWidthBonusPx);
+    const castBarWidthPx = Math.max(
+      baseResourceBarWidthPx,
+      showHolyPower ? holyPowerBarWidthPx : 0,
+      showManaBar ? manaBarWidthPx : 0
+    );
     const manaPct = Math.max(0, Math.min(100, Number(cooldownBarSnapshot.manaPct ?? 0)));
     const serenityCharges = Math.max(
       0,
@@ -6573,179 +7856,231 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
     const castProgress = currentCastInfo && castTimeMs > 0
       ? Math.max(0, Math.min(1, 1 - castRemainingMs / castTimeMs))
       : 0;
-    const normalizedGroupKey = groupKey === "reserve" ? "reserve" : "manager";
+    const normalizedGroupKey =
+      groupKey === "reserve" ? "reserve" : groupKey === "secondary" ? "secondary" : "manager";
     const renderedSpellOrder = Array.isArray(spellOrder) ? spellOrder : managerCooldownSpellOrder;
+    const showEmptyDropZone = enableDragReorder && renderedSpellOrder.length === 0;
+    const normalizedResourceSectionOrder = normalizeCooldownResourceSectionOrder(resourceSectionOrder);
+
+    const containerClassName = showFrame
+      ? "select-none rounded border border-slate-700 bg-black/70 p-1.5 shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
+      : "select-none";
+
+    const spellRowNode = (
+      <div
+        className="flex items-center justify-center"
+        style={{
+          gap: `${COOLDOWN_MANAGER_LAYOUT_CONFIG.iconGapPx}px`,
+          minHeight: showEmptyDropZone ? `${iconSizePx}px` : undefined
+        }}
+      >
+        {renderedSpellOrder.map((spellKey) => {
+          const spell = practiceSpellsByKey[spellKey];
+          if (!spell) {
+            return null;
+          }
+
+          const meta = practiceCooldownSpellMetaByKey[spellKey] ?? {};
+          const isBenedictionDisplayFlashHeal =
+            spellKey === "flashHeal" &&
+            (Math.max(0, Number(cooldownBarSnapshot?.buffs?.benedictionMs ?? 0)) > 0 ||
+              Math.max(0, Number(cooldownBarSnapshot?.buffs?.apotheosisMs ?? 0)) > 0);
+          const displaySpellKey = isBenedictionDisplayFlashHeal ? "benediction" : spellKey;
+          const displaySpell = practiceSpellsByKey[displaySpellKey] ?? spell;
+          const displayMeta = practiceCooldownSpellMetaByKey[displaySpellKey] ?? meta;
+          const displayIconUrl =
+            practiceSpellIconsByKey[displaySpellKey] ||
+            displayMeta.iconUrl ||
+            practiceSpellIconsByKey[spellKey] ||
+            meta.iconUrl ||
+            DEFAULT_SPELL_ICON_URL;
+          const cooldownMs = Math.max(0, Number(cooldownBarSnapshot.cooldowns?.[spellKey] ?? 0));
+          const buffRemainingMs = getSelfBuffRemainingMs(cooldownBarSnapshot, spellKey);
+          const buffActive = buffRemainingMs > 0;
+          const isOneUseSpent =
+            spellKey === "divineBlessing" && Boolean(cooldownBarSnapshot.divineBlessingUsedInCombat);
+          const holyShockCharges = Math.max(0, Number(cooldownBarSnapshot.holyShockCharges ?? 0));
+          const holyShockHasCharge = spellKey === "holyShock" ? holyShockCharges > 0 : false;
+          const coolingDown = isOneUseSpent
+            ? true
+            : spellKey === "holyShock"
+              ? !buffActive && !holyShockHasCharge && cooldownMs > 0
+              : !buffActive && cooldownMs > 0;
+          const overlayLabel = buffActive
+            ? `${formatSeconds(buffRemainingMs)}s`
+            : isOneUseSpent
+              ? "소진"
+              : coolingDown
+                ? `${Math.ceil(cooldownMs / 1000)}s`
+                : "";
+          const chargeLabel = spellKey === "holyShock" ? `${holyShockCharges}` : "";
+          const bottomRightChargeLabel = spellKey === "serenity" && serenityCharges > 0
+            ? `${serenityCharges}`
+            : "";
+
+          const iconNode = (
+            <div
+              className={`relative overflow-hidden rounded border ${coolingDown ? "border-slate-700" : "border-slate-500/80"} ${enableDragReorder ? "cursor-grab active:cursor-grabbing" : ""}`}
+              style={{
+                width: `${iconSizePx}px`,
+                height: `${iconSizePx}px`
+              }}
+            >
+              <img
+                alt={displaySpell.name}
+                className={`h-full w-full object-cover ${coolingDown ? "grayscale" : ""}`}
+                onError={(event) => {
+                  if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                    return;
+                  }
+                  event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                }}
+                src={displayIconUrl}
+              />
+              {buffActive ? <div className="absolute inset-0 bg-amber-300/10" /> : null}
+              {overlayLabel ? (
+                <div className={`absolute inset-0 flex items-center justify-center text-xs font-semibold ${buffActive ? "text-amber-100" : "bg-black/55 text-slate-100"}`}>
+                  {overlayLabel}
+                </div>
+              ) : null}
+              {chargeLabel ? (
+                <div className="absolute left-0.5 top-0.5 rounded bg-black/70 px-1 text-[10px] font-semibold leading-none text-violet-100">
+                  {chargeLabel}
+                </div>
+              ) : null}
+              {showBindings ? (
+                <div
+                  className="absolute bottom-0 left-0 right-0 leading-none text-slate-100 bg-black/50"
+                  style={{
+                    fontSize: `${bindingFontPx}px`,
+                    paddingLeft: `${bindingPaddingXPx}px`,
+                    paddingRight: `${bindingPaddingXPx}px`,
+                    paddingTop: `${bindingPaddingYPx}px`,
+                    paddingBottom: `${bindingPaddingYPx}px`
+                  }}
+                >
+                  {bindingLabelsForDisplay[spellKey] ?? "-"}
+                </div>
+              ) : null}
+              {bottomRightChargeLabel ? (
+                <div className="absolute bottom-0.5 right-0.5 z-20 rounded bg-black/75 px-1 text-[10px] font-semibold leading-none text-cyan-100">
+                  {bottomRightChargeLabel}
+                </div>
+              ) : null}
+            </div>
+          );
+
+          const wrapperProps = enableDragReorder
+            ? {
+              draggable: true,
+              onDragStart: (event) => handleCooldownSpellDragStart(event, spellKey, normalizedGroupKey),
+              onDragOver: handleCooldownSpellDragOver,
+              onDrop: (event) => handleCooldownSpellDrop(event, normalizedGroupKey, spellKey),
+              onDragEnd: handleCooldownSpellDragEnd
+            }
+            : {};
+
+          if (enableWowheadTooltip && displayMeta.spellId) {
+            return (
+              <div key={spellKey} {...wrapperProps}>
+                <a
+                  className="block wh-tooltip-only-link"
+                  data-wh-rename-link="false"
+                  href={`https://www.wowhead.com/ko/spell=${displayMeta.spellId}`}
+                  onClick={interactive ? undefined : (event) => event.preventDefault()}
+                  rel="noreferrer"
+                  target={interactive ? "_blank" : undefined}
+                  title={displaySpell.name}
+                >
+                  {iconNode}
+                </a>
+              </div>
+            );
+          }
+
+          return (
+            <div key={spellKey} title={displaySpell.name} {...wrapperProps}>
+              {iconNode}
+            </div>
+          );
+        })}
+        {showEmptyDropZone ? (
+          <div
+            className="rounded border border-dashed border-slate-600/80 bg-slate-900/60"
+            style={{ width: `${iconSizePx}px`, height: `${iconSizePx}px` }}
+          />
+        ) : null}
+      </div>
+    );
+
+    const holyPowerNode = showHolyPower ? (
+      <div className="relative">
+        <div className="flex justify-center">
+          <div
+            className="flex overflow-hidden rounded-[2px] border border-slate-700"
+            style={{ width: `${holyPowerBarWidthPx}px` }}
+          >
+            {Array.from({ length: 5 }, (_, index) => {
+              const active = index < holyPowerValue;
+              return (
+                <div
+                  className={`border-r border-slate-800 last:border-r-0 ${active ? "bg-yellow-300/95" : "bg-slate-900/90"}`}
+                  key={`holy-power-${index + 1}`}
+                  style={{
+                    width: `${holyPowerSegmentWidthPx}px`,
+                    height: `${holyPowerCellHeightPx}px`
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-semibold leading-none text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.85)]">
+          {holyPowerValue}
+        </div>
+      </div>
+    ) : null;
+
+    const manaNode = showManaBar ? (
+      <div
+        className="relative mx-auto h-[10px] overflow-hidden rounded-[2px] border border-slate-700 bg-gray-950/90"
+        style={{ width: `${manaBarWidthPx}px` }}
+      >
+        <div className="h-full bg-blue-500 transition-[width] duration-100 ease-linear" style={{ width: `${manaPct}%` }} />
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[9px] font-semibold leading-none text-blue-100">
+          {Math.round(manaPct)}%
+        </div>
+      </div>
+    ) : null;
+
+    const sectionNodeByKey = {
+      spells: spellRowNode,
+      holyPower: holyPowerNode,
+      mana: manaNode
+    };
 
     return (
       <div
-        className="select-none rounded border border-slate-700 bg-black/70 p-1.5 shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
+        className={containerClassName}
         onDragOver={enableDragReorder ? handleCooldownSpellDragOver : undefined}
         onDrop={enableDragReorder ? (event) => handleCooldownSpellDrop(event, normalizedGroupKey) : undefined}
       >
-        <div className="flex items-center" style={{ gap: `${COOLDOWN_MANAGER_LAYOUT_CONFIG.iconGapPx}px` }}>
-          {renderedSpellOrder.map((spellKey) => {
-            const spell = practiceSpellsByKey[spellKey];
-            if (!spell) {
-              return null;
-            }
-
-            const meta = practiceCooldownSpellMetaByKey[spellKey] ?? {};
-            const cooldownMs = Math.max(0, Number(cooldownBarSnapshot.cooldowns?.[spellKey] ?? 0));
-            const buffRemainingMs = getSelfBuffRemainingMs(cooldownBarSnapshot, spellKey);
-            const buffActive = buffRemainingMs > 0;
-            const isOneUseSpent =
-              spellKey === "divineBlessing" && Boolean(cooldownBarSnapshot.divineBlessingUsedInCombat);
-            const holyShockCharges = Math.max(0, Number(cooldownBarSnapshot.holyShockCharges ?? 0));
-            const holyShockMaxCharges = Math.max(1, Number(cooldownBarSnapshot.holyShockMaxCharges ?? 2));
-            const holyShockHasCharge = spellKey === "holyShock" ? holyShockCharges > 0 : false;
-            const coolingDown = isOneUseSpent
-              ? true
-              : spellKey === "holyShock"
-                ? !buffActive && !holyShockHasCharge && cooldownMs > 0
-                : !buffActive && cooldownMs > 0;
-            const overlayLabel = buffActive
-              ? `${formatSeconds(buffRemainingMs)}s`
-              : isOneUseSpent
-                ? "소진"
-                : coolingDown
-                  ? `${Math.ceil(cooldownMs / 1000)}s`
-                  : "";
-            const chargeLabel = spellKey === "holyShock" ? `${holyShockCharges}` : "";
-            const bottomRightChargeLabel = spellKey === "serenity" && serenityCharges > 0
-              ? `${serenityCharges}`
-              : "";
-
-            const iconNode = (
-              <div
-                className={`relative overflow-hidden rounded border ${coolingDown ? "border-slate-700" : "border-slate-500/80"} ${enableDragReorder ? "cursor-grab active:cursor-grabbing" : ""}`}
-                style={{
-                  width: `${iconSizePx}px`,
-                  height: `${iconSizePx}px`
-                }}
-              >
-                <img
-                  alt={spell.name}
-                  className={`h-full w-full object-cover ${coolingDown ? "grayscale" : ""}`}
-                  onError={(event) => {
-                    if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
-                      return;
-                    }
-                    event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
-                  }}
-                  src={practiceSpellIconsByKey[spellKey] || meta.iconUrl || DEFAULT_SPELL_ICON_URL}
-                />
-                {buffActive ? <div className="absolute inset-0 bg-amber-300/10" /> : null}
-                {overlayLabel ? (
-                  <div className={`absolute inset-0 flex items-center justify-center text-xs font-semibold ${buffActive ? "text-amber-100" : "bg-black/55 text-slate-100"}`}>
-                    {overlayLabel}
-                  </div>
-                ) : null}
-                {chargeLabel ? (
-                  <div className="absolute left-0.5 top-0.5 rounded bg-black/70 px-1 text-[10px] font-semibold leading-none text-violet-100">
-                    {chargeLabel}
-                  </div>
-                ) : null}
-                {showBindings ? (
-                  <div
-                    className="absolute bottom-0 left-0 right-0 leading-none text-slate-100 bg-black/50"
-                    style={{
-                      fontSize: `${bindingFontPx}px`,
-                      paddingLeft: `${bindingPaddingXPx}px`,
-                      paddingRight: `${bindingPaddingXPx}px`,
-                      paddingTop: `${bindingPaddingYPx}px`,
-                      paddingBottom: `${bindingPaddingYPx}px`
-                    }}
-                  >
-                    {bindingLabelsForDisplay[spellKey] ?? "-"}
-                  </div>
-                ) : null}
-                {bottomRightChargeLabel ? (
-                  <div className="absolute bottom-0.5 right-0.5 z-20 rounded bg-black/75 px-1 text-[10px] font-semibold leading-none text-cyan-100">
-                    {bottomRightChargeLabel}
-                  </div>
-                ) : null}
-              </div>
-            );
-
-            const wrapperProps = enableDragReorder
-              ? {
-                draggable: true,
-                onDragStart: (event) => handleCooldownSpellDragStart(event, spellKey, normalizedGroupKey),
-                onDragOver: handleCooldownSpellDragOver,
-                onDrop: (event) => handleCooldownSpellDrop(event, normalizedGroupKey, spellKey),
-                onDragEnd: handleCooldownSpellDragEnd
-              }
-              : {};
-
-            if (interactive && meta.spellId) {
-              return (
-                <div key={spellKey} {...wrapperProps}>
-                  <a
-                    className="block"
-                    data-wh-rename-link="false"
-                    href={`https://www.wowhead.com/ko/spell=${meta.spellId}`}
-                    rel="noreferrer"
-                    target="_blank"
-                    title={spell.name}
-                  >
-                    {iconNode}
-                  </a>
-                </div>
-              );
-            }
-
-            return (
-              <div key={spellKey} title={spell.name} {...wrapperProps}>
-                {iconNode}
-              </div>
-            );
-          })}
-        </div>
-
-        {showHolyPower ? (
-          <div className="relative mt-1">
-            <div className="flex justify-center">
-              <div
-                className="flex overflow-hidden rounded-[2px] border border-slate-700"
-                style={{ width: `${holyPowerBarWidthPx}px` }}
-              >
-                {Array.from({ length: 5 }, (_, index) => {
-                  const active = index < holyPowerValue;
-                  return (
-                    <div
-                      className={`border-r border-slate-800 last:border-r-0 ${active ? "bg-yellow-300/95" : "bg-slate-900/90"}`}
-                      key={`holy-power-${index + 1}`}
-                      style={{
-                        width: `${holyPowerCellWidthPx}px`,
-                        height: `${holyPowerCellHeightPx}px`
-                      }}
-                    />
-                  );
-                })}
-              </div>
+        {normalizedResourceSectionOrder.map((sectionKey, sectionIndex) => {
+          const node = sectionNodeByKey[sectionKey];
+          if (!node) {
+            return null;
+          }
+          return (
+            <div className={sectionIndex > 0 ? "mt-1.5" : undefined} key={`cooldown-section-${sectionKey}`}>
+              {node}
             </div>
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-semibold leading-none text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.85)]">
-              {holyPowerValue}
-            </div>
-          </div>
-        ) : null}
-
-        {showManaBar ? (
-          <div
-            className="relative mx-auto mt-1.5 h-[10px] overflow-hidden rounded-[2px] border border-slate-700 bg-gray-950/90"
-            style={{ width: `${holyPowerBarWidthPx}px` }}
-          >
-            <div className="h-full bg-blue-500 transition-[width] duration-100 ease-linear" style={{ width: `${manaPct}%` }} />
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[9px] font-semibold leading-none text-blue-100">
-              {Math.round(manaPct)}%
-            </div>
-          </div>
-        ) : null}
+          );
+        })}
 
         {showCastBar ? (
           <div
             className="mx-auto mt-1.5 overflow-hidden rounded-[2px] border border-slate-700 bg-slate-900/95"
-            style={{ width: `${holyPowerBarWidthPx}px` }}
+            style={{ width: `${castBarWidthPx}px` }}
           >
             {currentCastInfo ? (
               <div
@@ -6776,6 +8111,180 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
             )}
           </div>
         ) : null}
+      </div>
+    );
+  }
+
+  function renderCooldownManagerSpellResourceLayout({
+    primaryIconSizePx,
+    secondaryIconSizePx,
+    primarySpellOrder = managerCooldownSpellOrder,
+    secondarySpellOrder = secondaryCooldownSpellOrder,
+    showHolyPower = false,
+    showManaBar = false,
+    showCastBar = false,
+    resourceSectionOrder = DEFAULT_COOLDOWN_RESOURCE_BAR_LAYOUT.sectionOrder,
+    holyPowerWidthBonusPx = 0,
+    manaBarWidthBonusPx = 0,
+    showBindings = true,
+    enableWowheadTooltip = false,
+    enableDragReorder = false,
+    interactive = false
+  }) {
+    const visibleSectionKeys = ["spells"];
+    if (showHolyPower) {
+      visibleSectionKeys.push("holyPower");
+    }
+    if (showManaBar) {
+      visibleSectionKeys.push("mana");
+    }
+    if (showCastBar) {
+      visibleSectionKeys.push("castBar");
+    }
+    const normalizedSectionOrder = resolveVisibleCooldownResourceSectionOrder(
+      resourceSectionOrder,
+      visibleSectionKeys
+    );
+    const normalizedSecondarySpellOrder = Array.isArray(secondarySpellOrder) ? secondarySpellOrder : [];
+
+    // spells section is a single bundle: primary row + secondary row.
+    const spellSectionNode = (
+      <div>
+        {renderCooldownManagerBar({
+          iconSizePx: primaryIconSizePx,
+          holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellWidthPx,
+          holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellHeightPx,
+          spellOrder: primarySpellOrder,
+          groupKey: "manager",
+          interactive,
+          enableWowheadTooltip,
+          showHolyPower: false,
+          showManaBar: false,
+          showCastBar: false,
+          showBindings,
+          enableDragReorder,
+          showFrame: false
+        })}
+        {normalizedSecondarySpellOrder.length > 0 ? (
+          <div style={{ marginTop: `${COOLDOWN_MANAGER_SPELL_SECTION_INNER_GAP_PX}px` }}>
+            {renderCooldownManagerBar({
+              iconSizePx: secondaryIconSizePx,
+              holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellWidthPx,
+              holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellHeightPx,
+              spellOrder: normalizedSecondarySpellOrder,
+              groupKey: "secondary",
+              interactive,
+              enableWowheadTooltip,
+              showHolyPower: false,
+              showManaBar: false,
+              showCastBar: false,
+              showBindings,
+              enableDragReorder,
+              showFrame: false
+            })}
+          </div>
+        ) : null}
+      </div>
+    );
+
+    const holyPowerSectionNode = showHolyPower
+      ? renderCooldownManagerBar({
+        iconSizePx: secondaryIconSizePx,
+        holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellWidthPx,
+        holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellHeightPx,
+        spellOrder: [],
+        groupKey: "secondary",
+        interactive,
+        enableWowheadTooltip: false,
+        showHolyPower: true,
+        showManaBar: false,
+        showCastBar: false,
+        holyPowerWidthBonusPx,
+        showBindings: false,
+        enableDragReorder: false,
+        showFrame: false
+      })
+      : null;
+
+    const manaSectionNode = showManaBar
+      ? renderCooldownManagerBar({
+        iconSizePx: secondaryIconSizePx,
+        holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellWidthPx,
+        holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellHeightPx,
+        spellOrder: [],
+        groupKey: "secondary",
+        interactive,
+        enableWowheadTooltip: false,
+        showHolyPower: false,
+        showManaBar: true,
+        showCastBar: false,
+        manaBarWidthBonusPx,
+        showBindings: false,
+        enableDragReorder: false,
+        showFrame: false
+      })
+      : null;
+
+    const castBarTopMarginPx = Math.max(0, Number(COOLDOWN_MANAGER_CAST_BAR_TOP_MARGIN_PX) || 0);
+    const castBarBottomMarginPx = Math.max(0, Number(COOLDOWN_MANAGER_CAST_BAR_BOTTOM_MARGIN_PX) || 0);
+    const castBarSectionNode = showCastBar
+      ? (
+        <div
+          style={
+            castBarTopMarginPx > 0 || castBarBottomMarginPx > 0
+              ? {
+                marginTop: castBarTopMarginPx > 0 ? `${castBarTopMarginPx}px` : undefined,
+                marginBottom: castBarBottomMarginPx > 0 ? `${castBarBottomMarginPx}px` : undefined
+              }
+              : undefined
+          }
+        >
+          {renderCooldownManagerBar({
+            iconSizePx: secondaryIconSizePx,
+            holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellWidthPx,
+            holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellHeightPx,
+            spellOrder: [],
+            groupKey: "secondary",
+            interactive,
+            enableWowheadTooltip: false,
+            showHolyPower: false,
+            showManaBar: false,
+            showCastBar: true,
+            showBindings: false,
+            enableDragReorder: false,
+            showFrame: false
+          })}
+        </div>
+      )
+      : null;
+
+    const sectionNodeByKey = {
+      spells: spellSectionNode,
+      holyPower: holyPowerSectionNode,
+      mana: manaSectionNode,
+      castBar: castBarSectionNode
+    };
+
+    return (
+      <div>
+        {normalizedSectionOrder.map((sectionKey, sectionIndex) => {
+          const node = sectionNodeByKey[sectionKey];
+          if (!node) {
+            return null;
+          }
+          return (
+            <div
+              key={`spell-resource-layout-${sectionKey}`}
+              style={
+                sectionIndex > 0
+                  ? { marginTop: `${COOLDOWN_MANAGER_RESOURCE_SECTION_GAP_PX}px` }
+                  : undefined
+              }
+            >
+              {node}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -6830,12 +8339,26 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
                       const nextCooldownOrderBuckets = buildCooldownManagerSpellOrderBuckets(
                         nextRuntime.activeSpellKeys,
                         nextRuntime.cooldownManagerSpellKeys,
+                        nextRuntime.cooldownManagerSecondarySpellKeys,
                         nextRuntime.cooldownManagerNonDisplaySpellKeys
                       );
                       cooldownSpellOrderRef.current = nextCooldownOrderBuckets.manager;
+                      cooldownSecondarySpellOrderRef.current = nextCooldownOrderBuckets.secondary;
                       cooldownReserveSpellOrderRef.current = nextCooldownOrderBuckets.reserve;
                       setCooldownSpellOrder(nextCooldownOrderBuckets.manager);
+                      setCooldownSecondarySpellOrder(nextCooldownOrderBuckets.secondary);
                       setCooldownReserveSpellOrder(nextCooldownOrderBuckets.reserve);
+                      const nextSpecialProcOrder = buildSpecialProcDisplayOrder(
+                        nextRuntime.specialProcDisplayConfig,
+                        []
+                      );
+                      specialProcOrderKeysRef.current = nextSpecialProcOrder;
+                      setSpecialProcOrderKeys(nextSpecialProcOrder);
+                      const nextSpecialProcEnabledKeys = buildSpecialProcEnabledKeys(
+                        nextRuntime.specialProcDisplayConfig
+                      );
+                      specialProcEnabledKeysRef.current = nextSpecialProcEnabledKeys;
+                      setSpecialProcEnabledKeys(nextSpecialProcEnabledKeys);
                     }}
                     type="button"
                   >
@@ -6854,8 +8377,17 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
               <p className="mt-3 text-xs text-slate-300">아래 세팅을 열려면 힐러 아이콘을 선택하세요.</p>
             ) : null}
             {hasExplicitHealerSelection && selectedHealerMeta && (selectedHealerDisclaimers.length || selectedHealerPatchMeta) ? (
-              <div className="mt-3 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs text-violet-100">
-                <p className="font-semibold">{selectedHealerMeta.shortName} 안내</p>
+              <div className="mt-3 relative rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs text-violet-100">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold">{selectedHealerMeta.shortName} 안내</p>
+                  <button
+                    className="rounded-md bg-violet-600 px-3 py-1.5 text-[15px] font-medium tracking-wide text-white hover:bg-violet-500"
+                    onClick={() => setPatchNotesModalOpen(true)}
+                    type="button"
+                  >
+                    패치 노트
+                  </button>
+                </div>
                 {selectedHealerPatchMeta ? (
                   <p className="mt-1 text-[11px] leading-tight text-amber-200">
                     {selectedHealerPatchMeta.lastUpdatedAt ? `최종 수정: ${selectedHealerPatchMeta.lastUpdatedAt}` : ""}
@@ -6985,7 +8517,7 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
                     <p className="mt-1 text-[11px] leading-tight text-slate-400">
                       전투 이동 입력에 직접 사용됩니다. 여기에 넣은 키는 스킬 단축키로 배정할 수 없습니다.
                     </p>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <div className="mt-2 grid grid-cols-2 gap-2">
                       {CUSTOM_MOVEMENT_DIRECTION_OPTIONS.map((option) => (
                         <label className="text-xs text-slate-300" key={option.value}>
                           {option.label}
@@ -7194,32 +8726,10 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
                   설정 완료!
                 </button>
               </div>
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                <button
-                  className="rounded-lg border border-sky-400/60 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={!canUseCloudKeybindProfile || running || keybindProfileSyncBusy}
-                  onClick={handleSaveCloudKeybindProfile}
-                  type="button"
-                >
-                  내 바인딩 저장
-                </button>
-                <button
-                  className="rounded-lg border border-slate-500/70 bg-slate-700/25 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-slate-700/40 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={!canUseCloudKeybindProfile || running || keybindProfileSyncBusy}
-                  onClick={() => {
-                    void loadCloudKeybindProfile({ silent: false });
-                  }}
-                  type="button"
-                >
-                  내 바인딩 불러오기
-                </button>
-              </div>
-              {keybindProfileSyncBusy ? (
-                <p className="mt-1 text-center text-[11px] text-sky-200">개인 키바인드 동기화 중...</p>
-              ) : null}
+
               {!isLoggedIn ? (
                 <p className="mt-1 text-center text-[11px] text-slate-400">
-                  로그인하면 힐러별 키바인드를 DB에 저장하고 자동으로 불러옵니다.
+                  로그인하면 힐러별 세팅을 DB에 저장하고 자동으로 불러옵니다.
                 </p>
               ) : null}
               <p className="mt-2 text-center text-[11px] leading-tight text-slate-400">
@@ -7330,48 +8840,457 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
                 <h2 className="text-base font-semibold text-violet-100">쿨다운 매니저</h2>
                 {/* <p className="text-xs text-slate-400">하단 오버레이로 현재 키바인딩이 함께 표시됩니다.</p> */}
               </div>
-              <p className="mt-1 text-sm text-slate-400">
+              {/* <p className="mt-1 text-sm text-slate-400">
                 각 아이콘을 드래그해서 스킬 순서를 바꾸면, 실제 레이드 프레임 위 쿨다운 매니저에도 같은 순서로 반영됩니다.
-              </p>
+              </p> */}
+
+              {setupSpecialProcDisplayEntries.length ? (
+                <div className="mt-3 flex justify-center">
+                  <div
+                    className="rounded-lg border border-slate-800 bg-slate-900/35 p-3"
+                    style={{ width: `min(100%, ${setupSpecialProcSectionWidthPx}px)` }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-slate-300">버프 프록 리스트</p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-300">
+                        <span>{`크기 ${configuredSpecialProcOverlayIconSizePx}px`}</span>
+                        <button
+                          className="h-5 w-5 rounded border border-slate-600/80 bg-black/70 text-[11px] leading-none text-slate-100 disabled:opacity-35"
+                          disabled={configuredSpecialProcOverlayIconSizePx <= DEFAULT_SPECIAL_PROC_ICON_SIZE_PX}
+                          onClick={() =>
+                            setSpecialProcOverlayIconSizePx((prev) =>
+                              Math.max(DEFAULT_SPECIAL_PROC_ICON_SIZE_PX, Number(prev ?? DEFAULT_SPECIAL_PROC_ICON_SIZE_PX) - 1)
+                            )
+                          }
+                          type="button"
+                        >
+                          -
+                        </button>
+                        <button
+                          className="h-5 w-5 rounded border border-slate-600/80 bg-black/70 text-[11px] leading-none text-slate-100 disabled:opacity-35"
+                          disabled={configuredSpecialProcOverlayIconSizePx >= maxSpecialProcOverlayIconSizePx}
+                          onClick={() =>
+                            setSpecialProcOverlayIconSizePx((prev) =>
+                              Math.min(maxSpecialProcOverlayIconSizePx, Number(prev ?? DEFAULT_SPECIAL_PROC_ICON_SIZE_PX) + 1)
+                            )
+                          }
+                          type="button"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-start justify-center gap-2">
+                      <div
+                        className="shrink-0 rounded-md border border-emerald-400/25 bg-black/65 p-2"
+                        style={{ width: `${setupSpecialProcEnabledPaneWidthPx}px` }}
+                      >
+                        <p className="text-[10px] font-semibold text-emerald-200">ON 리스트</p>
+                        <div className="mt-1 flex flex-nowrap items-center gap-1.5 overflow-visible pr-0.5">
+                          {setupSpecialProcEnabledEntries.length ? (
+                            setupSpecialProcEnabledEntries.map((proc, index) => {
+                              const canMoveLeft = index > 0;
+                              const canMoveRight = index < setupSpecialProcEnabledEntries.length - 1;
+                              const icon = (
+                                <div
+                                  className="relative overflow-hidden rounded border border-slate-600/80 bg-black/70"
+                                  style={{
+                                    width: `${configuredSpecialProcOverlayIconSizePx}px`,
+                                    height: `${configuredSpecialProcOverlayIconSizePx}px`
+                                  }}
+                                  title={proc.label}
+                                >
+                                  <img
+                                    alt={proc.label}
+                                    className="h-full w-full object-cover"
+                                    onError={(event) => {
+                                      if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                        return;
+                                      }
+                                      event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                    }}
+                                    src={proc.iconUrl}
+                                  />
+                                </div>
+                              );
+                              const iconNode = proc.spellId
+                                ? (
+                                  <a
+                                    className="block wh-tooltip-only-link"
+                                    data-wh-rename-link="false"
+                                    href={`https://www.wowhead.com/ko/spell=${proc.spellId}`}
+                                    onClick={(event) => event.preventDefault()}
+                                    rel="noreferrer"
+                                    title={proc.label}
+                                  >
+                                    {icon}
+                                  </a>
+                                )
+                                : icon;
+                              return (
+                                <div className="relative shrink-0 pt-3" key={`setup-proc-on-${proc.id}`}>
+                                  <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between px-[1px]">
+                                    <button
+                                      className="pointer-events-auto h-3.5 w-3.5 rounded border border-slate-600/70 bg-black/80 text-[8px] leading-none text-slate-200 disabled:opacity-35"
+                                      disabled={!canMoveLeft}
+                                      onClick={() => shiftSpecialProcOrder(proc.key, -1)}
+                                      type="button"
+                                    >
+                                      ◀
+                                    </button>
+                                    <button
+                                      className="pointer-events-auto h-3.5 w-3.5 rounded border border-slate-600/70 bg-black/80 text-[8px] leading-none text-slate-200 disabled:opacity-35"
+                                      disabled={!canMoveRight}
+                                      onClick={() => shiftSpecialProcOrder(proc.key, 1)}
+                                      type="button"
+                                    >
+                                      ▶
+                                    </button>
+                                  </div>
+                                  {iconNode}
+                                  <button
+                                    className="mt-1 h-3.5 w-full rounded border border-rose-400/55 bg-rose-500/15 text-[8px] font-semibold leading-none text-rose-100"
+                                    onClick={() => setSpecialProcEnabledState(proc.key, false)}
+                                    type="button"
+                                  >
+                                    X
+                                  </button>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-[10px] text-slate-500">표시 중인 버프 없음</p>
+                          )}
+                        </div>
+                      </div>
+                      <div
+                        className="shrink-0 rounded-md border border-slate-700/80 bg-slate-800/45 p-2"
+                        style={{ width: `${setupSpecialProcDisabledPaneWidthPx}px` }}
+                      >
+                        <p className="text-[10px] font-semibold text-slate-300">OFF 리스트</p>
+                        <div className="mt-1 flex flex-nowrap items-center gap-1.5 overflow-visible pr-0.5">
+                          {setupSpecialProcDisabledEntries.length ? (
+                            setupSpecialProcDisabledEntries.map((proc) => {
+                              const icon = (
+                                <div
+                                  className="relative overflow-hidden rounded border border-slate-700/85 bg-slate-800/70"
+                                  style={{
+                                    width: `${configuredSpecialProcOverlayIconSizePx}px`,
+                                    height: `${configuredSpecialProcOverlayIconSizePx}px`
+                                  }}
+                                  title={proc.label}
+                                >
+                                  <img
+                                    alt={proc.label}
+                                    className="h-full w-full object-cover grayscale opacity-55"
+                                    onError={(event) => {
+                                      if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                        return;
+                                      }
+                                      event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                    }}
+                                    src={proc.iconUrl}
+                                  />
+                                </div>
+                              );
+                              const iconNode = proc.spellId
+                                ? (
+                                  <a
+                                    className="block wh-tooltip-only-link"
+                                    data-wh-rename-link="false"
+                                    href={`https://www.wowhead.com/ko/spell=${proc.spellId}`}
+                                    onClick={(event) => event.preventDefault()}
+                                    rel="noreferrer"
+                                    title={proc.label}
+                                  >
+                                    {icon}
+                                  </a>
+                                )
+                                : icon;
+                              return (
+                                <div className="relative shrink-0" key={`setup-proc-off-${proc.id}`}>
+                                  {iconNode}
+                                  <button
+                                    className="mt-1 h-3.5 w-full rounded border border-emerald-400/55 bg-emerald-500/15 text-[8px] font-semibold leading-none text-emerald-100"
+                                    onClick={() => setSpecialProcEnabledState(proc.key, true)}
+                                    type="button"
+                                  >
+                                    ON
+                                  </button>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-[10px] text-slate-500">비활성 버프 없음</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-3 flex justify-center">
-                {renderCooldownManagerBar({
-                  iconSizePx: COOLDOWN_MANAGER_LAYOUT_CONFIG.iconSizePx,
-                  holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.holyPowerCellWidthPx,
-                  holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.holyPowerCellHeightPx,
-                  spellOrder: managerCooldownSpellOrder,
-                  groupKey: "manager",
-                  interactive: false,
-                  showHolyPower: false,
-                  showBindings: true,
-                  enableDragReorder: true
-                })}
-              </div>
-
-              <div className="mt-3 flex justify-center">
-                <div
-                  className="rounded-lg border border-slate-800 bg-slate-900/35 p-3"
-                  style={{ width: `min(100%, ${reserveCooldownSectionWidthPx}px)` }}
-                >
-
-                  {renderCooldownManagerBar({
-                    iconSizePx: COOLDOWN_MANAGER_LAYOUT_CONFIG.iconSizePx,
-                    holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.holyPowerCellWidthPx,
-                    holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.holyPowerCellHeightPx,
-                    spellOrder: reserveCooldownSpellOrder,
-                    groupKey: "reserve",
-                    interactive: false,
-                    showHolyPower: false,
-                    showManaBar: false,
-                    showCastBar: false,
-                    showBindings: true,
-                    enableDragReorder: true
-                  })}
-                  <p className="mt-2 text-center text-xs text-slate-400">
-                    스킬은 있지만 쿨다운 매니저에는 표시되지 않는 애들
-                  </p>
+                <div className="relative">
+                  <div className="absolute right-full top-0 mr-3 w-max max-w-[240px] rounded-lg border border-slate-700/80 bg-slate-900/55 p-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.4)]">
+                    <p className="text-[11px] font-semibold text-slate-200">스킬 아이콘 크기</p>
+                    <div className="mt-1 space-y-1">
+                      <div className="rounded border border-slate-700/70 bg-black/35 px-1.5 py-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold text-slate-200">
+                            {`첫째줄 ${cooldownManagerPrimaryIconSizePx}px (기본 ${DEFAULT_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX}px)`}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                              disabled={cooldownManagerPrimaryIconSizePx <= MIN_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX}
+                              onClick={() =>
+                                setCooldownManagerPrimaryIconSizeSettingPx((prev) =>
+                                  Math.max(
+                                    MIN_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX,
+                                    Math.round(Number(prev ?? DEFAULT_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX)) - COOLDOWN_MANAGER_ICON_SIZE_STEP_PX
+                                  )
+                                )
+                              }
+                              type="button"
+                            >
+                              ◀
+                            </button>
+                            <button
+                              className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                              disabled={cooldownManagerPrimaryIconSizePx >= MAX_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX}
+                              onClick={() =>
+                                setCooldownManagerPrimaryIconSizeSettingPx((prev) =>
+                                  Math.min(
+                                    MAX_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX,
+                                    Math.round(Number(prev ?? DEFAULT_COOLDOWN_MANAGER_PRIMARY_ICON_SIZE_PX)) + COOLDOWN_MANAGER_ICON_SIZE_STEP_PX
+                                  )
+                                )
+                              }
+                              type="button"
+                            >
+                              ▶
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="rounded border border-slate-700/70 bg-black/35 px-1.5 py-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold text-slate-200">
+                            {`둘째줄 ${cooldownManagerSecondaryIconSizePx}px (기본 ${DEFAULT_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX}px)`}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                              disabled={cooldownManagerSecondaryIconSizePx <= MIN_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX}
+                              onClick={() =>
+                                setCooldownManagerSecondaryIconSizeSettingPx((prev) =>
+                                  Math.max(
+                                    MIN_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX,
+                                    Math.round(Number(prev ?? DEFAULT_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX)) - COOLDOWN_MANAGER_ICON_SIZE_STEP_PX
+                                  )
+                                )
+                              }
+                              type="button"
+                            >
+                              ◀
+                            </button>
+                            <button
+                              className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                              disabled={cooldownManagerSecondaryIconSizePx >= MAX_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX}
+                              onClick={() =>
+                                setCooldownManagerSecondaryIconSizeSettingPx((prev) =>
+                                  Math.min(
+                                    MAX_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX,
+                                    Math.round(Number(prev ?? DEFAULT_COOLDOWN_MANAGER_SECONDARY_ICON_SIZE_PX)) + COOLDOWN_MANAGER_ICON_SIZE_STEP_PX
+                                  )
+                                )
+                              }
+                              type="button"
+                            >
+                              ▶
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700 bg-black/70 p-3 shadow-[0_8px_28px_rgba(0,0,0,0.45)]">
+                    <p className="mb-2 rounded-md border border-cyan-300/60 bg-cyan-400/15 px-2 py-1 text-center text-xs font-semibold text-cyan-100">
+                      아이콘을 드래그해서 위치를 이동할 수 있습니다.<br />
+                      (위아래 줄 이동도 가능)
+                    </p>
+                    {renderCooldownManagerSpellResourceLayout({
+                      primaryIconSizePx: cooldownManagerPrimaryIconSizePx,
+                      secondaryIconSizePx: cooldownManagerSecondaryIconSizePx,
+                      primarySpellOrder: managerCooldownSpellOrder,
+                      secondarySpellOrder: secondaryCooldownSpellOrder,
+                      showHolyPower: selectedHealerIsHolyPaladin,
+                      showManaBar: selectedHealerSupportsCooldownResourceOrder,
+                      showCastBar: selectedHealerSupportsCooldownResourceOrder,
+                      resourceSectionOrder: setupVisibleCooldownResourceSectionOrder,
+                      holyPowerWidthBonusPx: selectedHealerIsHolyPaladin
+                        ? normalizedCooldownResourceBarLayout.holyPowerWidthBonusPx
+                        : 0,
+                      manaBarWidthBonusPx: selectedHealerIsHolyPaladin
+                        ? normalizedCooldownResourceBarLayout.manaWidthBonusPx
+                        : 0,
+                      showBindings: true,
+                      enableWowheadTooltip: true,
+                      enableDragReorder: true,
+                      interactive: false
+                    })}
+                    <div className="h-px bg-slate-600/50 mt-4" />
+                    <div className="mt-4">
+                      {renderCooldownManagerBar({
+                        iconSizePx: cooldownManagerPrimaryIconSizePx,
+                        holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellWidthPx,
+                        holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellHeightPx,
+                        spellOrder: reserveCooldownSpellOrder,
+                        groupKey: "reserve",
+                        interactive: false,
+                        enableWowheadTooltip: true,
+                        showHolyPower: false,
+                        showManaBar: false,
+                        showCastBar: false,
+                        showBindings: true,
+                        enableDragReorder: true,
+                        showFrame: false
+                      })}
+                    </div>
+                    <p className="mt-2 text-center text-xs text-slate-400">
+                      스킬은 있지만 쿨다운 매니저에는 표시되지 않는 애들
+                    </p>
+                  </div>
+                  {selectedHealerSupportsCooldownResourceOrder ? (
+                    <div className="absolute left-full top-0 ml-3 w-max max-w-[240px] rounded-lg border border-slate-700/80 bg-slate-900/55 p-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.4)]">
+                      <p className="text-[11px] font-semibold text-slate-200">
+                        {selectedHealerIsHolyPaladin ? "바 순서 및 너비" : "순서"}
+                      </p>
+                      <div className="mt-1 space-y-1">
+                        {setupVisibleCooldownResourceSectionOrder.map((sectionKey, index) => (
+                          <div
+                            className="flex items-center justify-between rounded border border-slate-700/70 bg-black/35 px-1.5 py-1"
+                            key={`resource-layout-order-${sectionKey}`}
+                          >
+                            <span className="text-[10px] font-semibold text-slate-200">
+                              {COOLDOWN_RESOURCE_SECTION_LABEL_BY_KEY[sectionKey] ?? sectionKey}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                                disabled={index <= 0}
+                                onClick={() => moveCooldownResourceSection(sectionKey, -1, setupVisibleCooldownResourceSectionKeys)}
+                                type="button"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                                disabled={index >= setupVisibleCooldownResourceSectionOrder.length - 1}
+                                onClick={() => moveCooldownResourceSection(sectionKey, 1, setupVisibleCooldownResourceSectionKeys)}
+                                type="button"
+                              >
+                                ▼
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {selectedHealerIsHolyPaladin ? (
+                        <div className="mt-1 space-y-1">
+                          <div className="rounded border border-yellow-300/35 bg-black/40 px-1.5 py-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-semibold text-yellow-200">
+                                {`자원바 너비 +${normalizedCooldownResourceBarLayout.holyPowerWidthBonusPx}px`}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                                  disabled={normalizedCooldownResourceBarLayout.holyPowerWidthBonusPx <= COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_MIN_PX}
+                                  onClick={() => adjustCooldownResourceBarWidth("holyPower", -COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_STEP_PX)}
+                                  type="button"
+                                >
+                                  -
+                                </button>
+                                <button
+                                  className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                                  disabled={normalizedCooldownResourceBarLayout.holyPowerWidthBonusPx >= COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_MAX_PX}
+                                  onClick={() => adjustCooldownResourceBarWidth("holyPower", COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_STEP_PX)}
+                                  type="button"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="rounded border border-blue-300/35 bg-black/40 px-1.5 py-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-semibold text-blue-200">
+                                {`마나바 너비 +${normalizedCooldownResourceBarLayout.manaWidthBonusPx}px`}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                                  disabled={normalizedCooldownResourceBarLayout.manaWidthBonusPx <= COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_MIN_PX}
+                                  onClick={() => adjustCooldownResourceBarWidth("mana", -COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_STEP_PX)}
+                                  type="button"
+                                >
+                                  -
+                                </button>
+                                <button
+                                  className="h-4 w-4 rounded border border-slate-600/80 bg-black/70 text-[9px] leading-none text-slate-100 disabled:opacity-35"
+                                  disabled={normalizedCooldownResourceBarLayout.manaWidthBonusPx >= COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_MAX_PX}
+                                  onClick={() => adjustCooldownResourceBarWidth("mana", COOLDOWN_RESOURCE_BAR_WIDTH_BONUS_STEP_PX)}
+                                  type="button"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  className="rounded-lg border border-sky-400/60 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!canUseCloudKeybindProfile || running || keybindProfileSyncBusy}
+                  onClick={handleSaveCloudKeybindProfile}
+                  type="button"
+                >
+                  내 세팅 저장
+                </button>
+                <button
+                  className="rounded-lg border border-slate-500/70 bg-slate-700/25 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:bg-slate-700/40 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!canUseCloudKeybindProfile || running || keybindProfileSyncBusy}
+                  onClick={() => {
+                    void loadCloudKeybindProfile({ silent: false });
+                  }}
+                  type="button"
+                >
+                  내 세팅 불러오기
+                </button>
+              </div>
+              {keybindProfileSyncBusy ? (
+                <p className="mt-1 text-center text-[11px] text-sky-200">개인 세팅 동기화 중...</p>
+              ) : null}
+              {cloudProfileStatusText ? (
+                <p
+                  className={`mt-1 text-center text-[11px] ${cloudProfileStatusTone === "success"
+                    ? "text-emerald-200"
+                    : cloudProfileStatusTone === "error"
+                      ? "text-rose-200"
+                      : "text-slate-300"
+                    }`}
+                >
+                  {cloudProfileStatusText}
+                </p>
+              ) : null}
 
               <div className="mt-4 flex items-center justify-center gap-2">
                 <button
@@ -7436,11 +9355,12 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
                   className="relative"
                   style={{
                     width: `${raidGridWidthPx}px`,
-                    paddingTop: `${RAID_FRAME_VISUAL_CONFIG.topOverlayReservedHeightPx}px`
+                    paddingTop: `${combatCooldownManagerReservedHeightPx}px`
                   }}
                 >
                   <div
                     className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2"
+                    ref={combatCooldownManagerRef}
                     style={{
                       top: `${RAID_FRAME_VISUAL_CONFIG.topOverlayBaseOffsetYPx}px`
                     }}
@@ -7487,17 +9407,32 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
                         </div>
                       );
                     })}
-                    {renderCooldownManagerBar({
-                      iconSizePx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayIconSizePx,
-                      holyPowerCellWidthPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellWidthPx,
-                      holyPowerCellHeightPx: COOLDOWN_MANAGER_LAYOUT_CONFIG.overlayHolyPowerCellHeightPx,
-                      interactive: false,
-                      showHolyPower: activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG,
-                      showManaBar: true,
-                      showCastBar: true,
-                      showBindings: true,
-                      enableDragReorder: false
-                    })}
+                    <div className="rounded-lg border border-slate-700 bg-black/70 p-1.5 shadow-[0_8px_28px_rgba(0,0,0,0.45)]">
+                      {renderCooldownManagerSpellResourceLayout({
+                        primaryIconSizePx: activeCooldownManagerPrimaryIconSizePx,
+                        secondaryIconSizePx: activeCooldownManagerSecondaryIconSizePx,
+                        primarySpellOrder: managerCooldownSpellOrder,
+                        secondarySpellOrder: secondaryCooldownSpellOrder,
+                        showHolyPower: activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG,
+                        showManaBar: true,
+                        showCastBar: true,
+                        resourceSectionOrder:
+                          activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG ||
+                            activeCombatHealerSlug === HOLY_PRIEST_HEALER_SLUG
+                            ? activeCooldownResourceBarLayout.sectionOrder
+                            : DEFAULT_COOLDOWN_RESOURCE_BAR_LAYOUT.sectionOrder,
+                        holyPowerWidthBonusPx: activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG
+                          ? activeCooldownResourceBarLayout.holyPowerWidthBonusPx
+                          : 0,
+                        manaBarWidthBonusPx: activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG
+                          ? activeCooldownResourceBarLayout.manaWidthBonusPx
+                          : 0,
+                        showBindings: true,
+                        enableWowheadTooltip: false,
+                        enableDragReorder: false,
+                        interactive: false
+                      })}
+                    </div>
                   </div>
 
                   <div className="grid gap-0 overflow-hidden rounded-md border border-slate-900" style={raidGridStyle}>
@@ -7868,290 +9803,299 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
             </div>
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-[1fr_2fr]">
-            <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
-              <h2 className="text-base font-semibold text-violet-100">전투 기록</h2>
-              {currentSnapshot.finished ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {combatRecordCards.map((card) => (
-                    <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300" key={card.key}>
-                      {card.title}
-                      <p
-                        className={`mt-1 whitespace-pre-line font-semibold ${card.valueTextClassName ?? "text-sm"} ${card.valueClassName}`}
-                      >
-                        {card.value}
-                      </p>
+          {showPostCombatSummaryPanels ? (
+            <>
+              <section className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+                <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+                  <h2 className="text-base font-semibold text-violet-100">전투 기록</h2>
+                  {currentSnapshot.finished ? (
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {combatRecordCards.map((card) => (
+                        <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-300" key={card.key}>
+                          {card.title}
+                          <p
+                            className={`mt-1 whitespace-pre-line font-semibold ${card.valueTextClassName ?? "text-sm"} ${card.valueClassName}`}
+                          >
+                            {card.value}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <p className="mt-3 text-xs text-slate-400">
+                      전투 종료 후 공통 기록(평균 공대 체력/오버힐 비율/사망자 수/남은 마나/트리아지 힐 총량 및 비중)과 직업별 기록을 표시합니다.
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <p className="mt-3 text-xs text-slate-400">
-                  전투 종료 후 공통 기록(평균 공대 체력/오버힐 비율/사망자 수/남은 마나/트리아지 힐 총량 및 비중)과 직업별 기록을 표시합니다.
-                </p>
-              )}
-            </div>
 
-            <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
-              <h2 className="text-base font-semibold text-violet-100">힐 미터기</h2>
-              {healMeterRows.length ? (
-                <div className="mt-3 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/60">
-                  <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,2.2fr)_72px] border-b border-slate-700 bg-slate-900/90 px-2 pt-1.5 pb-1 text-[11px] font-semibold text-slate-400">
-                    <span>스킬</span>
-                    <span className="ml-4">치유량</span>
-                    <span className="text-right">시전 수</span>
-                  </div>
-                  <div className="divide-y divide-slate-800/80">
-                    {displayedHealMeterRows.map((row) => {
-                      const isChildRow = Number(row.depth) > 0;
-                      const hasChildRows = !isChildRow && Array.isArray(row.children) && row.children.length > 0;
-                      const isExpanded = hasChildRows && expandedHealMeterSpellKeys.has(row.spellKey);
-                      return (
-                        <div
-                          className={`grid grid-cols-[minmax(0,1.2fr)_minmax(0,2.2fr)_72px] items-center px-2 py-1.5 ${isChildRow ? "bg-slate-900/35" : ""}`}
-                          key={`heal-meter-${row.parentSpellKey || "root"}-${row.spellKey}-${row.depth || 0}`}
-                        >
-                          <div className={`min-w-0 ${isChildRow ? "pl-3" : ""}`}>
-                            <div className="flex min-w-0 items-center gap-1.5">
-                              {hasChildRows ? (
-                                <button
-                                  aria-expanded={isExpanded}
-                                  aria-label={isExpanded ? "하위 힐량 숨기기" : "하위 힐량 보기"}
-                                  className="h-4 w-4 shrink-0 rounded border border-slate-600/80 text-[10px] font-semibold leading-none text-slate-300 hover:border-violet-300/80 hover:text-violet-100"
-                                  onClick={() => handleToggleHealMeterRowExpand(row.spellKey)}
-                                  type="button"
-                                >
-                                  {isExpanded ? "▾" : "▸"}
-                                </button>
-                              ) : isChildRow ? (
-                                <span className="w-4 shrink-0 text-center text-[10px] font-semibold text-slate-500">└</span>
-                              ) : (
-                                <span className="w-4 shrink-0" />
-                              )}
-                              {row.spellId ? (
-                                <a
-                                  className={`block min-w-0 truncate text-xs font-semibold ${isChildRow ? "text-slate-300" : "text-slate-100"}`}
-                                  data-wh-icon-size="small"
-                                  data-wh-rename-link="false"
-                                  href={`https://www.wowhead.com/ko/spell=${row.spellId}`}
-                                  rel="noreferrer"
-                                  target="_blank"
-                                  title={row.spellName}
-                                >
-                                  {row.spellName}
-                                </a>
-                              ) : (
-                                <div className="flex min-w-0 items-center gap-2" title={row.spellName}>
-                                  <img
-                                    alt={row.spellName}
-                                    className="h-4 w-4 shrink-0 rounded-[2px] border border-black/50 object-cover"
-                                    onError={(event) => {
-                                      if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
-                                        return;
-                                      }
-                                      event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
-                                    }}
-                                    src={row.iconUrl}
-                                  />
-                                  <span className={`truncate text-xs font-semibold ${isChildRow ? "text-slate-300" : "text-slate-100"}`}>
-                                    {row.spellName}
-                                  </span>
+                <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+                  <h2 className="text-base font-semibold text-violet-100">힐 미터기</h2>
+                  {healMeterRows.length ? (
+                    <div className="mt-3 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/60">
+                      <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,2.2fr)_72px] border-b border-slate-700 bg-slate-900/90 px-2 pt-1.5 pb-1 text-[11px] font-semibold text-slate-400">
+                        <span>스킬</span>
+                        <span className="ml-4">치유량</span>
+                        <span className="text-right">시전 수</span>
+                      </div>
+                      <div className="divide-y divide-slate-800/80">
+                        {displayedHealMeterRows.map((row) => {
+                          const isChildRow = Number(row.depth) > 0;
+                          const hasChildRows = !isChildRow && Array.isArray(row.children) && row.children.length > 0;
+                          const isExpanded = hasChildRows && expandedHealMeterSpellKeys.has(row.spellKey);
+                          return (
+                            <div
+                              className={`grid grid-cols-[minmax(0,1.2fr)_minmax(0,2.2fr)_72px] items-center px-2 py-1.5 ${isChildRow ? "bg-slate-900/35" : ""}`}
+                              key={`heal-meter-${row.parentSpellKey || "root"}-${row.spellKey}-${row.depth || 0}`}
+                            >
+                              <div className={`min-w-0 ${isChildRow ? "pl-3" : ""}`}>
+                                <div className="flex min-w-0 items-center gap-1.5">
+                                  {hasChildRows ? (
+                                    <button
+                                      aria-expanded={isExpanded}
+                                      aria-label={isExpanded ? "하위 힐량 숨기기" : "하위 힐량 보기"}
+                                      className="h-4 w-4 shrink-0 rounded border border-slate-600/80 text-[10px] font-semibold leading-none text-slate-300 hover:border-violet-300/80 hover:text-violet-100"
+                                      onClick={() => handleToggleHealMeterRowExpand(row.spellKey)}
+                                      type="button"
+                                    >
+                                      {isExpanded ? "▾" : "▸"}
+                                    </button>
+                                  ) : isChildRow ? (
+                                    <span className="w-4 shrink-0 text-center text-[10px] font-semibold text-slate-500">└</span>
+                                  ) : (
+                                    <span className="w-4 shrink-0" />
+                                  )}
+                                  {row.spellId ? (
+                                    <a
+                                      className={`block min-w-0 truncate text-xs font-semibold ${isChildRow ? "text-slate-300" : "text-slate-100"}`}
+                                      data-wh-icon-size="small"
+                                      data-wh-rename-link="false"
+                                      href={`https://www.wowhead.com/ko/spell=${row.spellId}`}
+                                      rel="noreferrer"
+                                      target="_blank"
+                                      title={row.spellName}
+                                    >
+                                      {row.spellName}
+                                    </a>
+                                  ) : (
+                                    <div className="flex min-w-0 items-center gap-2" title={row.spellName}>
+                                      <img
+                                        alt={row.spellName}
+                                        className="h-4 w-4 shrink-0 rounded-[2px] border border-black/50 object-cover"
+                                        onError={(event) => {
+                                          if (event.currentTarget.src === DEFAULT_SPELL_ICON_URL) {
+                                            return;
+                                          }
+                                          event.currentTarget.src = DEFAULT_SPELL_ICON_URL;
+                                        }}
+                                        src={row.iconUrl}
+                                      />
+                                      <span className={`truncate text-xs font-semibold ${isChildRow ? "text-slate-300" : "text-slate-100"}`}>
+                                        {row.spellName}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="w-14 shrink-0 text-right text-[11px] font-semibold text-slate-200">
+                                  {row.ratioPct.toFixed(2)}%
+                                </span>
+                                <div className="h-4 min-w-0 flex-1 overflow-hidden rounded-[2px] border border-slate-700 bg-gray-950/90">
+                                  <div
+                                    className={`h-full ${isChildRow ? "bg-violet-300/70" : "bg-violet-400/80"}`}
+                                    style={{
+                                      width: `${Math.max(
+                                        2,
+                                        Math.min(
+                                          100,
+                                          healMeterMaxAmount > 0
+                                            ? (Math.max(0, Number(row.amount ?? 0)) / healMeterMaxAmount) * 100
+                                            : 0
+                                        )
+                                      )}%`
+                                    }}
+                                  />
+                                </div>
+                                <span className={`w-16 shrink-0 text-right text-xs font-semibold ${isChildRow ? "text-violet-200/80" : "text-violet-100"}`}>
+                                  {formatHealingAmount(row.amount)}
+                                </span>
+                              </div>
+                              <div className={`text-right text-xs font-semibold ${isChildRow ? "text-slate-300" : "text-slate-200"}`}>
+                                {row.casts === null ? "-" : row.casts}
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="w-14 shrink-0 text-right text-[11px] font-semibold text-slate-200">
-                              {row.ratioPct.toFixed(2)}%
-                            </span>
-                            <div className="h-4 min-w-0 flex-1 overflow-hidden rounded-[2px] border border-slate-700 bg-gray-950/90">
-                              <div
-                                className={`h-full ${isChildRow ? "bg-violet-300/70" : "bg-violet-400/80"}`}
-                                style={{
-                                  width: `${Math.max(
-                                    2,
-                                    Math.min(
-                                      100,
-                                      healMeterMaxAmount > 0
-                                        ? (Math.max(0, Number(row.amount ?? 0)) / healMeterMaxAmount) * 100
-                                        : 0
-                                    )
-                                  )}%`
-                                }}
-                              />
-                            </div>
-                            <span className={`w-16 shrink-0 text-right text-xs font-semibold ${isChildRow ? "text-violet-200/80" : "text-violet-100"}`}>
-                              {formatHealingAmount(row.amount)}
-                            </span>
-                          </div>
-                          <div className={`text-right text-xs font-semibold ${isChildRow ? "text-slate-300" : "text-slate-200"}`}>
-                            {row.casts === null ? "-" : row.casts}
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-slate-400">치유량 집계가 아직 없습니다.</p>
+                  )}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                      CPM
+                      <p className="mt-1 text-sm font-semibold text-violet-200">{finalCpm.toFixed(1)}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                      자힐 비중
+                      <p className="mt-1 text-sm font-semibold text-emerald-200">{selfHealRatioPct.toFixed(1)}%</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                      <p className="font-semibold text-slate-200">스킬 맞은 피해</p>
+                      <p className="mt-0.5 text-[11px] leading-tight text-slate-400">100이면 1회 사망</p>
+                      <p className="mt-1 text-sm font-semibold text-rose-200">{canvasRawDamageTaken.toFixed(1)}</p>
+                      <p className="mt-1 text-[11px] leading-tight text-slate-400">미사일: {canvasHitCounts.missile}회</p>
+                      <p className="text-[11px] leading-tight text-slate-400">막대 바닥: {canvasHitCounts.hazardBar}회</p>
+                      {showZoneFloorHitCount ? (
+                        <p className="text-[11px] leading-tight text-slate-400">
+                          장판 바닥: {canvasHitCounts.zoneFloor}회
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                      <p className="font-semibold text-slate-200">피격 복구 힐 비중</p>
+                      <p className="mt-0.5 text-[11px] leading-tight text-slate-400">
+                        전체 힐 대비 비율
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-violet-200">{canvasDamageHealingSharePct.toFixed(1)}%</p>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <p className="mt-3 text-xs text-slate-400">치유량 집계가 아직 없습니다.</p>
-              )}
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
-                  CPM
-                  <p className="mt-1 text-sm font-semibold text-violet-200">{finalCpm.toFixed(1)}</p>
-                </div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
-                  자힐 비중
-                  <p className="mt-1 text-sm font-semibold text-emerald-200">{selfHealRatioPct.toFixed(1)}%</p>
-                </div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
-                  <p className="font-semibold text-slate-200">스킬 맞은 피해</p>
-                  <p className="mt-0.5 text-[11px] leading-tight text-slate-400">100이면 1회 사망</p>
-                  <p className="mt-1 text-sm font-semibold text-rose-200">{canvasRawDamageTaken.toFixed(1)}</p>
-                  <p className="mt-1 text-[11px] leading-tight text-slate-400">미사일: {canvasHitCounts.missile}회</p>
-                  <p className="text-[11px] leading-tight text-slate-400">막대 바닥: {canvasHitCounts.hazardBar}회</p>
-                  {showZoneFloorHitCount ? (
-                    <p className="text-[11px] leading-tight text-slate-400">
-                      장판 바닥: {canvasHitCounts.zoneFloor}회
-                    </p>
-                  ) : null}
-                </div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
-                  <p className="font-semibold text-slate-200">피격 복구 힐 비중</p>
-                  <p className="mt-0.5 text-[11px] leading-tight text-slate-400">
-                    전체 힐 대비 비율
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-violet-200">{canvasDamageHealingSharePct.toFixed(1)}%</p>
-                </div>
-              </div>
-            </div>
-          </section>
+              </section>
 
-          <section className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold text-violet-100">피드백</h2>
-                  <p className="mt-1 text-xs text-slate-400">전투 종료 후 기준치 기반으로 결과가 표시됩니다.</p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="rounded-xl border border-violet-400/45 bg-violet-500/10 px-3 py-2 text-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-violet-200">Score</p>
-                    <p className="mt-0.5 text-2xl font-extrabold leading-none text-violet-100">
-                      {isSuccessfulPracticeResult && finalScoreBreakdown ? `${finalScoreBreakdown.totalScore.toFixed(1)}점` : "-"}
-                    </p>
+              <section className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-base font-semibold text-violet-100">피드백</h2>
+                      <p className="mt-1 text-xs text-slate-400">전투 종료 후 기준치 기반으로 결과가 표시됩니다.</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="rounded-xl border border-violet-400/45 bg-violet-500/10 px-3 py-2 text-center">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-violet-200">Score</p>
+                        <p className="mt-0.5 text-2xl font-extrabold leading-none text-violet-100">
+                          {isSuccessfulPracticeResult && finalScoreBreakdown ? `${finalScoreBreakdown.totalScore.toFixed(1)}점` : "-"}
+                        </p>
+                      </div>
+                      {showRankingRegisterControl ? (
+                        isLoggedIn ? (
+                          <button
+                            className="rounded-lg border border-violet-400/70 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-100 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={rankingSaveStatus === "saving" || rankingSaveStatus === "saved"}
+                            onClick={() => {
+                              void saveCurrentRunRanking({ force: rankingSaveStatus === "error" });
+                            }}
+                            type="button"
+                          >
+                            {rankingSaveButtonLabel}
+                          </button>
+                        ) : (
+                          <p className="text-[11px] text-slate-400">로그인 시 랭킹 등록 가능</p>
+                        )
+                      ) : null}
+                    </div>
                   </div>
-                  {showRankingRegisterControl ? (
-                    isLoggedIn ? (
-                      <button
-                        className="rounded-lg border border-violet-400/70 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-100 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={rankingSaveStatus === "saving" || rankingSaveStatus === "saved"}
-                        onClick={() => {
-                          void saveCurrentRunRanking({ force: rankingSaveStatus === "error" });
-                        }}
-                        type="button"
-                      >
-                        {rankingSaveButtonLabel}
-                      </button>
-                    ) : (
-                      <p className="text-[11px] text-slate-400">로그인 시 랭킹 등록 가능</p>
-                    )
-                  ) : null}
+                  <div className="mt-3">
+                    <article className="rounded-lg border border-slate-700 bg-slate-900/65 p-3">
+                      {feedbackGameOverReason ? (
+                        <p className="text-[12px] font-semibold leading-tight text-rose-200">
+                          전투 결과: 실패 ({feedbackGameOverReason})
+                        </p>
+                      ) : isSuccessfulPracticeResult ? (
+                        <p className="text-[12px] font-semibold leading-tight text-rose-200">
+                          {`전투 결과: 성공 (${Math.max(0, Math.round(Number(currentSnapshot?.metrics?.deaths ?? 0))) > 0
+                            ? `사망자 ${Math.max(0, Math.round(Number(currentSnapshot?.metrics?.deaths ?? 0)))}명`
+                            : "전원 생존"
+                            })`}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] font-semibold leading-tight text-slate-300">
+                          전투 결과: 전투 종료 후 표시됩니다.
+                        </p>
+                      )}
+                      {/* {finalScoreBreakdown ? (
+                        <p className="mt-2 text-[11px] leading-tight text-slate-300">
+                          점수 상세: 사망 {finalScoreBreakdown.deathsScore.toFixed(1)}/20, 오버힐 {finalScoreBreakdown.overhealingScore.toFixed(1)}/15,
+                          평균 공대 체력 {finalScoreBreakdown.averageRaidHealthScore.toFixed(1)}/20, 남은 마나 {finalScoreBreakdown.remainingManaScore.toFixed(1)}/10,
+                          CPM {finalScoreBreakdown.cpmScore.toFixed(1)}/10, 자힐 비중 {finalScoreBreakdown.selfHealScore.toFixed(1)}/5,
+                          힐러 전용 {finalScoreBreakdown.healerSpecificScore.toFixed(1)}/20
+                        </p>
+                      ) : null} */}
+                      {activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG ? (
+                        isSuccessfulPracticeResult ? (
+                          holyPaladinFeedbackLines.length ? (
+                            <div className="mt-2 space-y-1">
+                              {holyPaladinFeedbackLines.map((line, index) => (
+                                <p className="text-[11px] leading-tight text-amber-200" key={`holy-paladin-feedback-${index}`}>
+                                  - {line}
+                                </p>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-[11px] leading-tight text-emerald-200">기준치를 모두 만족했습니다.</p>
+                          )
+                        ) : (
+                          <p className="mt-2 text-[11px] leading-tight text-slate-400">
+                            신기 피드백은 전투 성공 후 표시됩니다.
+                          </p>
+                        )
+                      ) : activeCombatHealerSlug === HOLY_PRIEST_HEALER_SLUG ? (
+                        isSuccessfulPracticeResult ? (
+                          holyPriestFeedbackLines.length ? (
+                            <div className="mt-2 space-y-1">
+                              {holyPriestFeedbackLines.map((line, index) => (
+                                <p className="text-[11px] leading-tight text-amber-200" key={`holy-priest-feedback-${index}`}>
+                                  - {line}
+                                </p>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-[11px] leading-tight text-emerald-200">기준치를 모두 만족했습니다.</p>
+                          )
+                        ) : (
+                          <p className="mt-2 text-[11px] leading-tight text-slate-400">
+                            신사 피드백은 전투 성공 후 표시됩니다.
+                          </p>
+                        )
+                      ) : (
+                        <p className="mt-2 text-[11px] leading-tight text-slate-400">
+                          선택한 힐러 전용 평가 항목이 표시됩니다.
+                        </p>
+                      )}
+                    </article>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-3">
-                <article className="rounded-lg border border-slate-700 bg-slate-900/65 p-3">
-                  {feedbackGameOverReason ? (
-                    <p className="text-[12px] font-semibold leading-tight text-rose-200">
-                      전투 결과: 실패 ({feedbackGameOverReason})
-                    </p>
-                  ) : isSuccessfulPracticeResult ? (
-                    <p className="text-[12px] font-semibold leading-tight text-rose-200">
-                      {`전투 결과: 성공 (${Math.max(0, Math.round(Number(currentSnapshot?.metrics?.deaths ?? 0))) > 0
-                        ? `사망자 ${Math.max(0, Math.round(Number(currentSnapshot?.metrics?.deaths ?? 0)))}명`
-                        : "전원 생존"
-                        })`}
-                    </p>
-                  ) : (
-                    <p className="text-[11px] font-semibold leading-tight text-slate-300">
-                      전투 결과: 전투 종료 후 표시됩니다.
-                    </p>
-                  )}
-                  {/* {finalScoreBreakdown ? (
-                    <p className="mt-2 text-[11px] leading-tight text-slate-300">
-                      점수 상세: 사망 {finalScoreBreakdown.deathsScore.toFixed(1)}/20, 오버힐 {finalScoreBreakdown.overhealingScore.toFixed(1)}/15,
-                      평균 공대 체력 {finalScoreBreakdown.averageRaidHealthScore.toFixed(1)}/20, 남은 마나 {finalScoreBreakdown.remainingManaScore.toFixed(1)}/10,
-                      CPM {finalScoreBreakdown.cpmScore.toFixed(1)}/10, 자힐 비중 {finalScoreBreakdown.selfHealScore.toFixed(1)}/5,
-                      힐러 전용 {finalScoreBreakdown.healerSpecificScore.toFixed(1)}/20
-                    </p>
-                  ) : null} */}
-                  {activeCombatHealerSlug === HOLY_PALADIN_HEALER_SLUG ? (
-                    isSuccessfulPracticeResult ? (
-                      holyPaladinFeedbackLines.length ? (
-                        <div className="mt-2 space-y-1">
-                          {holyPaladinFeedbackLines.map((line, index) => (
-                            <p className="text-[11px] leading-tight text-amber-200" key={`holy-paladin-feedback-${index}`}>
-                              - {line}
-                            </p>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-[11px] leading-tight text-emerald-200">기준치를 모두 만족했습니다.</p>
-                      )
-                    ) : (
-                      <p className="mt-2 text-[11px] leading-tight text-slate-400">
-                        신기 피드백은 전투 성공 후 표시됩니다.
-                      </p>
-                    )
-                  ) : activeCombatHealerSlug === HOLY_PRIEST_HEALER_SLUG ? (
-                    isSuccessfulPracticeResult ? (
-                      holyPriestFeedbackLines.length ? (
-                        <div className="mt-2 space-y-1">
-                          {holyPriestFeedbackLines.map((line, index) => (
-                            <p className="text-[11px] leading-tight text-amber-200" key={`holy-priest-feedback-${index}`}>
-                              - {line}
-                            </p>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-[11px] leading-tight text-emerald-200">기준치를 모두 만족했습니다.</p>
-                      )
-                    ) : (
-                      <p className="mt-2 text-[11px] leading-tight text-slate-400">
-                        신사 피드백은 전투 성공 후 표시됩니다.
-                      </p>
-                    )
-                  ) : (
-                    <p className="mt-2 text-[11px] leading-tight text-slate-400">
-                      선택한 힐러 전용 평가 항목이 표시됩니다.
-                    </p>
-                  )}
-                </article>
-              </div>
-            </div>
 
-            <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
-              <h2 className="text-base font-semibold text-violet-100">이벤트 로그</h2>
-              <div className="mt-3 max-h-64 space-y-1 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/60 p-2">
-                {sortedEventLogs.map((log) => (
-                  <p className={`text-xs ${logColorClass(log.type)}`} key={log.id}>
-                    [{formatTime(log.timeMs)}] {log.text}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </section>
+                <div className="rounded-2xl border border-slate-700 bg-gray-950/55 p-4">
+                  <h2 className="text-base font-semibold text-violet-100">이벤트 로그</h2>
+                  <div className="mt-3 max-h-64 space-y-1 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/60 p-2">
+                    {sortedEventLogs.map((log) => (
+                      <p className={`text-xs ${logColorClass(log.type)}`} key={log.id}>
+                        [{formatTime(log.timeMs)}] {log.text}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </section>
 
-          {!running ? (
-            <div className="flex justify-center">
-              <button
-                className="rounded-lg border border-violet-300/70 bg-violet-500/20 px-5 py-2 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/30"
-                onClick={handleRestartPractice}
-                type="button"
-              >
-                다시 시작하기
-              </button>
-            </div>
-          ) : null}
+              <div className="flex justify-center">
+                <button
+                  className="rounded-lg border border-violet-300/70 bg-violet-500/20 px-5 py-2 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/30"
+                  onClick={handleRestartPractice}
+                  type="button"
+                >
+                  다시 시작하기
+                </button>
+              </div>
+            </>
+          ) : (
+            <section className="rounded-2xl border border-slate-700 bg-gray-950/45 p-4 text-sm text-slate-300">
+              <h2 className="text-base font-semibold text-violet-100">전투 데이터 집계 중</h2>
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                전투 중에는 성능 최적화를 위해 힐 미터기/CPM/전투 기록/이벤트 로그를 숨기고, 전투 종료 후 한 번에 표시합니다.
+              </p>
+            </section>
+          )}
         </div>
       ) : (
         <section className="rounded-2xl border border-slate-700 bg-gray-950/45 p-4 text-sm text-slate-400">
@@ -8334,6 +10278,43 @@ export function HealerPracticeSimulator({ onCombatRunningChange } = {}) {
               )}
             </div>
           </section>
+        </div>
+      ) : null}
+
+      {patchNotesModalOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setPatchNotesModalOpen(false)}
+            role="presentation"
+          />
+          <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/50 p-4">
+              <h2 className="text-xl font-bold text-white">
+                {selectedHealerMeta?.shortName} 패치 노트
+              </h2>
+              <button
+                className="rounded-lg p-2 hover:bg-slate-800"
+                onClick={() => setPatchNotesModalOpen(false)}
+                type="button"
+              >
+                <span className="sr-only">닫기</span>
+                <span className="text-slate-400">✕</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {HEALER_PRACTICE_PATCH_NOTES_BY_HEALER[selectedHealerSlug]?.length ? (
+                HEALER_PRACTICE_PATCH_NOTES_BY_HEALER[selectedHealerSlug].map((note, index) => (
+                  <div key={index} className="rounded-lg bg-slate-800/50 p-3">
+                    <p className="font-semibold text-violet-300 mb-1">{note.date}</p>
+                    <p className="text-sm text-slate-300 whitespace-pre-wrap">{note.text}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-8">아직 등록된 패치 노트가 없습니다.</p>
+              )}
+            </div>
+          </div>
         </div>
       ) : null}
     </div>

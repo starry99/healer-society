@@ -13,6 +13,22 @@ export const HOLY_PALADIN_DEFAULT_STATS = Object.freeze({
 // 기존 globalManaTuningScale 기본값(1.2)과 동일하게 시작.
 export const HOLY_PALADIN_MANA_TUNING_SCALE = 1.2;
 
+// 빛의 섬광/성스러운 빛 시전 사운드 설정 (public 경로 기준)
+export const HOLY_PALADIN_SOUND_CONFIG = Object.freeze({
+  flashOfLightAndHolyLightCastSfxEnabled: true,
+  flashOfLightAndHolyLightCastSfxSrc: "/sounds/FX_Holy_Magic_Cast_Small_05.ogg",
+  flashOfLightAndHolyLightCastSfxVolume: 0.03,
+  holyShockCastSfxEnabled: true,
+  holyShockCastSfxSrc: "/sounds/FX_Holy_Magic_Cast_Small_05.ogg",
+  holyShockCastSfxVolume: 0.03,
+  divineTollCastSfxEnabled: true,
+  divineTollCastSfxSrc: "/sounds/toll.ogg",
+  divineTollCastSfxVolume: 0.03,
+  lightOfDawnCastSfxEnabled: true,
+  lightOfDawnCastSfxSrc: "/sounds/SPELL_PR_Revamp_Holy_Precast_Start_Large_01.ogg",
+  lightOfDawnCastSfxVolume: 0.03
+});
+
 // 난이도별 피해 배율/전투 시간/레이드 버스트 패턴 (신성 성기사 전용)
 // scheduledRaidBursts:
 // - startAtSec: 시작 시점(초)
@@ -23,7 +39,7 @@ export const HOLY_PALADIN_PRACTICE_DIFFICULTY_TUNING = Object.freeze({
   normal: Object.freeze({
     label: "일반",
     fixedCombatDurationMinutes: 2,
-    incomingDamageMultiplier: 0.45,
+    incomingDamageMultiplier: 0.46,
     damageBreakEveryMs: 30000,
     damageBreakDurationMs: 5000,
     scheduledRaidBursts: Object.freeze([
@@ -72,6 +88,7 @@ export const HOLY_PALADIN_PRACTICE_DIFFICULTY_TUNING = Object.freeze({
 // true: 활성화, false: 비활성화
 export const HOLY_PALADIN_ADDED_TALENT_TOGGLES = Object.freeze({
   infusionOfLight: true,
+  divinePurpose: true,
   handOfFaith: true,
   holyRevelation: true,
   radiantLight: true,
@@ -96,9 +113,9 @@ export const HOLY_PALADIN_PRACTICE_TUNING = Object.freeze({
   healAmountCoefficients: Object.freeze({
     holyShock: 8,
     flashOfLight: 4.9,
-    holyLight: 43.67, // 44.9
-    lightOfDawn: 3.58,
-    eternalFlame: 13.68,
+    holyLight: 43.4, // 44.9
+    lightOfDawn: 3.6,
+    eternalFlame: 13.6,
     eternalFlameTick: 0.38,
     sunSear: 0.76
   }),
@@ -107,7 +124,7 @@ export const HOLY_PALADIN_PRACTICE_TUNING = Object.freeze({
     holyShock: 0.0224,
     flashOfLight: 0.006,
     judgment: 0.0114,
-    holyLight: 0.076,
+    holyLight: 0.0756,
     lightOfDawn: 0.006,
     eternalFlame: 0.006,
     divineBlessing: 0,
@@ -155,6 +172,12 @@ export const HOLY_PALADIN_INFUSION_OF_LIGHT_CONFIG = Object.freeze({
   flashOfLightHealMultiplier: 2
 });
 
+export const HOLY_PALADIN_DIVINE_PURPOSE_CONFIG = Object.freeze({
+  procChance: 0.15,
+  healBonusPct: 0.15,
+  durationMs: 12000
+});
+
 export const HOLY_PALADIN_CRIT_CONFIG = Object.freeze({
   defaultCritHealMultiplier: 2,
   holyShockCritChanceBonus: 0.08,
@@ -173,7 +196,7 @@ export const HOLY_PALADIN_SUN_SEAR_CONFIG = Object.freeze({
 export const HOLY_PALADIN_DAWNLIGHT_CONFIG = Object.freeze({
   chargesFromDivineToll: 2,
   empowermentDurationMs: 30000,
-  totalHealRatio: 5.382,
+  totalHealRatio: 13.33,
   durationMs: 8000,
   tickMs: 1000
 });
@@ -191,6 +214,12 @@ export const COOLDOWN_MANAGER_SPELL_KEYS = Object.freeze([
   "divineToll",
   "avengingWrath",
   "auraMastery",
+  // "divineProtection",
+  // "divineBlessing"
+]);
+
+// 쿨다운 매니저 2번째 줄 기본 스킬
+export const COOLDOWN_MANAGER_SECONDARY_SPELL_KEYS = Object.freeze([
   "divineProtection",
   "divineBlessing"
 ]);
@@ -208,7 +237,9 @@ export const SPELL_ICON_URL_BY_KEY = Object.freeze({
   holyShock: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_searinglight.jpg",
   judgment: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_righteousfury.jpg",
   flashOfLight: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_flashheal.jpg",
-  holyLight: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_holybolt.jpg",
+  holyLight: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_surgeoflight.jpg",
+  infusionOfLight: "https://wow.zamimg.com/images/wow/icons/large/ability_paladin_infusionoflight.jpg",
+  divinePurpose: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_divinepurpose.jpg",
   lightOfDawn: "https://wow.zamimg.com/images/wow/icons/large/spell_paladin_lightofdawn.jpg",
   eternalFlame: "https://wow.zamimg.com/images/wow/icons/large/inv_torch_thrown.jpg",
   divineBlessing: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_layonhands.jpg",
@@ -216,7 +247,7 @@ export const SPELL_ICON_URL_BY_KEY = Object.freeze({
   beaconOfFaith: "https://wow.zamimg.com/images/wow/icons/large/ability_paladin_beaconoflight.jpg",
   beaconOfSavior: "https://wow.zamimg.com/images/wow/icons/large/inv12_apextalent_paladin_beaconofthesavior.jpg",
   divineToll: "https://wow.zamimg.com/images/wow/icons/large/inv_ability_paladin_divinetoll.jpg",
-  dawnlight: "https://wow.zamimg.com/images/wow/icons/large/spell_paladin_lightofdawn.jpg",
+  dawnlight: "https://wow.zamimg.com/images/wow/icons/large/inv_ability_heraldofthesunpaladin_dawnlight.jpg",
   handOfFaith: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_vindication.jpg",
   avengingWrath: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_avenginewrath.jpg",
   auraMastery: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_auramastery.jpg",
@@ -277,8 +308,22 @@ export const COOLDOWN_MANAGER_SPELL_META = Object.freeze({
 // - 아이콘 크기/상단 Y 오프셋은 healerPracticeGlobalSettings.js 공통 상수 사용
 export const HOLY_PALADIN_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
+    key: "infusionOfLight",
+    label: "빛 주입",
+    spellId: 54149,
+    iconUrl: SPELL_ICON_URL_BY_KEY.infusionOfLight,
+    buffRemainingMsKey: "infusionOfLightMs",
+    stackCountBuffKey: "infusionOfLightCharges",
+    showAboveCooldownManager: true,
+    showOnMyRaidFrame: false,
+    showCountdownOnOverlay: true,
+    showCountdownOnRaidFrame: false,
+    showStackCountOnOverlay: true
+  }),
+  Object.freeze({
     key: "avengingWrath",
     label: "응징의 격노",
+    spellId: 31884,
     iconUrl: SPELL_ICON_URL_BY_KEY.avengingWrath,
     buffRemainingMsKey: "avengingWrathMs",
     showAboveCooldownManager: true,
@@ -289,8 +334,21 @@ export const HOLY_PALADIN_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "auraMastery",
     label: "오라 숙련",
+    spellId: 31821,
     iconUrl: SPELL_ICON_URL_BY_KEY.auraMastery,
     buffRemainingMsKey: "auraMasteryMs",
+    defaultEnabledInSetup: false,
+    showAboveCooldownManager: true,
+    showOnMyRaidFrame: false,
+    showCountdownOnOverlay: true,
+    showCountdownOnRaidFrame: false
+  }),
+  Object.freeze({
+    key: "divinePurpose",
+    label: "신성한 목적",
+    spellId: 223819,
+    iconUrl: SPELL_ICON_URL_BY_KEY.divinePurpose,
+    buffRemainingMsKey: "divinePurposeMs",
     showAboveCooldownManager: true,
     showOnMyRaidFrame: false,
     showCountdownOnOverlay: true,
@@ -299,6 +357,7 @@ export const HOLY_PALADIN_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "handOfFaith",
     label: "신앙의 손",
+    spellId: 1242008,
     iconUrl: SPELL_ICON_URL_BY_KEY.handOfFaith,
     buffRemainingMsKey: "handOfFaithMs",
     stackCountBuffKey: "handOfFaithCharges",
@@ -311,6 +370,7 @@ export const HOLY_PALADIN_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "dawnlight",
     label: "새벽빛",
+    spellId: 431377,
     iconUrl: SPELL_ICON_URL_BY_KEY.dawnlight,
     buffRemainingMsKey: "dawnlightEmpowermentMs",
     stackCountBuffKey: "dawnlightEmpowermentCharges",
@@ -323,8 +383,10 @@ export const HOLY_PALADIN_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "divineProtection",
     label: "신의 가호",
+    spellId: 498,
     iconUrl: SPELL_ICON_URL_BY_KEY.divineProtection,
     buffRemainingMsKey: "divineProtectionMs",
+    defaultEnabledInSetup: false,
     showAboveCooldownManager: true,
     showOnMyRaidFrame: true,
     showCountdownOnOverlay: true,

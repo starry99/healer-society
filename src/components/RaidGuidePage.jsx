@@ -421,12 +421,13 @@ export function RaidGuidePage({ raidMemberMap }) {
                 const rotationAccent = resolveStatAccent(member.color, siteAccentFallback);
                 const talentsExtraStateKey = `${member.slug}:${section.id}:${currentMode}`;
                 const talentCopyStateKey = `${talentsExtraStateKey}:copy`;
+                const talentsExtraDefaultOpen = section.type === "talents";
                 const talentsExtraOpen = Object.prototype.hasOwnProperty.call(
                   talentsExtraOpenByKey,
                   talentsExtraStateKey
                 )
                   ? Boolean(talentsExtraOpenByKey[talentsExtraStateKey])
-                  : false;
+                  : talentsExtraDefaultOpen;
                 const talentCopyString = (section.copyTalentStringByMode?.[currentMode] || "").trim();
                 const talentCopyFeedback = talentCopyFeedbackByKey[talentCopyStateKey] || "";
 

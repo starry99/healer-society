@@ -2,14 +2,15 @@ export const HOLY_PRIEST_HEALER_SLUG = "holy-priest";
 
 export const HOLY_PRIEST_ADDED_TALENT_TOGGLES = Object.freeze({
   halo: true,
-  prayersOfTheVirtuous: true,
+  prayersOfTheVirtuous: false,
   lightweaver: true,
   ultimateSerenity: true,
   divineImage: true,
   seasonOneTier: true,
   upliftingWords: true,
   crisisManagement: true,
-  trailOfLight: true,
+  trailOfLight: false,
+  dispersingLight: true,
   lightsResurgence: true,
   resonantEnergy: true
 });
@@ -28,6 +29,13 @@ export const HOLY_PRIEST_MANA_TUNING_SCALE = 1.05;
 // 신성 사제 기본 마나 재생 배율 (글로벌 기본 재생량에 곱해짐)
 export const HOLY_PRIEST_AUTO_MANA_REGEN_MULTIPLIER = 1.1;
 
+// 치유의 기원 시전 사운드 설정 (public 경로 기준)
+export const HOLY_PRIEST_SOUND_CONFIG = Object.freeze({
+  prayerOfHealingCastSfxEnabled: true,
+  prayerOfHealingCastSfxSrc: "/sounds/SPELL_PR_Revamp_Holy_Precast_Start_Large_01.ogg",
+  prayerOfHealingCastSfxVolume: 0.04
+});
+
 // 난이도별 피해 배율/전투 시간/레이드 버스트 패턴 (신성 사제 전용)
 // scheduledRaidBursts:
 // - startAtSec: 시작 시점(초)
@@ -38,7 +46,7 @@ export const HOLY_PRIEST_PRACTICE_DIFFICULTY_TUNING = Object.freeze({
   normal: Object.freeze({
     label: "일반",
     fixedCombatDurationMinutes: 2,
-    incomingDamageMultiplier: 0.5,
+    incomingDamageMultiplier: 0.52,
     damageBreakEveryMs: 30000,
     damageBreakDurationMs: 5000,
     scheduledRaidBursts: Object.freeze([
@@ -49,7 +57,7 @@ export const HOLY_PRIEST_PRACTICE_DIFFICULTY_TUNING = Object.freeze({
   heroic: Object.freeze({
     label: "영웅",
     fixedCombatDurationMinutes: 2,
-    incomingDamageMultiplier: 0.58,
+    incomingDamageMultiplier: 0.6,
     damageBreakEveryMs: 30000,
     damageBreakDurationMs: 5000,
     scheduledRaidBursts: Object.freeze([
@@ -64,9 +72,9 @@ export const HOLY_PRIEST_PRACTICE_DIFFICULTY_TUNING = Object.freeze({
     damageBreakEveryMs: 30000,
     damageBreakDurationMs: 4000,
     scheduledRaidBursts: Object.freeze([
-      { id: "raid-pulse-5", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7500 },
-      { id: "raid-pulse-6", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7500 },
-      { id: "raid-pulse-7", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7500 }
+      { id: "raid-pulse-5", startAtSec: 10, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7600 },
+      { id: "raid-pulse-6", startAtSec: 80, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7600 },
+      { id: "raid-pulse-7", startAtSec: 140, tickIntervalSec: 1, tickCount: 8, damagePerTick: 7600 }
     ])
   }),
   worldFirstKill: Object.freeze({
@@ -94,8 +102,8 @@ export const HOLY_PRIEST_PRACTICE_TUNING = Object.freeze({
     prayerOfMending: 0.97,
     renew: 1.34,
     halo: 3.35,
-    cosmicRipple: 2.16,
-    divineHymn: 7.5,
+    cosmicRipple: 2.54,
+    divineHymn: 7, //7.5
     divineImageHealingLight: 2,
     divineImageDazzlingLights: 0.25,
     divineImageBlessedLight: 1.65
@@ -166,7 +174,7 @@ export const HOLY_PRIEST_PRACTICE_TUNING = Object.freeze({
     unwaveringWillHealthThresholdRatio: 0.75,
     unwaveringWillCastTimeReductionPct: 0.1,
     surgeOfLightBaseProcChanceAtFullMana: 0.08,
-    surgeOfLightProcChanceAtZeroMana: 0.5,
+    surgeOfLightProcChanceAtZeroMana: 0.12,
     surgeOfLightDurationMs: 20000,
     surgeOfLightMaxStacks: 2,
     surgeOfLightManaCostMultiplier: 0.5,
@@ -202,6 +210,8 @@ export const HOLY_PRIEST_PRACTICE_TUNING = Object.freeze({
     faithPrayerOfHealingBonusPct: 0.25,
     bindingHealFlashHealSelfHealRatio: 0.2,
     trailOfLightHealRatio: 0.25,
+    dispersingLightReplicateRatio: 0.05,
+    dispersingLightTargetCount: 4,
     lightsResurgenceRenewProcChance: 0.12,
     renewDurationMs: 15000,
     renewTickMs: 3000,
@@ -244,9 +254,13 @@ export const HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_KEYS = Object.freeze([
   "serenity",
   "prayerOfMending",
   "halo",
-  "fade",
   "apotheosis",
-  "divineHymn",
+  "divineHymn"
+]);
+
+// 쿨다운 매니저 2번째 줄 기본 스킬 (코드에서 자유롭게 수정 가능)
+export const HOLY_PRIEST_COOLDOWN_MANAGER_SECONDARY_SPELL_KEYS = Object.freeze([
+  "fade",
   "desperatePrayer"
 ]);
 
@@ -267,11 +281,12 @@ export const HOLY_PRIEST_SPELL_ICON_URL_BY_KEY = Object.freeze({
   divineImage: "https://wow.zamimg.com/images/wow/icons/large/inv_staff_2h_artifactheartofkure_d_04.jpg",
   benediction: "https://wow.zamimg.com/images/wow/icons/large/inv12_apextalent_priest_benediction.jpg",
   trailOfLight: "https://wow.zamimg.com/images/wow/icons/large/ability_priest_wordsofmeaning.jpg",
+  dispersingLight: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_flashheal.jpg",
   bindingHeal: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_blindingheal.jpg",
   surgeOfLight: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_surgeoflight.jpg",
   fade: "https://wow.zamimg.com/images/wow/icons/large/spell_magic_lesserinvisibilty.jpg",
   apotheosis: "https://wow.zamimg.com/images/wow/icons/large/ability_priest_ascension.jpg",
-  faith: "https://wow.zamimg.com/images/wow/icons/large/ability_priest_archangel.jpg",
+  faith: "https://wow.zamimg.com/images/wow/icons/large/ability_priest_rayofhope.jpg",
   lightweaver: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_greaterheal.jpg",
   ultimateSerenity: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_persuitofjustice.jpg",
   divineHymn: "https://wow.zamimg.com/images/wow/icons/large/spell_holy_divinehymn.jpg",
@@ -315,24 +330,19 @@ export const HOLY_PRIEST_COOLDOWN_MANAGER_SPELL_META = Object.freeze({
   desperatePrayer: {
     spellId: 19236,
     iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.desperatePrayer
+  },
+  benediction: {
+    spellId: 1262763,
+    iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.benediction
   }
 });
 
 // 힐러별 전용 버프/프록 아이콘 표시 설정
 export const HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
-    key: "fade",
-    label: "소실",
-    iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.fade,
-    buffRemainingMsKey: "fadeMs",
-    showAboveCooldownManager: true,
-    showOnMyRaidFrame: false,
-    showCountdownOnOverlay: true,
-    showCountdownOnRaidFrame: false
-  }),
-  Object.freeze({
     key: "surgeOfLight",
     label: "빛의 쇄도",
+    spellId: 109186,
     iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.surgeOfLight,
     buffRemainingMsKey: "surgeOfLightMs",
     stackCountBuffKey: "surgeOfLightStacks",
@@ -345,6 +355,7 @@ export const HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "lightweaver",
     label: "빛술사",
+    spellId: 390994,
     iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.lightweaver,
     buffRemainingMsKey: "lightweaverMs",
     stackCountBuffKey: "lightweaverStacks",
@@ -357,8 +368,10 @@ export const HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "benediction",
     label: "축도",
+    spellId: 1262763,
     iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.benediction,
     buffRemainingMsKey: "benedictionMs",
+    alternateBuffRemainingMsKeys: Object.freeze(["apotheosisMs"]),
     showAboveCooldownManager: true,
     showOnMyRaidFrame: false,
     showCountdownOnOverlay: true,
@@ -367,6 +380,7 @@ export const HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "divineImage",
     label: "신성한 환영",
+    spellId: 392990,
     iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.divineImage,
     buffRemainingMsKey: "divineImageMs",
     stackCountBuffKey: "divineImageStacks",
@@ -379,6 +393,7 @@ export const HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "apotheosis",
     label: "절정",
+    spellId: 200183,
     iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.apotheosis,
     buffRemainingMsKey: "apotheosisMs",
     showAboveCooldownManager: true,
@@ -389,6 +404,7 @@ export const HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
   Object.freeze({
     key: "faith",
     label: "신앙",
+    spellId: 1215241,
     iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.faith,
     buffRemainingMsKey: "faithMs",
     stackCountBuffKey: "faithStacks",
@@ -397,27 +413,5 @@ export const HOLY_PRIEST_SPECIAL_PROC_DISPLAY_CONFIG = Object.freeze([
     showCountdownOnOverlay: true,
     showCountdownOnRaidFrame: false,
     showStackCountOnOverlay: true
-  }),
-  Object.freeze({
-    key: "divineHymnHealingTaken",
-    label: "천상의 찬가 치유 증가",
-    iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.divineHymn,
-    buffRemainingMsKey: "divineHymnHealingTakenMs",
-    stackCountBuffKey: "divineHymnHealingTakenStacks",
-    showAboveCooldownManager: true,
-    showOnMyRaidFrame: false,
-    showCountdownOnOverlay: true,
-    showCountdownOnRaidFrame: false,
-    showStackCountOnOverlay: true
-  }),
-  Object.freeze({
-    key: "desperatePrayerSelfMaxHp",
-    label: "구원의 기도 체력 증가",
-    iconUrl: HOLY_PRIEST_SPELL_ICON_URL_BY_KEY.desperatePrayer,
-    buffRemainingMsKey: "desperatePrayerSelfMaxHpMs",
-    showAboveCooldownManager: true,
-    showOnMyRaidFrame: true,
-    showCountdownOnOverlay: true,
-    showCountdownOnRaidFrame: true
   })
 ]);

@@ -103,7 +103,7 @@ export const hpriestChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_wordsofmeaning.jpg"
         }
       ],
-      "selectedIndex": 1
+      "selectedIndex": 0
     },
     "hpriest-spec-142": {
       "options": [
@@ -118,7 +118,7 @@ export const hpriestChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_rayofhope.jpg"
         }
       ],
-      "selectedIndex": 1
+      "selectedIndex": 0
     },
     "hpriest-hero-46": {
       "options": [
@@ -139,7 +139,7 @@ export const hpriestChoiceOverlayFromCopy = {
       "options": [
         {
           "href": "https://www.wowhead.com/ko/spell=449874",
-          "name": "예언자의 의지",
+          "name": "마력 압축",
           "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_circleofrenewal.jpg"
         },
         {
@@ -148,7 +148,7 @@ export const hpriestChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_ascension.jpg"
         }
       ],
-      "selectedIndex": 1
+      "selectedIndex": 0
     }
   }
 };

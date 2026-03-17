@@ -58,9 +58,9 @@ export const holyPriestTreesFromCopy = [
         "name": "마법 무효화",
         "href": "https://www.wowhead.com/ko/spell=528/마법-무효화",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_nullifydisease.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 528,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-class-30",
@@ -113,9 +113,9 @@ export const holyPriestTreesFromCopy = [
         "name": "정화 연마",
         "href": "https://www.wowhead.com/ko/spell=390632/정화-연마",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_nullifydisease.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390632,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-class-47",
@@ -144,10 +144,11 @@ export const holyPriestTreesFromCopy = [
         "row": 2,
         "col": 8,
         "name": "순수한 공포 / 끔찍한 절규",
-        "href": "javascript:",
+        "href": "https://www.wowhead.com/ko/spell=55676/%EB%81%94%EC%B0%8D%ED%95%9C-%EC%A0%88%EA%B7%9C",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nzinsanity_fearofdeath.jpg",
-        "selected": false,
-        "rank": "0/1"
+        "selected": true,
+        "spellId": 55676,
+        "rank": "1/1"
       },
       {
         "id": "hpriest-class-60",
@@ -167,9 +168,9 @@ export const holyPriestTreesFromCopy = [
         "name": "육체와 영혼",
         "href": "https://www.wowhead.com/ko/spell=64129/%EC%9C%A1%EC%B2%B4%EC%99%80-%EC%98%81%ED%98%BC?spellModifier=137031",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_symbolofhope.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 64129,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-class-64",
@@ -308,9 +309,9 @@ export const holyPriestTreesFromCopy = [
         "name": "감화",
         "href": "https://www.wowhead.com/ko/spell=390676/%EA%B0%90%ED%99%94?spellModifier=137031",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_layonhands.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 390676,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-class-102",
@@ -396,9 +397,9 @@ export const holyPriestTreesFromCopy = [
         "name": "천사의 자비",
         "href": "https://www.wowhead.com/ko/spell=238100/천사의-자비",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_testoffaith.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 238100,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-class-140",
@@ -484,9 +485,9 @@ export const holyPriestTreesFromCopy = [
         "name": "환상",
         "href": "https://www.wowhead.com/ko/spell=108942/환상",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_phantasm.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 108942,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-class-174",
@@ -517,9 +518,9 @@ export const holyPriestTreesFromCopy = [
         "name": "망령의 손아귀",
         "href": "https://www.wowhead.com/ko/spell=459559/망령의-손아귀",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_chilltouch.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 459559,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-class-186",
@@ -725,9 +726,9 @@ export const holyPriestTreesFromCopy = [
         "name": "깨달음",
         "href": "https://www.wowhead.com/ko/spell=193155/깨달음",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_arcane_mindmastery.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 193155,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-spec-89",
@@ -747,9 +748,9 @@ export const holyPriestTreesFromCopy = [
         "name": "효율적인 기도",
         "href": "https://www.wowhead.com/ko/spell=1247131/효율적인-기도",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_finalprayer.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 1247131,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-spec-102",
@@ -758,9 +759,9 @@ export const holyPriestTreesFromCopy = [
         "name": "치유의 집중",
         "href": "https://www.wowhead.com/ko/spell=1247166/치유의-집중",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_healingfocus.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 1247166,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "hpriest-spec-104",
@@ -824,9 +825,9 @@ export const holyPriestTreesFromCopy = [
         "name": "고결한 자의 기도",
         "href": "https://www.wowhead.com/ko/spell=390977/고결한-자의-기도",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_prayerofmendingtga.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 390977,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "hpriest-spec-136",
@@ -855,10 +856,10 @@ export const holyPriestTreesFromCopy = [
         "row": 7,
         "col": 3,
         "name": "영원한 존엄 / 신앙",
-        "href": "https://www.wowhead.com/ko/spell=1215241/신앙",
+        "href": "https://www.wowhead.com/ko/spell=1215245/영원한-존엄",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_archangel.jpg",
         "selected": true,
-        "spellId": 1215241,
+        "spellId": 1215245,
         "rank": "1/1"
       },
       {
