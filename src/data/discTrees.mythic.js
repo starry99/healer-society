@@ -3,6 +3,7 @@ export const disciplinePriestTreesFromCopy = [
     "id": "class",
     "label": "공용 특성",
     "summary": "수양 사제 공용 특성 원본 트리",
+    "sourceUrl": "",
     "columns": 9,
     "rows": 10,
     "nodes": [
@@ -112,9 +113,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "정화 연마",
         "href": "https://www.wowhead.com/ko/spell=390632/정화-연마",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_nullifydisease.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390632,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-class-47",
@@ -143,10 +144,10 @@ export const disciplinePriestTreesFromCopy = [
         "row": 2,
         "col": 8,
         "name": "순수한 공포 / 끔찍한 절규",
-        "href": "javascript:",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nzinsanity_fearofdeath.jpg",
-        "selected": false,
-        "rank": "0/1"
+        "href": "https://www.wowhead.com/ko/spell=55676/petrifying-scream?def=119593",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_psychichorrors.jpg",
+        "selected": true,
+        "rank": "1/1"
       },
       {
         "id": "disc-class-60",
@@ -208,10 +209,10 @@ export const disciplinePriestTreesFromCopy = [
         "row": 3,
         "col": 7,
         "name": "정신 지배 / 정신 지배",
-        "href": "https://www.wowhead.com/ko/spell=205364",
+        "href": "javascript:",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_shadowworddominate.jpg",
-        "selected": true,
-        "rank": "1/1"
+        "selected": false,
+        "rank": "0/1"
       },
       {
         "id": "disc-class-74",
@@ -296,9 +297,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "공포 속박",
         "href": "https://www.wowhead.com/ko/spell=9484/공포-속박",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_slow.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 9484,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-class-98",
@@ -483,9 +484,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "환상",
         "href": "https://www.wowhead.com/ko/spell=108942/환상",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_phantasm.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 108942,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-class-174",
@@ -516,9 +517,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "망령의 손아귀",
         "href": "https://www.wowhead.com/ko/spell=459559/망령의-손아귀",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_chilltouch.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 459559,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-class-186",
@@ -536,6 +537,7 @@ export const disciplinePriestTreesFromCopy = [
   {
     "id": "spec",
     "label": "전문화 특성",
+    "summary": "수양 사제 전문화 특성 원본 트리",
     "sourceUrl": "",
     "columns": 7,
     "rows": 11,
@@ -635,9 +637,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "잠식하는 어둠",
         "href": "https://www.wowhead.com/ko/spell=472568/잠식하는-어둠",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_painspike.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 472568,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-spec-60",
@@ -657,9 +659,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "수양 보호막",
         "href": "https://www.wowhead.com/ko/spell=197045/수양-보호막",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_divineprotection.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 197045,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-66",
@@ -767,9 +769,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "고통과 고뇌",
         "href": "https://www.wowhead.com/ko/spell=390689/%EA%B3%A0%ED%86%B5%EA%B3%BC-%EA%B3%A0%EB%87%8C?def=108708&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_shadowwordpain.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390689,
-        "rank": "0/2"
+        "rank": "2/2"
       },
       {
         "id": "disc-spec-110",
@@ -789,9 +791,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "엄격한 규율",
         "href": "https://www.wowhead.com/ko/spell=373180/%EC%97%84%EA%B2%A9%ED%95%9C-%EA%B7%9C%EC%9C%A8?def=108734&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_paladin_handoflight.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 373180,
-        "rank": "2/2"
+        "rank": "0/2"
       },
       {
         "id": "disc-spec-123",
@@ -822,9 +824,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "신의 행렬",
         "href": "https://www.wowhead.com/ko/spell=472361/신의-행렬",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_evangelism.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 472361,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-spec-140",
@@ -833,9 +835,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "내면의 집중력",
         "href": "https://www.wowhead.com/ko/spell=390693/내면의-집중력",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_frost_windwalkon.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390693,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-142",
@@ -877,9 +879,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "상급 성스러운 일격",
         "href": "https://www.wowhead.com/ko/spell=1253724/%EC%83%81%EA%B8%89-%EC%84%B1%EC%8A%A4%EB%9F%AC%EC%9A%B4-%EC%9D%BC%EA%B2%A9?def=108699&rank=1",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_paladin_inquisition.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 1253724,
-        "rank": "2/2"
+        "rank": "0/2"
       },
       {
         "id": "disc-spec-157",
@@ -888,9 +890,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "천상의 아이기스",
         "href": "https://www.wowhead.com/ko/spell=47515/천상의-아이기스",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_devineaegis.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 47515,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-159",
@@ -943,9 +945,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "영원의 방벽",
         "href": "https://www.wowhead.com/ko/spell=238135/영원의-방벽",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_powerwordshield.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 238135,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-178",
@@ -1025,153 +1027,154 @@ export const disciplinePriestTreesFromCopy = [
         "id": "disc-hero-9",
         "row": 0,
         "col": 2,
-        "name": "혼돈의 균열",
-        "href": "https://www.wowhead.com/ko/spell=447444",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_voidweaverpriest_entropicrift.jpg",
+        "name": "인도의 빛",
+        "href": "https://www.wowhead.com/ko/spell=1248423/%EC%9D%B8%EB%8F%84%EC%9D%98-%EB%B9%9B?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_holywordlife.jpg",
         "selected": true,
-        "spellId": 447444,
+        "spellId": 1248423,
         "rank": "1/1"
       },
       {
         "id": "disc-hero-25",
         "row": 1,
         "col": 0,
-        "name": "탈출 불가 / 암흑 마력",
-        "href": "https://www.wowhead.com/ko/spell=451018/%EC%95%94%ED%9D%91-%EB%A7%88%EB%A0%A5?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/achievement_boss_triumvirate_darknaaru.jpg",
+        "name": "예방의 기술",
+        "href": "https://www.wowhead.com/ko/spell=440662/%EC%98%88%EB%B0%A9%EC%9D%98-%EA%B8%B0%EC%88%A0?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_powerwordshield.jpg",
         "selected": true,
-        "spellId": 451018,
+        "spellId": 440662,
         "rank": "1/1"
       },
       {
         "id": "disc-hero-27",
         "row": 1,
         "col": 1,
-        "name": "공허의 폭발",
-        "href": "https://www.wowhead.com/ko/spell=450405/공허의-폭발?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_cosmicvoid_missile.jpg",
+        "name": "선제적 조처",
+        "href": "https://www.wowhead.com/ko/spell=440671/%EC%84%A0%EC%A0%9C%EC%A0%81-%EC%A1%B0%EC%B2%98?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_renew.jpg",
         "selected": true,
-        "spellId": 450405,
+        "spellId": 440671,
         "rank": "1/1"
       },
       {
         "id": "disc-hero-29",
         "row": 1,
         "col": 2,
-        "name": "내면의 종지부",
-        "href": "https://www.wowhead.com/ko/spell=448278/내면의-종지부?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_cosmicvoid_buff.jpg",
+        "name": "천금 같은 시간",
+        "href": "https://www.wowhead.com/ko/spell=440681/%EC%B2%9C%EA%B8%88-%EA%B0%99%EC%9D%80-%EC%8B%9C%EA%B0%84?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_timestop.jpg",
         "selected": true,
-        "spellId": 448278,
+        "spellId": 440681,
         "rank": "1/1"
       },
       {
         "id": "disc-hero-31",
         "row": 1,
         "col": 3,
-        "name": "공허의 심장",
-        "href": "https://www.wowhead.com/ko/spell=449880/공허의-심장?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_cosmicvoid_orb.jpg",
+        "name": "현자의 말",
+        "href": "https://www.wowhead.com/ko/spell=1272352/%ED%98%84%EC%9E%90%EC%9D%98-%EB%A7%90?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_power-word.jpg",
         "selected": true,
-        "spellId": 449880,
-        "rank": "1/1"
-      },
-      {
-        "id": "disc-hero-46",
-        "row": 2,
-        "col": 0,
-        "name": "물질 포식",
-        "href": "https://www.wowhead.com/ko/spell=451840/물질-포식?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_consumemagic.jpg",
-        "selected": true,
-        "spellId": 451840,
-        "rank": "1/1"
-      },
-      {
-        "id": "disc-hero-48",
-        "row": 2,
-        "col": 1,
-        "name": "공허의 강화 / 어둠에 물드는 지평선",
-        "href": "https://www.wowhead.com/ko/spell=450138/공허의-강화?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_cosmicvoid_nova.jpg",
-        "selected": true,
-        "spellId": 450138,
-        "rank": "1/1"
-      },
-      {
-        "id": "disc-hero-50",
-        "row": 2,
-        "col": 2,
-        "name": "공허의 망령",
-        "href": "https://www.wowhead.com/ko/spell=451234/공허의-망령?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/warlock_curse_shadow.jpg",
-        "selected": true,
-        "spellId": 451234,
+        "spellId": 1272352,
         "rank": "1/1"
       },
       {
         "id": "disc-hero-44",
         "row": 2,
-        "col": 3,
-        "name": "공허의 손길",
-        "href": "https://www.wowhead.com/ko/spell=1266856",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_112_raidtrinkets_blobofswirlingvoid_purple.jpg",
+        "col": 0,
+        "name": "보장된 안전",
+        "href": "https://www.wowhead.com/ko/spell=440766/%EB%B3%B4%EC%9E%A5%EB%90%9C-%EC%95%88%EC%A0%84?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_prayerofmendingtga.jpg",
         "selected": true,
-        "spellId": 1266856,
+        "spellId": 440766,
+        "rank": "1/1"
+      },
+      {
+        "id": "disc-hero-46",
+        "row": 2,
+        "col": 1,
+        "name": "거룩한 깃털 / 위기 모면",
+        "href": "https://www.wowhead.com/ko/spell=440670/%EA%B1%B0%EB%A3%A9%ED%95%9C-%EA%B9%83%ED%84%B8",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_angelicfeather.jpg",
+        "selected": true,
+        "spellId": 440670,
+        "rank": "1/1"
+      },
+      {
+        "id": "disc-hero-48",
+        "row": 2,
+        "col": 2,
+        "name": "예견된 상황",
+        "href": "https://www.wowhead.com/ko/spell=440738/%EC%98%88%EA%B2%AC%EB%90%9C-%EC%83%81%ED%99%A9?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_painsupression.jpg",
+        "selected": true,
+        "spellId": 440738,
+        "rank": "1/1"
+      },
+      {
+        "id": "disc-hero-50",
+        "row": 2,
+        "col": 3,
+        "name": "선지자의 통찰",
+        "href": "https://www.wowhead.com/ko/spell=1272359/%EC%84%A0%EC%A7%80%EC%9E%90%EC%9D%98-%ED%86%B5%EC%B0%B0?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_pontifex.jpg",
+        "selected": true,
+        "spellId": 1272359,
         "rank": "1/1"
       },
       {
         "id": "disc-hero-63",
         "row": 3,
         "col": 0,
-        "name": "맥박 촉진",
-        "href": "https://www.wowhead.com/ko/spell=1266845/맥박-촉진?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_rogue_sanguinaryvein.jpg",
+        "name": "예언자의 의지 / 궁여지책",
+        "href": "https://www.wowhead.com/ko/spell=433905/%EC%98%88%EC%96%B8%EC%9E%90%EC%9D%98-%EC%9D%98%EC%A7%80?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_clarityofpurpose.jpg",
         "selected": true,
+        "spellId": 433905,
         "rank": "1/1"
       },
       {
         "id": "disc-hero-65",
         "row": 3,
         "col": 1,
-        "name": "공허 주입",
-        "href": "https://www.wowhead.com/ko/spell=450612/공허-주입?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_volatileshadow.jpg",
+        "name": "즉발적인 예측",
+        "href": "https://www.wowhead.com/ko/spell=1246799/%EC%A6%89%EB%B0%9C%EC%A0%81%EC%9D%B8-%EC%98%88%EC%B8%A1?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_blessedlife.jpg",
         "selected": true,
-        "spellId": 450612,
-        "rank": "1/1"
-      },
-      {
-        "id": "disc-hero-69",
-        "row": 3,
-        "col": 2,
-        "name": "공허 흡혈 / 어둠의 품으로",
-        "href": "https://www.wowhead.com/ko/spell=451311",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_soulleech_2.jpg",
-        "selected": true,
-        "spellId": 451311,
+        "spellId": 1246799,
         "rank": "1/1"
       },
       {
         "id": "disc-hero-67",
         "row": 3,
-        "col": 3,
-        "name": "압도적인 어둠",
-        "href": "https://www.wowhead.com/ko/spell=1266883/압도적인-어둠?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_shadowelementalmount.jpg",
+        "col": 2,
+        "name": "경건",
+        "href": "https://www.wowhead.com/ko/spell=1246802/경건",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_oraclepriest_premonitionpiety.jpg",
         "selected": true,
-        "spellId": 1266883,
+        "spellId": 1246802,
+        "rank": "1/1"
+      },
+      {
+        "id": "disc-hero-69",
+        "row": 3,
+        "col": 3,
+        "name": "펼쳐지는 시야",
+        "href": "https://www.wowhead.com/ko/spell=1272363/%ED%8E%BC%EC%B3%90%EC%A7%80%EB%8A%94-%EC%8B%9C%EC%95%BC?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_mindvision.jpg",
+        "selected": true,
+        "spellId": 1272363,
         "rank": "1/1"
       },
       {
         "id": "disc-hero-85",
         "row": 4,
         "col": 2,
-        "name": "공허 붕괴",
-        "href": "https://www.wowhead.com/ko/spell=448403/공허-붕괴?spellModifier=137032",
-        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_cosmicvoid_groundsate.jpg",
+        "name": "두 개의 시야",
+        "href": "https://www.wowhead.com/ko/spell=440742/%EB%91%90-%EA%B0%9C%EC%9D%98-%EC%8B%9C%EC%95%BC?spellModifier=137032",
+        "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_oraclepriest_clairvoyance.jpg",
         "selected": true,
-        "spellId": 448403,
+        "spellId": 440742,
         "rank": "1/1"
       }
     ]

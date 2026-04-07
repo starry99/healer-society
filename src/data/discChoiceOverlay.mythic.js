@@ -28,7 +28,7 @@ export const discChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_void-flay.jpg"
         }
       ],
-      "selectedIndex": 1
+      "selectedIndex": 0
     },
     "disc-class-74": {
       "options": [
@@ -120,47 +120,32 @@ export const discChoiceOverlayFromCopy = {
       ],
       "selectedIndex": 1
     },
-    "disc-hero-25": {
+    "disc-hero-46": {
       "options": [
         {
-          "href": "https://www.wowhead.com/ko/spell=451204",
-          "name": "탈출 불가",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_fire_twilighthellfire.jpg"
+          "href": "https://www.wowhead.com/ko/spell=440670/거룩한-깃털",
+          "name": "거룩한 깃털",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_angelicfeather.jpg"
         },
         {
-          "href": "https://www.wowhead.com/ko/spell=451018/%EC%95%94%ED%9D%91-%EB%A7%88%EB%A0%A5?spellModifier=137032",
-          "name": "암흑 마력",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/achievement_boss_triumvirate_darknaaru.jpg"
-        }
-      ],
-      "selectedIndex": 1
-    },
-    "disc-hero-48": {
-      "options": [
-        {
-          "href": "https://www.wowhead.com/ko/spell=450138/공허의-강화?spellModifier=137032",
-          "name": "공허의 강화",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_cosmicvoid_nova.jpg"
-        },
-        {
-          "href": "https://www.wowhead.com/ko/spell=449912",
-          "name": "어둠에 물드는 지평선",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_83_voidfocus.jpg"
+          "href": "https://www.wowhead.com/ko/spell=440669/위기-모면",
+          "name": "위기 모면",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/priest_spell_leapoffaith_a.jpg"
         }
       ],
       "selectedIndex": 0
     },
-    "disc-hero-69": {
+    "disc-hero-63": {
       "options": [
         {
-          "href": "https://www.wowhead.com/ko/spell=451311",
-          "name": "공허 흡혈",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_soulleech_2.jpg"
+          "href": "https://www.wowhead.com/ko/spell=433905/예언자의-의지",
+          "name": "예언자의 의지",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_clarityofpurpose.jpg"
         },
         {
-          "href": "https://www.wowhead.com/ko/spell=451569",
-          "name": "어둠의 품으로",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_shadesofdarkness.jpg"
+          "href": "https://www.wowhead.com/ko/spell=458718/궁여지책",
+          "name": "궁여지책",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_testoffaith.jpg"
         }
       ],
       "selectedIndex": 0

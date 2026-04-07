@@ -9,7 +9,7 @@ import { HealerPracticeSimulator } from "./simulators/HealerPracticeSimulator";
 
 const simulatorViews: Record<string, ComponentType> = {
   "disc-ramp-planner": DisciplineRampSimulator,
-  "hpal-healer-practice": HealerPracticeSimulator
+  "hpal-healer-practice": HealerPracticeSimulator,
 };
 const HEALER_PRACTICE_OPEN_RANKING_EVENT = "healer-practice-open-ranking";
 type HealerPracticeSimulatorProps = {

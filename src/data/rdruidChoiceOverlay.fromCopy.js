@@ -118,7 +118,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_ravenform.jpg"
         }
       ],
-      "selectedIndex": 0
+      "selectedIndex": 1
     },
     "rdruid-spec-104": {
       "options": [

@@ -644,10 +644,10 @@ export const restorationDruidTreesFromCopy = [
         "row": 2,
         "col": 4,
         "name": "자연의 광채 / 지나가는 계절",
-        "href": "https://www.wowhead.com/ko/spell=392288/자연의-광채",
+        "href": "https://www.wowhead.com/ko/spell=382550/지나가는-계절",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_spiritarmor.jpg",
         "selected": true,
-        "spellId": 392288,
+        "spellId": 382550,
         "rank": "1/1"
       },
       {

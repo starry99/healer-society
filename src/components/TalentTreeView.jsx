@@ -10,7 +10,7 @@ const POINT_BADGE_SIZE = 24;
 const HERO_EMBLEM_ICON_OVERRIDES = {
   "discipline-priest": {
     raid: "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-oracle.webp",
-    mythic: "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-voidweaver.webp"
+    mythic: "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-priest-oracle.webp"
   },
   "holy-paladin": "https://wow.zamimg.com/images/wow/TextureAtlas/live/talents-heroclass-paladin-heraldofthesun.webp",
   "restoration-druid": {
