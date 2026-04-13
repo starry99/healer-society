@@ -67,7 +67,7 @@ const EXTERNAL_RAID_LINKS: ExternalRaidGuideLink[] = [
     name: "선봉대",
     loc: "공허첨탑",
     icon: "https://wow.zamimg.com/images/wow/journal/ui-ej-boss-paladin-trio.png",
-    url: ""
+    url: "https://raidstrats.gg/planner?view=1c6af99e-dc3d-48f5-b44d-b3987ca26d53"
   },
   {
     slug: "raid-boss-6",
