@@ -637,9 +637,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "잠식하는 어둠",
         "href": "https://www.wowhead.com/ko/spell=472568/잠식하는-어둠",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_painspike.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 472568,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-60",
@@ -648,9 +648,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "찬란한 동공 / 인내의 광채",
         "href": "https://www.wowhead.com/ko/spell=390685/인내의-광채",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_surgeoflight.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 390685,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-spec-64",
@@ -692,9 +692,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "어둠의 환희",
         "href": "https://www.wowhead.com/ko/spell=373003/어둠의-환희",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_rogue_envelopingshadows.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 373003,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-81",
@@ -703,9 +703,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "신성 광선",
         "href": "https://www.wowhead.com/ko/spell=372969/신성-광선",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_paladin_infusionoflight.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 372969,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-85",
@@ -791,9 +791,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "엄격한 규율",
         "href": "https://www.wowhead.com/ko/spell=373180/%EC%97%84%EA%B2%A9%ED%95%9C-%EA%B7%9C%EC%9C%A8?def=108734&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_paladin_handoflight.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 373180,
-        "rank": "0/2"
+        "rank": "2/2"
       },
       {
         "id": "disc-spec-123",
@@ -813,9 +813,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "심연의 몽상",
         "href": "https://www.wowhead.com/ko/spell=373054/%EC%8B%AC%EC%97%B0%EC%9D%98-%EB%AA%BD%EC%83%81?def=108714&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_surgeofdarkness.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 373054,
-        "rank": "2/2"
+        "rank": "0/2"
       },
       {
         "id": "disc-spec-136",
@@ -844,10 +844,10 @@ export const disciplinePriestTreesFromCopy = [
         "row": 7,
         "col": 3,
         "name": "대천사 / 환각의 마귀",
-        "href": "https://www.wowhead.com/ko/spell=1280137",
+        "href": "https://www.wowhead.com/ko/spell=197862/",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_soulleech_3.jpg",
         "selected": true,
-        "spellId": 1280137,
+        "spellId": 197862,
         "rank": "1/1"
       },
       {
@@ -868,9 +868,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "어둠의 마귀",
         "href": "https://www.wowhead.com/ko/spell=34433/%EC%96%B4%EB%91%A0%EC%9D%98-%EB%A7%88%EA%B7%80?spellModifier=137032",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_shadowfiend.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 34433,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-spec-155",
@@ -901,9 +901,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "빌린 시간",
         "href": "https://www.wowhead.com/ko/spell=390691/%EB%B9%8C%EB%A6%B0-%EC%8B%9C%EA%B0%84?def=108702&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_borrowedtime.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390691,
-        "rank": "0/2"
+        "rank": "2/2"
       },
       {
         "id": "disc-spec-163",
@@ -923,9 +923,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "죽음의 고통",
         "href": "https://www.wowhead.com/ko/spell=1240364/죽음의-고통",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_deathsembrace.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 1240364,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-spec-167",
@@ -934,9 +934,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "피할 수 없는 고통",
         "href": "https://www.wowhead.com/ko/spell=373427/%ED%94%BC%ED%95%A0-%EC%88%98-%EC%97%86%EB%8A%94-%EA%B3%A0%ED%86%B5?spellModifier=137032",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_chilltouch.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 373427,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-spec-176",
@@ -956,9 +956,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "번영과 역경",
         "href": "https://www.wowhead.com/ko/spell=390786/번영과-역경",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_burningwill.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390786,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-182",
@@ -978,9 +978,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "대속",
         "href": "https://www.wowhead.com/ko/spell=390832/%EB%8C%80%EC%86%8D?def=108716&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_shadowpower.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 390832,
-        "rank": "2/2"
+        "rank": "0/2"
       },
       {
         "id": "disc-spec-199",

@@ -692,11 +692,10 @@ export function GuidePage({ healerMap }) {
                         <TalentTreePanel healer={healer} mode={currentMode} />
                         <div className="mt-4 flex flex-col items-center gap-1">
                           <button
-                            className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
-                              talentCopyString
-                                ? "site-accent-border site-accent-bg-subtle site-accent-text hover:brightness-110"
-                                : "cursor-not-allowed border-slate-700 bg-slate-900/70 text-slate-500"
-                            }`}
+                            className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${talentCopyString
+                              ? "site-accent-border site-accent-bg-subtle site-accent-text hover:brightness-110"
+                              : "cursor-not-allowed border-slate-700 bg-slate-900/70 text-slate-500"
+                              }`}
                             onClick={(event) => handleTalentCopyClick(event, talentCopyStateKey, talentCopyString)}
                             type="button"
                           >
@@ -733,9 +732,9 @@ export function GuidePage({ healerMap }) {
                     {section.type === "changelog" ? (
                       <div className="space-y-4">
                         {section.entries && section.entries.length > 0 ? (
-                          <div className="flex flex-col gap-4">
+                          <div className="flex flex-col gap-1">
                             {section.entries.map((entry, index) => (
-                              <div key={index} className="flex items-start border-b border-slate-700/50 pb-3 last:border-0 last:pb-0">
+                              <div key={index} className="flex items-start last:pb-0">
                                 <div className="shrink-0 text-sm font-semibold text-slate-300 mr-2 mt-[2px]">
                                   {formatChangelogDate(entry.date)}:
                                 </div>

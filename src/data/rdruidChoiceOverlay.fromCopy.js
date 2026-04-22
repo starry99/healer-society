@@ -88,7 +88,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_druid_equinox.jpg"
         }
       ],
-      "selectedIndex": 1
+      "selectedIndex": 0
     },
     "rdruid-spec-43": {
       "options": [
@@ -163,7 +163,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_druid_convokethespirits.jpg"
         }
       ],
-      "selectedIndex": 0
+      "selectedIndex": 1
     },
     "rdruid-spec-153": {
       "options": [
@@ -180,32 +180,32 @@ export const rdruidChoiceOverlayFromCopy = {
       ],
       "selectedIndex": 1
     },
-    "rdruid-hero-44": {
+    "rdruid-hero-46": {
       "options": [
         {
-          "href": "https://www.wowhead.com/ko/spell=428859/자연의-힘",
-          "name": "자연의 힘",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_naturesblessing.jpg"
+          "href": "https://www.wowhead.com/ko/spell=439895/휘감는-소용돌이",
+          "name": "휘감는 소용돌이",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_druid_ursolsvortex.jpg"
         },
         {
-          "href": "https://www.wowhead.com/ko/spell=429227/자연의-내구력",
-          "name": "자연의 내구력",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_manatree.jpg"
+          "href": "https://www.wowhead.com/ko/spell=439901/꽃의-걸음",
+          "name": "꽃의 걸음",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_trailofflowers.jpg"
         }
       ],
-      "selectedIndex": 0
+      "selectedIndex": 1
     },
     "rdruid-hero-48": {
       "options": [
         {
-          "href": "https://www.wowhead.com/ko/spell=429402/숲의-감화",
-          "name": "숲의 감화",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_protectionofthegrove.jpg"
+          "href": "https://www.wowhead.com/ko/spell=439929/자연과의-유대",
+          "name": "자연과의 유대",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_marrigolds_01.jpg"
         },
         {
-          "href": "https://www.wowhead.com/ko/spell=429420/강렬한-강화",
-          "name": "강렬한 강화",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_serenefocus.jpg"
+          "href": "https://www.wowhead.com/ko/spell=440116/조화로운-체질",
+          "name": "조화로운 체질",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/talentspec_druid_restoration.jpg"
         }
       ],
       "selectedIndex": 0
@@ -213,32 +213,32 @@ export const rdruidChoiceOverlayFromCopy = {
     "rdruid-hero-63": {
       "options": [
         {
-          "href": "https://www.wowhead.com/ko/spell=429215/풍성한-개화",
-          "name": "풍성한 개화",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_herbalism_70_dreamleaf.jpg"
+          "href": "https://www.wowhead.com/ko/spell=439880/불굴의-번성",
+          "name": "불굴의 번성",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_herb_16.jpg"
         },
         {
-          "href": "https://www.wowhead.com/ko/spell=428937/새봄",
-          "name": "새봄",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_trailofflowers.jpg"
+          "href": "https://www.wowhead.com/ko/spell=439882/뿌리-연결망",
+          "name": "뿌리-연결망",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_creature_poison_04.jpg"
         }
       ],
       "selectedIndex": 1
     },
-    "rdruid-hero-65": {
+    "rdruid-hero-67": {
       "options": [
         {
-          "href": "https://www.wowhead.com/ko/spell=434220/꿈의-힘",
-          "name": "꿈의 힘",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_xavius_dreamsimulacrum.jpg"
+          "href": "https://www.wowhead.com/ko/spell=440117/쌍둥이-새싹",
+          "name": "쌍둥이 새싹",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_herb_evergreenmoss.jpg"
         },
         {
-          "href": "https://www.wowhead.com/ko/spell=434249/꿈의-통제",
-          "name": "꿈의 통제",
-          "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_cloth_outdooremeralddream_d_01_buckle.jpg"
+          "href": "https://www.wowhead.com/ko/spell=440118/식재",
+          "name": "식재",
+          "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_creature_poison_03.jpg"
         }
       ],
-      "selectedIndex": 0
+      "selectedIndex": 1
     }
   }
 };

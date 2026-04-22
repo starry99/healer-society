@@ -47,9 +47,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "신성한 폭발",
         "href": "https://www.wowhead.com/ko/spell=132157/%EC%8B%A0%EC%84%B1%ED%95%9C-%ED%8F%AD%EB%B0%9C?spellModifier=1246549",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_holynova.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 132157,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-class-26",
@@ -58,9 +58,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "마법 무효화",
         "href": "https://www.wowhead.com/ko/spell=528/마법-무효화",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_nullifydisease.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 528,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-class-30",
@@ -93,7 +93,7 @@ export const disciplinePriestTreesFromCopy = [
         "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_ability_holyfire_nova.jpg",
         "selected": false,
         "spellId": 1246549,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "disc-class-43",
@@ -167,9 +167,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "육체와 영혼",
         "href": "https://www.wowhead.com/ko/spell=64129/%EC%9C%A1%EC%B2%B4%EC%99%80-%EC%98%81%ED%98%BC?spellModifier=137032",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_symbolofhope.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 64129,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-class-64",
@@ -308,9 +308,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "감화",
         "href": "https://www.wowhead.com/ko/spell=390676/%EA%B0%90%ED%99%94?spellModifier=137032",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_layonhands.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390676,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-class-102",
@@ -758,9 +758,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "면책",
         "href": "https://www.wowhead.com/ko/spell=373049/면책",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_priest_clarityofwill.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 373049,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-106",
@@ -769,9 +769,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "고통과 고뇌",
         "href": "https://www.wowhead.com/ko/spell=390689/%EA%B3%A0%ED%86%B5%EA%B3%BC-%EA%B3%A0%EB%87%8C?def=108708&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_shadowwordpain.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 390689,
-        "rank": "2/2"
+        "rank": "0/2"
       },
       {
         "id": "disc-spec-110",
@@ -901,9 +901,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "빌린 시간",
         "href": "https://www.wowhead.com/ko/spell=390691/%EB%B9%8C%EB%A6%B0-%EC%8B%9C%EA%B0%84?def=108702&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_holy_borrowedtime.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390691,
-        "rank": "0/2"
+        "rank": "2/2"
       },
       {
         "id": "disc-spec-163",
@@ -956,9 +956,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "번영과 역경",
         "href": "https://www.wowhead.com/ko/spell=390786/번영과-역경",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_priest_burningwill.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 390786,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "disc-spec-182",
@@ -978,9 +978,9 @@ export const disciplinePriestTreesFromCopy = [
         "name": "대속",
         "href": "https://www.wowhead.com/ko/spell=390832/%EB%8C%80%EC%86%8D?def=108716&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_shadowpower.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 390832,
-        "rank": "2/2"
+        "rank": "0/2"
       },
       {
         "id": "disc-spec-199",

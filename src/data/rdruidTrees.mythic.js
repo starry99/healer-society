@@ -12,9 +12,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "갈퀴 발톱",
         "href": "https://www.wowhead.com/ko/spell=1822/%EA%B0%88%ED%80%B4-%EB%B0%9C%ED%86%B1",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_disembowel.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 1822,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "rdruid-class-7",
@@ -45,9 +45,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "별빛섬광",
         "href": "https://www.wowhead.com/ko/spell=197628/%EB%B3%84%EB%B9%9B%EC%84%AC%EA%B4%91",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_arcane_starfire.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 197628,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "rdruid-class-20",
@@ -56,9 +56,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "치명상",
         "href": "https://www.wowhead.com/ko/spell=474526/치명상",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_xavius_tormentingswipe.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 474526,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "rdruid-class-24",
@@ -67,9 +67,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "휘둘러치기",
         "href": "https://www.wowhead.com/ko/spell=213764/%ED%9C%98%EB%91%98%EB%9F%AC%EC%B9%98%EA%B8%B0?spellModifier=137012",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/inv_misc_monsterclaw_03.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 213764,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "rdruid-class-28",
@@ -100,9 +100,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "별빛쇄도",
         "href": "https://www.wowhead.com/ko/spell=197626/%EB%B3%84%EB%B9%9B%EC%87%84%EB%8F%84",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_arcane_arcane03.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 197626,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "rdruid-class-41",
@@ -111,9 +111,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "도려내기",
         "href": "https://www.wowhead.com/ko/spell=1079/도려내기",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_ghoulfrenzy.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 1079,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "rdruid-class-45",
@@ -144,9 +144,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "달빛야수 변신",
         "href": "https://www.wowhead.com/ko/spell=24858/%EB%8B%AC%EB%B9%9B%EC%95%BC%EC%88%98-%EB%B3%80%EC%8B%A0",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_forceofnature.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 24858,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "rdruid-class-58",
@@ -166,9 +166,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "살수의 본능",
         "href": "https://www.wowhead.com/ko/spell=108299/%EC%82%B4%EC%88%98%EC%9D%98-%EB%B3%B8%EB%8A%A5?def=108308&rank=2",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_predatoryinstincts.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 108299,
-        "rank": "2/2"
+        "rank": "0/2"
       },
       {
         "id": "rdruid-class-64",
@@ -221,9 +221,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "태양섬광",
         "href": "https://www.wowhead.com/ko/spell=93402/%ED%83%9C%EC%96%91%EC%84%AC%EA%B4%91?spellModifier=137012",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_mage_firestarter.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 93402,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "rdruid-class-79",
@@ -274,7 +274,7 @@ export const restorationDruidTreesFromCopy = [
         "row": 5,
         "col": 2,
         "name": "야생의 돌진 / 범의 질주",
-        "href": "https://www.wowhead.com/ko/spell=252216/범의-질주",
+        "href": "https://www.wowhead.com/ko/spell=102401/야생의-돌진",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_druid_wildcharge.jpg",
         "selected": true,
         "spellId": 252216,
@@ -309,9 +309,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "별빛 도관",
         "href": "https://www.wowhead.com/ko/spell=451211/별빛-도관",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_arcane_arcane01.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 451211,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "rdruid-class-117",
@@ -375,9 +375,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "태풍",
         "href": "https://www.wowhead.com/ko/spell=132469/%ED%83%9C%ED%92%8D",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_typhoon.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 132469,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "rdruid-class-129",
@@ -471,7 +471,7 @@ export const restorationDruidTreesFromCopy = [
         "row": 8,
         "col": 0,
         "name": "행동 불가의 포효 / 거센 강타",
-        "href": "https://www.wowhead.com/ko/spell=99",
+        "href": "https://www.wowhead.com/ko/spell=99/행동-불가의-포효",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_demoralizingroar.jpg",
         "spellId": 99,
         "selected": true,
@@ -484,9 +484,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "곰의 활기",
         "href": "https://www.wowhead.com/ko/spell=377842/곰의-활기",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_markofursol.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 377842,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "rdruid-class-159",
@@ -504,10 +504,10 @@ export const restorationDruidTreesFromCopy = [
         "row": 8,
         "col": 4,
         "name": "자연의 굴레 / 천상의 굴레",
-        "href": "https://www.wowhead.com/ko/spell=474530/자연의-굴레?spellModifier=137012",
+        "href": "https://www.wowhead.com/ko/spell=474541/천상의-굴레",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_disembowel.jpg",
         "selected": true,
-        "spellId": 474530,
+        "spellId": 474541,
         "rank": "1/1"
       },
       {
@@ -541,7 +541,7 @@ export const restorationDruidTreesFromCopy = [
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_lifegivingspeed.jpg",
         "selected": true,
         "spellId": 400129,
-        "rank": "1/2"
+        "rank": "2/2"
       },
       {
         "id": "rdruid-class-174",
@@ -550,9 +550,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "액체 형상",
         "href": "https://www.wowhead.com/ko/spell=449193/액체-형상",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_mastershapeshifter.jpg",
-        "selected": true,
+        "selected": false,
         "spellId": 449193,
-        "rank": "1/1"
+        "rank": "0/1"
       },
       {
         "id": "rdruid-class-180",
@@ -574,7 +574,7 @@ export const restorationDruidTreesFromCopy = [
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_lightning.jpg",
         "selected": true,
         "spellId": 29166,
-        "rank": "1/1"
+        "rank": "0/1"
       }
     ]
   },
@@ -659,9 +659,9 @@ export const restorationDruidTreesFromCopy = [
         "name": "재생 연마",
         "href": "https://www.wowhead.com/ko/spell=231032/재생-연마",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_nature_resistnature.jpg",
-        "selected": false,
+        "selected": true,
         "spellId": 231032,
-        "rank": "0/1"
+        "rank": "1/1"
       },
       {
         "id": "rdruid-spec-64",
@@ -932,7 +932,7 @@ export const restorationDruidTreesFromCopy = [
         "row": 8,
         "col": 0,
         "name": "활기 / 변신의 대가",
-        "href": "https://www.wowhead.com/ko/spell=289237/%EB%B3%80%EC%8B%A0%EC%9D%98-%EB%8C%80%EA%B0%80",
+        "href": "https://www.wowhead.com/ko/spell=289237/변신의-대가",
         "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_mastershapeshifter.jpg",
         "selected": true,
         "rank": "1/1"

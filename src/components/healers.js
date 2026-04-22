@@ -58,31 +58,6 @@ const wowSpecIcons = {
 
 export const healers = [
   {
-    slug: "holy-paladin",
-    shortName: "신기",
-    name: "신성 성기사",
-    classIcon: wowSpecIcons.holyPaladin,
-    color: "#F58CBA",
-    enabled: true,
-    lastEdited: "2026-03-01",
-    talentLayout: holyPaladinTalentLayout,
-    talentTrees: holyPaladinTreesFromCopy,
-    talentChoiceOverlay: hpalChoiceOverlayFromCopy,
-    talentByMode: {
-      raid: {
-        talentLayout: holyPaladinTalentLayout,
-        talentTrees: holyPaladinTreesFromCopy,
-        talentChoiceOverlay: hpalChoiceOverlayFromCopy
-      },
-      mythic: {
-        talentLayout: holyPaladinTalentLayoutMythic,
-        talentTrees: holyPaladinTreesMythic,
-        talentChoiceOverlay: hpalChoiceOverlayMythic
-      }
-    },
-    sections: buildGuideSections(holyPaladinGuideContent)
-  },
-  {
     slug: "discipline-priest",
     shortName: "수사",
     name: "수양 사제",
@@ -108,31 +83,6 @@ export const healers = [
     sections: buildGuideSections(disciplinePriestGuideContent)
   },
   {
-    slug: "holy-priest",
-    shortName: "신사",
-    name: "신성 사제",
-    classIcon: wowSpecIcons.holyPriest,
-    color: "#E7FDFF",
-    enabled: true,
-    lastEdited: "2026-03-07",
-    talentLayout: holyPriestTalentLayout,
-    talentTrees: holyPriestTreesFromCopy,
-    talentChoiceOverlay: hpriestChoiceOverlayFromCopy,
-    talentByMode: {
-      raid: {
-        talentLayout: holyPriestTalentLayout,
-        talentTrees: holyPriestTreesFromCopy,
-        talentChoiceOverlay: hpriestChoiceOverlayFromCopy
-      },
-      mythic: {
-        talentLayout: holyPriestTalentLayoutMythic,
-        talentTrees: holyPriestTreesMythic,
-        talentChoiceOverlay: hpriestChoiceOverlayMythic
-      }
-    },
-    sections: buildGuideSections(holyPriestGuideContent)
-  },
-  {
     slug: "restoration-druid",
     shortName: "회드",
     name: "회복 드루이드",
@@ -156,6 +106,56 @@ export const healers = [
       }
     },
     sections: buildGuideSections(restorationDruidGuideContent)
+  },
+  {
+    slug: "holy-paladin",
+    shortName: "신기",
+    name: "신성 성기사",
+    classIcon: wowSpecIcons.holyPaladin,
+    color: "#F58CBA",
+    enabled: true,
+    lastEdited: "2026-03-01",
+    talentLayout: holyPaladinTalentLayout,
+    talentTrees: holyPaladinTreesFromCopy,
+    talentChoiceOverlay: hpalChoiceOverlayFromCopy,
+    talentByMode: {
+      raid: {
+        talentLayout: holyPaladinTalentLayout,
+        talentTrees: holyPaladinTreesFromCopy,
+        talentChoiceOverlay: hpalChoiceOverlayFromCopy
+      },
+      mythic: {
+        talentLayout: holyPaladinTalentLayoutMythic,
+        talentTrees: holyPaladinTreesMythic,
+        talentChoiceOverlay: hpalChoiceOverlayMythic
+      }
+    },
+    sections: buildGuideSections(holyPaladinGuideContent)
+  },
+  {
+    slug: "holy-priest",
+    shortName: "신사",
+    name: "신성 사제",
+    classIcon: wowSpecIcons.holyPriest,
+    color: "#E7FDFF",
+    enabled: true,
+    lastEdited: "2026-03-07",
+    talentLayout: holyPriestTalentLayout,
+    talentTrees: holyPriestTreesFromCopy,
+    talentChoiceOverlay: hpriestChoiceOverlayFromCopy,
+    talentByMode: {
+      raid: {
+        talentLayout: holyPriestTalentLayout,
+        talentTrees: holyPriestTreesFromCopy,
+        talentChoiceOverlay: hpriestChoiceOverlayFromCopy
+      },
+      mythic: {
+        talentLayout: holyPriestTalentLayoutMythic,
+        talentTrees: holyPriestTreesMythic,
+        talentChoiceOverlay: hpriestChoiceOverlayMythic
+      }
+    },
+    sections: buildGuideSections(holyPriestGuideContent)
   },
   {
     slug: "restoration-shaman",

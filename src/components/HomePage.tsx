@@ -276,7 +276,7 @@ export function HomePage({ healers, simulators }: HomePageProps) {
             <section className="rounded-3xl border border-slate-700/80 bg-slate-900/55 p-4 shadow-panel pointer-events-auto">
               <div className="flex items-center justify-between">
                 <p className="text-lg font-bold md:text-xl text-slate-200">한밤 힐러 가이드</p>
-                <span className="text-xs text-slate-400">12.0.1</span>
+                <span className="text-xs text-slate-400">12.0.5</span>
               </div>
               <div className="mt-2 overflow-x-auto">
                 <div className="flex min-w-max items-start gap-3">

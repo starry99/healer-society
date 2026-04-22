@@ -73,7 +73,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_bash.jpg"
         }
       ],
-      "selectedIndex": 1
+      "selectedIndex": 0
     },
     "rdruid-class-161": {
       "options": [
@@ -88,7 +88,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_druid_equinox.jpg"
         }
       ],
-      "selectedIndex": 0
+      "selectedIndex": 1
     },
     "rdruid-spec-43": {
       "options": [
@@ -103,7 +103,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_giftoftheearthmother.jpg"
         }
       ],
-      "selectedIndex": 1
+      "selectedIndex": 0
     },
     "rdruid-spec-47": {
       "options": [
@@ -178,7 +178,7 @@ export const rdruidChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/ability_druid_mastershapeshifter.jpg"
         }
       ],
-      "selectedIndex": 0
+      "selectedIndex": 1
     },
     "rdruid-hero-46": {
       "options": [

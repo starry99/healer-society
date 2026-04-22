@@ -118,7 +118,7 @@ export const discChoiceOverlayFromCopy = {
           "icon": "https://wow.zamimg.com/images/wow/icons/large/spell_shadow_soulleech_3.jpg"
         }
       ],
-      "selectedIndex": 1
+      "selectedIndex": 0
     },
     "disc-hero-46": {
       "options": [
